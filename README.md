@@ -204,6 +204,45 @@ The ChirpStack Simulator provides various metrics that can be collected using
 * `gateway_uplink_count`: The number of uplinks sent by the gateways
 * `gateway_downlink_count`: The number of downlinks received by the gateways
 
+## Integration Tests & Shell (Windows)
+
+This project includes integration test tooling for ChirpStack v4 environments:
+
+- **[`integ/README.md`](integ/README.md)** — Integration test documentation (Türkçe)
+- **[`integ/shell.ps1`](integ/shell.ps1)** — Fast command execution (~1s) via persistent container
+- **[`integ/simulator-config/integ.toml`](integ/simulator-config/integ.toml)** — Example config targeting `192.168.1.103:8080`
+
+### Quick Start (Windows)
+
+```powershell
+# 1. Start persistent shell container
+.\integ\shell.ps1 start
+
+# 2. Run commands instantly (~1s each)
+.\integ\shell.ps1 list device-profiles
+.\integ\shell.ps1 list applications
+.\integ\shell.ps1 add application 2
+
+# 3. Run simulation (output visible in terminal)
+.\integ\shell.ps1 sim 30
+
+# 4. Clean up
+.\integ\shell.ps1 stop-sim
+.\integ\shell.ps1 stop
+```
+
+### Uplink Visibility
+
+All LoRaWAN traffic logged at `info` level in terminal:
+
+```
+level=info msg="simulator: send OTAA request" dev_eui=ccf35effc5a1d8e6
+level=info msg="simulator: uplink frame sent" dev_eui=ccf35effc5a1d8e6 gateways=2 length=23 payload=000000...
+level=info msg="simulator: send uplink" dev_eui=ccf35effc5a1d8e6 f_cnt=1 f_port=10 payload=010203
+```
+
+Full documentation: [`docs/USAGE.md`](docs/USAGE.md) and [`integ/README.md`](integ/README.md)
+
 ## License
 
 ChirpStack Simulator is distributed under the MIT license. See also

@@ -1,0 +1,44 @@
+[general]
+log_level=4
+min_devices_per_app=3
+max_devices_per_app=10
+report_path="./simulation_report.json"
+cleanup_gateways_on_exit=false
+
+[chirpstack.api]
+# ChirpStack API JWT token (create via chirpstack CLI or web interface)
+api_key="PUT_YOUR_API_KEY_HERE"
+# gRPC API server address (e.g., 192.168.1.103:8080 or chirpstack:8080)
+server="PUT_YOUR_SERVER_HERE:8080"
+insecure=true
+
+[chirpstack.integration.mqtt]
+server="tcp://PUT_YOUR_MQTT_HOST:1883"
+username=""
+password=""
+
+[chirpstack.gateway.backend.mqtt]
+server="tcp://PUT_YOUR_MQTT_HOST:1883"
+username=""
+password=""
+
+[[simulator]]
+# Tenant ID (get from ChirpStack web interface or list-tenants)
+tenant_id="PUT_YOUR_TENANT_ID_HERE"
+duration="0s"
+activation_time="30s"
+
+  [simulator.device]
+  count=5
+  uplink_interval="30s"
+  f_port=10
+  payload="010203"
+  frequency=868100000
+  bandwidth=125000
+  spreading_factor=7
+
+  [simulator.gateway]
+  min_count=1
+  max_count=2
+  event_topic_template="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}"
+  command_topic_template="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"

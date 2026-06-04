@@ -5,5 +5,8 @@
 /*.toml
 /*.json
 
+# integration test config (contains API keys)
+integ/simulator-config/integ.toml
+
 # builds
 /build/
