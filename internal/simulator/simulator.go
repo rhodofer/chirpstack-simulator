@@ -41,6 +41,16 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			return errors.Wrap(err, "decode payload error")
 		}
 
+		// AppName ve DeviceNamePrefix belirtilmemişse varsayılan üret.
+		appName := c.AppName
+		if appName == "" {
+			appName = fmt.Sprintf("uygulama-%d", i+1)
+		}
+		deviceNamePrefix := c.DeviceNamePrefix
+		if deviceNamePrefix == "" {
+			deviceNamePrefix = "device"
+		}
+
 		sim := simulation{
 			ctx:                  ctx,
 			wg:                   wg,
@@ -56,7 +66,10 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			duration:             c.Duration,
 			gatewayMinCount:      c.Gateway.MinCount,
 			gatewayMaxCount:      c.Gateway.MaxCount,
+			appName:              appName,
+			deviceNamePrefix:     deviceNamePrefix,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
+			deviceEUIs:           []lorawan.EUI64{},
 			eventTopicTemplate:   c.Gateway.EventTopicTemplate,
 			commandTopicTemplate: c.Gateway.CommandTopicTemplate,
 		}
@@ -76,18 +89,21 @@ type simulation struct {
 	gatewayMaxCount int
 	duration        time.Duration
 
-	fPort           uint8
-	payload         []byte
-	activationTime  time.Duration
-	uplinkInterval  time.Duration
-	frequency       int
-	bandwidth       int
-	spreadingFactor int
+	fPort            uint8
+	payload          []byte
+	activationTime   time.Duration
+	uplinkInterval   time.Duration
+	frequency        int
+	bandwidth        int
+	spreadingFactor  int
+	appName          string
+	deviceNamePrefix string
 
 	tenant               *api.Tenant
 	deviceProfileID      uuid.UUID
 	applicationID        string
 	gatewayIDs           []lorawan.EUI64
+	deviceEUIs           []lorawan.EUI64
 	deviceAppKeysMutex   sync.Mutex
 	deviceAppKeys        map[lorawan.EUI64]lorawan.AES128Key
 	eventTopicTemplate   string
@@ -354,110 +370,169 @@ func (s *simulation) tearDownDeviceProfile() error {
 }
 
 func (s *simulation) setupApplication() error {
-	log.Info("simulator: init application")
+	log.WithField("app_name", s.appName).Info("simulator: init application (upsert)")
 
-	appName, err := uuid.NewV4()
+	// Mevcut uygulamayı isimle ara.
+	listResp, err := as.Application().List(context.Background(), &api.ListApplicationsRequest{
+		TenantId: s.tenant.GetId(),
+		Limit:    100,
+		Search:   s.appName,
+	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "list applications error")
 	}
 
+	for _, item := range listResp.GetResult() {
+		if item.GetName() == s.appName {
+			s.applicationID = item.GetId()
+			log.WithFields(log.Fields{
+				"app_name": s.appName,
+				"app_id":   s.applicationID,
+			}).Info("simulator: mevcut uygulama bulundu, yeniden kullanılıyor")
+			return nil
+		}
+	}
+
+	// Yoksa oluştur.
 	createAppResp, err := as.Application().Create(context.Background(), &api.CreateApplicationRequest{
 		Application: &api.Application{
-			Name:        appName.String(),
-			Description: appName.String(),
+			Name:        s.appName,
+			Description: s.appName,
 			TenantId:    s.tenant.GetId(),
 		},
 	})
 	if err != nil {
-		return errors.Wrap(err, "create applicaiton error")
+		return errors.Wrap(err, "create application error")
 	}
 
 	s.applicationID = createAppResp.Id
+	log.WithFields(log.Fields{
+		"app_name": s.appName,
+		"app_id":   s.applicationID,
+	}).Info("simulator: yeni uygulama oluşturuldu")
 	return nil
 }
 
 func (s *simulation) tearDownApplication() error {
-	log.Info("simulator: tear-down application")
-
-	_, err := as.Application().Delete(context.Background(), &api.DeleteApplicationRequest{
-		Id: s.applicationID,
-	})
-	if err != nil {
-		return errors.Wrap(err, "delete application error")
-	}
+	// Uygulama ve device'lar kalıcıdır: yeniden başlatmada aynı ID kullanılır.
+	// Silme işlemi yapılmıyor.
+	log.WithField("app_name", s.appName).Info("simulator: uygulama korunuyor (silinmiyor)")
 	return nil
 }
 
 func (s *simulation) setupDevices() error {
-	log.Info("simulator: init devices")
+	log.Info("simulator: init devices (deterministik isimler, upsert)")
+
+	// Uygulamaya kayıtlı mevcut device'ları çek.
+	listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
+		ApplicationId: s.applicationID,
+		Limit:         1000,
+	})
+	if err != nil {
+		return errors.Wrap(err, "list devices error")
+	}
+
+	// Mevcut device'ları isimle indeksle.
+	existingByName := make(map[string]*api.DeviceListItem)
+	for _, d := range listResp.GetResult() {
+		existingByName[d.GetName()] = d
+	}
 
 	var wg sync.WaitGroup
 
 	for i := 0; i < s.deviceCount; i++ {
-		wg.Add(1)
+		devName := fmt.Sprintf("%s-%d", s.deviceNamePrefix, i+1)
 
-		go func() {
+		// Zaten varsa EUI ve anahtarını al, oluşturma.
+		if existing, ok := existingByName[devName]; ok {
+			var devEUI lorawan.EUI64
+			if err := devEUI.UnmarshalText([]byte(existing.GetDevEui())); err != nil {
+				return errors.Wrapf(err, "parse existing dev EUI for %s", devName)
+			}
+
+			// Mevcut anahtarı çek.
+			keysResp, err := as.Device().GetKeys(context.Background(), &api.GetDeviceKeysRequest{
+				DevEui: existing.GetDevEui(),
+			})
+			if err != nil {
+				return errors.Wrapf(err, "get device keys for %s", devName)
+			}
+			var appKey lorawan.AES128Key
+			if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
+				return errors.Wrapf(err, "parse app key for %s", devName)
+			}
+
+			s.deviceAppKeysMutex.Lock()
+			s.deviceAppKeys[devEUI] = appKey
+			s.deviceEUIs = append(s.deviceEUIs, devEUI)
+			s.deviceAppKeysMutex.Unlock()
+
+			log.WithFields(log.Fields{
+				"name":    devName,
+				"dev_eui": devEUI.String(),
+			}).Info("simulator: mevcut device bulundu, yeniden kullanılıyor")
+			continue
+		}
+
+		// Yeni device oluştur.
+		wg.Add(1)
+		go func(devName string) {
+			defer wg.Done()
+
 			var devEUI lorawan.EUI64
 			var appKey lorawan.AES128Key
 
 			if _, err := rand.Read(devEUI[:]); err != nil {
-				log.Fatal(err)
+				log.WithError(err).Fatal("read random dev EUI error")
 			}
 			if _, err := rand.Read(appKey[:]); err != nil {
-				log.Fatal(err)
+				log.WithError(err).Fatal("read random app key error")
 			}
 
 			_, err := as.Device().Create(context.Background(), &api.CreateDeviceRequest{
 				Device: &api.Device{
 					DevEui:          devEUI.String(),
-					Name:            devEUI.String(),
-					Description:     devEUI.String(),
+					Name:            devName,
+					Description:     devName,
 					ApplicationId:   s.applicationID,
 					DeviceProfileId: s.deviceProfileID.String(),
 				},
 			})
 			if err != nil {
-				log.Fatal("create device error, error: %s", err)
+				log.WithError(err).Fatalf("create device %s error", devName)
 			}
 
 			_, err = as.Device().CreateKeys(context.Background(), &api.CreateDeviceKeysRequest{
 				DeviceKeys: &api.DeviceKeys{
 					DevEui: devEUI.String(),
-
-					// yes, this is correct for LoRaWAN 1.0.x!
-					// see the API documentation
+					// LoRaWAN 1.0.x: NwkKey = AppKey
 					NwkKey: appKey.String(),
 				},
 			})
 			if err != nil {
-				log.Fatal("create device keys error, error: %s", err)
+				log.WithError(err).Fatalf("create device keys %s error", devName)
 			}
 
 			s.deviceAppKeysMutex.Lock()
 			s.deviceAppKeys[devEUI] = appKey
+			s.deviceEUIs = append(s.deviceEUIs, devEUI)
 			s.deviceAppKeysMutex.Unlock()
-			wg.Done()
-		}()
 
+			log.WithFields(log.Fields{
+				"name":    devName,
+				"dev_eui": devEUI.String(),
+			}).Info("simulator: yeni device oluşturuldu")
+		}(devName)
 	}
 
 	wg.Wait()
-
 	return nil
 }
 
 func (s *simulation) tearDownDevices() error {
-	log.Info("simulator: tear-down devices")
-
-	for k := range s.deviceAppKeys {
-		_, err := as.Device().Delete(context.Background(), &api.DeleteDeviceRequest{
-			DevEui: k.String(),
-		})
-		if err != nil {
-			return errors.Wrap(err, "delete device error")
-		}
-	}
-
+	// Device'lar kalıcıdır: yeniden başlatmada aynı EUI ve anahtarlar kullanılır.
+	// Silme işlemi yapılmıyor.
+	log.Info("simulator: device'lar korunuyor (silinmiyor)")
 	return nil
 }
 

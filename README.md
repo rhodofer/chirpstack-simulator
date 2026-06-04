@@ -1,3 +1,8 @@
+.\build\chirpstack-simulator.exe --config simulator.toml
+
+bunu yazarak çalıştırıyoruz
+
+
 # ChirpStack Simulator
 
 ChirpStack Simulator is an open-source simulator for the [ChirpStack](https://www.chirpstack.io)

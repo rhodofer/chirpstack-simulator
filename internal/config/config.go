@@ -40,9 +40,11 @@ type Config struct {
 	} `mapstructure:"chirpstack"`
 
 	Simulator []struct {
-		TenantID       string        `mapstructure:"tenant_id"`
-		Duration       time.Duration `mapstructure:"duration"`
-		ActivationTime time.Duration `mapstructure:"activation_time"`
+		TenantID         string        `mapstructure:"tenant_id"`
+		Duration         time.Duration `mapstructure:"duration"`
+		ActivationTime   time.Duration `mapstructure:"activation_time"`
+		AppName          string        `mapstructure:"app_name"`
+		DeviceNamePrefix string        `mapstructure:"device_name_prefix"`
 
 		Device struct {
 			Count           int           `mapstructure:"count"`
