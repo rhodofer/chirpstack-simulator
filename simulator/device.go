@@ -158,7 +158,8 @@ func WithUplinkCount(count uint32) DeviceOption {
 func WithUplinkPayload(confirmed bool, fPort uint8, pl []byte) DeviceOption {
 	return func(d *Device) error {
 		d.fPort = fPort
-		d.payload = pl
+		d.payload = make([]byte, len(pl))
+		copy(d.payload, pl)
 		d.confirmed = confirmed
 		return nil
 	}
@@ -341,6 +342,27 @@ func (d *Device) joinRequest() {
 
 // dataUp sends an data uplink.
 func (d *Device) dataUp() {
+	// Dynamic payload generator for 5-byte Falt-IoT telemetries (temperature, pressure, voltage)
+	if len(d.payload) == 5 {
+		nowNs := time.Now().UnixNano()
+		tempVal := int16(15 + (nowNs % 21)) // 15 to 35
+		pressVal := uint16(980 + ((nowNs >> 4) % 46)) // 980 to 1025
+		voltVal := uint8(28 + ((nowNs >> 8) % 9)) // 28 to 36
+
+		d.payload[0] = byte(tempVal >> 8)
+		d.payload[1] = byte(tempVal)
+		d.payload[2] = byte(pressVal >> 8)
+		d.payload[3] = byte(pressVal)
+		d.payload[4] = voltVal
+
+		log.WithFields(log.Fields{
+			"dev_eui":     d.devEUI,
+			"temperature": tempVal,
+			"pressure":    pressVal,
+			"voltage":     float64(voltVal) / 10.0,
+		}).Info("simulator: generated dynamic telemetry payload")
+	}
+
 	log.WithFields(log.Fields{
 		"dev_eui":   d.devEUI,
 		"dev_addr":  d.devAddr,
