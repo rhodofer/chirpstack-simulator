@@ -1,5 +1,7 @@
 # hidden files
 .*
+!.github/
+
 
 # config
 /*.toml
