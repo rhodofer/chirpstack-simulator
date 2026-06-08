@@ -171,6 +171,16 @@ activation_time="{{ $element.ActivationTime }}"
 #
 # Metrics can be retrieved from /metrics.
 bind="{{ .Prometheus.Bind }}"
+
+
+# HTTP API configuration.
+#
+# This enables the HTTP API for remote simulation control.
+# Endpoints: /api/health, /api/status, /api/start, /api/stop
+[http]
+
+# IP:port to bind the HTTP API server to.
+bind="{{ .HTTP.Bind }}"
 `
 
 var configCmd = &cobra.Command{

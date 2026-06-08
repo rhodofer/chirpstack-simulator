@@ -41,7 +41,8 @@ func init() {
 	viper.SetDefault("application_server.api.server", "127.0.0.1:8080")
 	viper.SetDefault("application_server.integration.mqtt.server", "tcp://127.0.0.1:1883")
 	viper.SetDefault("network_server.gateway.backend.mqtt.server", "tcp://127.0.0.1:1883")
-	viper.SetDefault("prometheus.bind", "0.0.0.0:9000")
+	viper.SetDefault("prometheus.bind", "0.0.0.0:9001")
+	viper.SetDefault("http.bind", "0.0.0.0:9002")
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configCmd)

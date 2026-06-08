@@ -4,6 +4,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-devel
-    command: make
+    command: >
+      bash -c "make build && ./build/chirpstack-simulator --config simulator.toml"
     volumes:
       - ./:/chirpstack-simulator
+    ports:
+      - "9002:9002"
+      - "9001:9001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -69,6 +69,7 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			appName:              appName,
 			deviceNamePrefix:     deviceNamePrefix,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
+			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
 			eventTopicTemplate:   c.Gateway.EventTopicTemplate,
 			commandTopicTemplate: c.Gateway.CommandTopicTemplate,
@@ -106,6 +107,7 @@ type simulation struct {
 	deviceEUIs           []lorawan.EUI64
 	deviceAppKeysMutex   sync.Mutex
 	deviceAppKeys        map[lorawan.EUI64]lorawan.AES128Key
+	deviceNames          map[lorawan.EUI64]string
 	eventTopicTemplate   string
 	commandTopicTemplate string
 }
@@ -227,6 +229,8 @@ func (s *simulation) runSimulation() error {
 
 		d, err := simulator.NewDevice(ctx, &wg,
 			simulator.WithDevEUI(devEUI),
+			simulator.WithAppName(s.appName),
+			simulator.WithDeviceName(s.deviceNames[devEUI]),
 			simulator.WithAppKey(appKey),
 			simulator.WithUplinkInterval(s.uplinkInterval),
 			simulator.WithOTAADelay(time.Duration(mrand.Int63n(int64(s.activationTime)))),
@@ -464,6 +468,7 @@ func (s *simulation) setupDevices() error {
 
 			s.deviceAppKeysMutex.Lock()
 			s.deviceAppKeys[devEUI] = appKey
+			s.deviceNames[devEUI] = devName
 			s.deviceEUIs = append(s.deviceEUIs, devEUI)
 			s.deviceAppKeysMutex.Unlock()
 
@@ -515,6 +520,7 @@ func (s *simulation) setupDevices() error {
 
 			s.deviceAppKeysMutex.Lock()
 			s.deviceAppKeys[devEUI] = appKey
+			s.deviceNames[devEUI] = devName
 			s.deviceEUIs = append(s.deviceEUIs, devEUI)
 			s.deviceAppKeysMutex.Unlock()
 

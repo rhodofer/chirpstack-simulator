@@ -42,6 +42,12 @@ type Device struct {
 	// DevEUI.
 	devEUI lorawan.EUI64
 
+	// AppName.
+	appName string
+
+	// DeviceName.
+	deviceName string
+
 	// JoinEUI.
 	joinEUI lorawan.EUI64
 
@@ -113,6 +119,22 @@ func WithAppKey(appKey lorawan.AES128Key) DeviceOption {
 	}
 }
 
+// WithAppName sets the AppName.
+func WithAppName(appName string) DeviceOption {
+	return func(d *Device) error {
+		d.appName = appName
+		return nil
+	}
+}
+
+// WithDeviceName sets the DeviceName.
+func WithDeviceName(deviceName string) DeviceOption {
+	return func(d *Device) error {
+		d.deviceName = deviceName
+		return nil
+	}
+}
+
 // WithDevEUI sets the DevEUI.
 func WithDevEUI(devEUI lorawan.EUI64) DeviceOption {
 	return func(d *Device) error {
@@ -166,13 +188,13 @@ func WithUplinkPayload(confirmed bool, fPort uint8, pl []byte) DeviceOption {
 }
 
 // WithGateways adds the device to the given gateways.
-// Use this function after WithDevEUI!
+// Use this function after WithDevEUI, WithAppName, WithDeviceName!
 func WithGateways(gws []*Gateway) DeviceOption {
 	return func(d *Device) error {
 		d.gateways = gws
 
 		for i := range d.gateways {
-			d.gateways[i].addDevice(d.devEUI, d.downlinkFrames)
+			d.gateways[i].addDevice(d.devEUI, d.appName, d.deviceName, d.downlinkFrames)
 		}
 		return nil
 	}
@@ -222,7 +244,9 @@ func NewDevice(ctx context.Context, wg *sync.WaitGroup, opts ...DeviceOption) (*
 	}
 
 	log.WithFields(log.Fields{
-		"dev_eui": d.devEUI,
+		"dev_eui":     d.devEUI,
+		"app_name":    d.appName,
+		"device_name": d.deviceName,
 	}).Info("simulator: new otaa device")
 
 	wg.Add(2)
@@ -315,7 +339,9 @@ func (d *Device) downlinkLoop() {
 // joinRequest sends the join-request.
 func (d *Device) joinRequest() {
 	log.WithFields(log.Fields{
-		"dev_eui": d.devEUI,
+		"dev_eui":     d.devEUI,
+		"app_name":    d.appName,
+		"device_name": d.deviceName,
 	}).Debug("simulator: send OTAA request")
 
 	phy := lorawan.PHYPayload{
@@ -357,6 +383,8 @@ func (d *Device) dataUp() {
 
 		log.WithFields(log.Fields{
 			"dev_eui":     d.devEUI,
+			"app_name":    d.appName,
+			"device_name": d.deviceName,
 			"temperature": tempVal,
 			"pressure":    pressVal,
 			"voltage":     float64(voltVal) / 10.0,
@@ -364,9 +392,11 @@ func (d *Device) dataUp() {
 	}
 
 	log.WithFields(log.Fields{
-		"dev_eui":   d.devEUI,
-		"dev_addr":  d.devAddr,
-		"confirmed": d.confirmed,
+		"dev_eui":     d.devEUI,
+		"dev_addr":    d.devAddr,
+		"app_name":    d.appName,
+		"device_name": d.deviceName,
+		"confirmed":   d.confirmed,
 	}).Debug("simulator: send uplink data")
 
 	mType := lorawan.UnconfirmedDataUp
@@ -452,8 +482,10 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 	d.devAddr = jaPL.DevAddr
 
 	log.WithFields(log.Fields{
-		"dev_eui":  d.devEUI,
-		"dev_addr": d.devAddr,
+		"dev_eui":     d.devEUI,
+		"dev_addr":    d.devAddr,
+		"app_name":    d.appName,
+		"device_name": d.deviceName,
 	}).Info("simulator: device OTAA activated")
 
 	d.setState(deviceStateActivated)
@@ -510,12 +542,14 @@ func (d *Device) downlinkData(phy lorawan.PHYPayload) error {
 	}
 
 	log.WithFields(log.Fields{
-		"confirmed": phy.MHDR.MType == lorawan.ConfirmedDataDown,
-		"ack":       macPL.FHDR.FCtrl.ACK,
-		"f_cnt":     d.fCntDown,
-		"dev_eui":   d.devEUI,
-		"f_port":    fPort,
-		"data":      hex.EncodeToString(data),
+		"confirmed":   phy.MHDR.MType == lorawan.ConfirmedDataDown,
+		"ack":         macPL.FHDR.FCtrl.ACK,
+		"f_cnt":       d.fCntDown,
+		"dev_eui":     d.devEUI,
+		"app_name":    d.appName,
+		"device_name": d.deviceName,
+		"f_port":      fPort,
+		"data":        hex.EncodeToString(data),
 	}).Info("simulator: device received downlink data")
 
 	if d.downlinkHandlerFunc == nil {

@@ -248,6 +248,45 @@ level=info msg="simulator: send uplink" dev_eui=ccf35effc5a1d8e6 f_cnt=1 f_port=
 
 Full documentation: [`docs/USAGE.md`](docs/USAGE.md) and [`integ/README.md`](integ/README.md)
 
+## Development Notes (Geliştirici Notları)
+
+### 1. Go Path on Windows
+Windows terminalinizde `go` komutları tanınmıyorsa, `C:\Program Files\Go\bin` yolunun **PATH** ortam değişkenine eklenmiş olduğundan emin olun.
+PowerShell ile kalıcı olarak eklemek için:
+```powershell
+$pathToAdd = "C:\Program Files\Go\bin"
+$userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+if ($userPath -split ';' -notcontains $pathToAdd) {
+    [System.Environment]::SetEnvironmentVariable("Path", $userPath + ";" + $pathToAdd, "User")
+}
+```
+*Not: Değişikliğin terminalinizde aktif olması için VS Code veya açık olan terminal kapatılıp açılmalıdır.*
+
+### 2. Web UI Port
+Simülatör web arayüzü varsayılan olarak **`9002`** portundan yayın yapar (`simulator.toml` dosyasında `[http] bind` altında ayarlanabilir).
+- Web UI: `http://localhost:9002`
+
+### 3. Local Development vs Docker Environment
+Arayüz statik dosyaları (`index.html`, `style.css`, `app.js` dosyaları `internal/api/frontend/` klasörü altındadır) derleme (build) sırasında binary içerisine gömüldüğü (`go:embed` yöntemiyle) için, arayüz değişikliklerinin yansıması için **yeniden derleme (build) yapılması zorunludur.**
+- **Docker Compose (Önerilen/Varsayılan):** Simülatörü docker-compose üzerinden çalıştırıyorsanız, yerelde yaptığınız arayüz değişikliklerinin docker imajında aktif olması için docker konteynerini yeniden başlatmanız yeterlidir (konteyner başlarken otomatik derleme yapar):
+  ```powershell
+  docker-compose restart
+  ```
+- **Local Windows Binary (Yerel Çalıştırma):** Simülatörü yerel Windows terminalinizden çalıştırmak istiyorsanız:
+  ```powershell
+  # Windows exe derleme
+  go build -ldflags "-s -w -X main.version=1.0.0" -o build/chirpstack-simulator.exe cmd/chirpstack-simulator/main.go
+  
+  # Çalıştırma
+  .\build\chirpstack-simulator.exe --config simulator.toml
+  ```
+
+### 4. Tenant-Scoped Filtering (Tenant Bazlı Filtreleme)
+Simülatör API'si global filtreleme ve tenant-scoped veri erişimini destekler:
+- **API Davranışı:** `handleListApplications`, `handleListDevices` ve `handleListDeviceProfiles` handler'ları, `tenant_id` parametresi boş (`""`) gönderildiğinde tüm tenant'lar/organizasyonlar arasında arama yaparak birleştirilmiş liste döner.
+- **Frontend Sync:** Arayüzde `net-tenant-select` ve `dp-tenant-select` gibi tenant filtreleme seçimleri yapıldığında ilgili API istekleri bu tenant parametresi ile yenilenir.
+
+
 ## License
 
 ChirpStack Simulator is distributed under the MIT license. See also
