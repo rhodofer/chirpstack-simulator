@@ -24,9 +24,6 @@
     var themeToggle       = $("#theme-toggle");
 
     // Tabs
-    var tabOverview       = $("#tab-overview");
-    var tabDevices        = $("#tab-devices");
-    var tabSettings       = $("#tab-settings");
     var pageTitleBar      = $("#page-title-bar");
 
     // Table
