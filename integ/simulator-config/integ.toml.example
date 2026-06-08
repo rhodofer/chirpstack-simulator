@@ -42,3 +42,9 @@ activation_time="30s"
   max_count=2
   event_topic_template="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}"
   command_topic_template="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
+
+[prometheus]
+bind="0.0.0.0:9001"
+
+[http]
+bind="0.0.0.0:9002"

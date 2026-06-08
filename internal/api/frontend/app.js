@@ -15,6 +15,7 @@
     // Sidebar
     var secondarySidebar  = $("#secondary-sidebar");
     var hamburgerBtn      = $("#hamburger-btn");
+    var sidebarCloseBtn   = $("#sidebar-close-btn");
     var versionText       = $("#version-text");
 
     // Top bar
@@ -23,10 +24,7 @@
     var uptimeBadge       = $("#uptime-badge");
     var themeToggle       = $("#theme-toggle");
 
-    // Tabs
-    var pageTitleBar      = $("#page-title-bar");
-
-    // Table
+    // Org Table
     var orgTableBody      = $("#org-table-body");
     var emptyState        = $("#empty-state");
     var totalCountEl      = $("#total-count");
@@ -37,8 +35,18 @@
 
     // Buttons
     var btnAddOrg         = $("#btn-add-org");
-    var btnStart          = $("#btn-start");
-    var btnStop           = $("#btn-stop");
+    var btnStart          = null;
+    var btnStop           = null;
+    var btnTopStart       = $("#btn-top-start");
+    var btnTopStop        = $("#btn-top-stop");
+    var btnSaveOrgConfig  = $("#btn-save-org-config");
+
+    // Bottom Console
+    var bottomConsole     = $("#bottom-console");
+    var btnConsoleClear   = $("#btn-console-clear");
+    var btnConsoleToggle  = $("#btn-console-toggle");
+    var consoleLogContainer = $("#console-log-container");
+    var consoleResizeHandle = $("#console-resize-handle");
 
     // Drawer
     var drawerOverlay     = $("#drawer-overlay");
@@ -94,6 +102,44 @@
     // Log & Toast
     var logContainer      = $("#log-container");
     var toast             = $("#toast");
+    // Networks DOM refs
+    var btnAddNet           = $("#btn-add-net");
+    var netTenantFilter     = $("#net-tenant-select");
+    var netSearchInput      = $("#net-search-input");
+    var btnNetRefresh       = $("#btn-net-refresh");
+    var netPageSizeSelect   = $("#net-page-size-select");
+    var netTableBody        = $("#net-table-body");
+    var netEmptyState       = $("#net-empty-state");
+    var netTotalCountEl     = $("#net-total-count");
+    var netPaginationEl     = $("#net-pagination");
+    var netModalOverlay     = $("#net-modal-overlay");
+    var netName             = $("#net-name");
+    var netTenant           = $("#net-tenant");
+    var netDescription      = $("#net-description");
+    var netModalClose       = $("#net-modal-close");
+    var netModalCancel      = $("#net-modal-cancel");
+    var netModalSave        = $("#net-modal-save");
+
+    // Devices DOM refs
+    var btnAddDev           = $("#btn-add-dev");
+    var devTenantFilter     = $("#dev-tenant-select");
+    var devSearchInput      = $("#dev-search-input");
+    var btnDevRefresh       = $("#btn-dev-refresh");
+    var devPageSizeSelect   = $("#dev-page-size-select");
+    var devTableBody        = $("#dev-table-body");
+    var devEmptyState       = $("#dev-empty-state");
+    var devTotalCountEl     = $("#dev-total-count");
+    var devPaginationEl     = $("#dev-pagination");
+    var devModalOverlay     = $("#dev-modal-overlay");
+    var devEui              = $("#dev-eui");
+    var btnRandomDevEui     = $("#btn-random-dev-eui");
+    var devName             = $("#dev-name");
+    var devApp              = $("#dev-app");
+    var devProfile          = $("#dev-profile");
+    var devDescription      = $("#dev-description");
+    var devModalClose       = $("#dev-modal-close");
+    var devModalCancel      = $("#dev-modal-cancel");
+    var devModalSave        = $("#dev-modal-save");
 
     // ─── State ─────────────────────────────────────────────────────────
     var state = {
@@ -114,7 +160,27 @@
         dpPage: 1,
         dpPageSize: 5,
         dpSearchQuery: "",
-        dpTenantFilter: ""
+        dpTenantFilter: "",
+        netList: [],
+        netFiltered: [],
+        netSort: { key: "name", dir: "asc" },
+        netPage: 1,
+        netPageSize: 5,
+        netSearchQuery: "",
+        netTenantFilter: "",
+        devList: [],
+        devFiltered: [],
+        devSort: { key: "name", dir: "asc" },
+        devPage: 1,
+        devPageSize: 5,
+        devSearchQuery: "",
+        devTenantFilter: "",
+        applications: [],
+        appFiltered: [],
+        appSearchQuery: "",
+        appSort: { key: "name", dir: "asc" },
+        appPage: 1,
+        appPageSize: 5
     };
 
     var pollTimer = null;
@@ -155,6 +221,25 @@
             return { ok: resp.ok, status: resp.status, data: data };
         } catch (err) {
             return { ok: false, status: 0, data: { error: err.message } };
+        }
+    }
+
+    // ─── API helper: fetch applications ────────────────────────────────────────
+    async function fetchApplications(tenantId) {
+        var url = "/api/applications";
+        if (tenantId) url += "?tenant_id=" + encodeURIComponent(tenantId);
+        const r = await api("GET", url);
+        if (r.ok) {
+            const data = r.data;
+            state.applications = data.applications || [];
+            logEntry("Uygulama listesi alındı: " + state.applications.length + " adet", "success");
+            applyAppFiltersAndRender();
+            return true;
+        } else {
+            const err = (r.data && r.data.error) || "Bilinmeyen hata";
+            logEntry("Uygulama listesi alınamadı: " + err, "error");
+            showToast(err, "error");
+            return false;
         }
     }
 
@@ -199,8 +284,37 @@
         statusBadge.textContent = status.toUpperCase();
 
         var isRunning = (status === "running" || status === "starting");
-        btnStart.disabled = isRunning || !state.activeOrgId;
-        btnStop.disabled  = !isRunning;
+        if (btnStart) btnStart.disabled = isRunning || !state.activeOrgId;
+        if (btnStop) btnStop.disabled  = !isRunning;
+        if (btnTopStart) btnTopStart.disabled = isRunning || !state.activeOrgId;
+        if (btnTopStop) btnTopStop.disabled  = !isRunning;
+        updateFormInputsState();
+
+        // Update console dot and expand when running
+        var consoleDot = $(".console-dot");
+        if (consoleDot) {
+            if (isRunning) {
+                consoleDot.classList.add("active");
+                if (bottomConsole && bottomConsole.classList.contains("collapsed")) {
+                    bottomConsole.classList.remove("collapsed");
+                    bottomConsole.classList.add("expanded");
+                    if (btnConsoleToggle) btnConsoleToggle.textContent = "Daralt";
+                    var savedHeight = localStorage.getItem("console-height") || "320px";
+                    bottomConsole.style.height = savedHeight;
+                }
+            } else {
+                consoleDot.classList.remove("active");
+            }
+        }
+
+        // Toggle active-simulation style on bottom console
+        if (bottomConsole) {
+            if (isRunning) {
+                bottomConsole.classList.add("active-simulation");
+            } else {
+                bottomConsole.classList.remove("active-simulation");
+            }
+        }
 
         // Settings tab stats
         if (statSimStatus) statSimStatus.textContent = status.toUpperCase();
@@ -272,6 +386,90 @@
         }
     }
 
+    function saveOrgConfig(orgId) {
+        if (!orgId) return;
+        var tenantEl = document.getElementById("tenant_id");
+        var appNameEl = document.getElementById("app_name");
+        var devPrefixEl = document.getElementById("device_prefix");
+        var devCountEl = document.getElementById("device_count");
+        var gwCountEl = document.getElementById("gateway_count");
+        var data = {
+            tenant_id: tenantEl ? tenantEl.value.trim() : orgId,
+            app_name: appNameEl ? appNameEl.value.trim() : "",
+            device_prefix: devPrefixEl ? devPrefixEl.value.trim() : "sim-dev",
+            device_count: devCountEl ? devCountEl.value.trim() : "5",
+            gateway_count: gwCountEl ? gwCountEl.value.trim() : "2"
+        };
+        localStorage.setItem("sim-org-config-" + orgId, JSON.stringify(data));
+    }
+
+    function loadOrgConfig(orgId, orgName) {
+        if (!orgId) return;
+        var raw = localStorage.getItem("sim-org-config-" + orgId);
+        var tenantField = document.getElementById("tenant_id");
+        var appNameField = document.getElementById("app_name");
+        var devPrefixField = document.getElementById("device_prefix");
+        var devCountField = document.getElementById("device_count");
+        var gwCountField = document.getElementById("gateway_count");
+
+        if (raw) {
+            try {
+                var data = JSON.parse(raw);
+                if (tenantField) tenantField.value = data.tenant_id || orgId;
+                if (appNameField) appNameField.value = data.app_name || orgName || "";
+                if (devPrefixField) devPrefixField.value = data.device_prefix || "sim-dev";
+                if (devCountField) devCountField.value = data.device_count || "5";
+                if (gwCountField) gwCountField.value = data.gateway_count || "2";
+                return;
+            } catch (e) {
+                console.error("Failed to parse org config", e);
+            }
+        }
+
+        // Fallback/defaults if no saved config
+        if (tenantField) tenantField.value = orgId;
+        if (appNameField) appNameField.value = orgName || "";
+        if (devPrefixField) devPrefixField.value = "sim-dev";
+        if (devCountField) devCountField.value = "5";
+        if (gwCountField) gwCountField.value = "2";
+    }
+
+    function updateFormInputsState() {
+        var isSimRunning = (state.currentStatus === "running" || state.currentStatus === "starting");
+
+        // Drawer form inputs
+        var drawerInputs = [
+            "tenant_id", "app_name", "device_prefix", "device_count", "gateway_count"
+        ];
+        drawerInputs.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.disabled = isSimRunning;
+        });
+
+        // Global settings form inputs
+        var settingsInputs = [
+            "duration", "activation_time", "frequency", "bandwidth", "spreading_factor",
+            "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"
+        ];
+        settingsInputs.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.disabled = isSimRunning;
+        });
+
+        // Save buttons
+        if (btnSaveOrgConfig) btnSaveOrgConfig.disabled = isSimRunning;
+    }
+
+    function selectDefaultOrgIfNone() {
+        if (state.organizations.length > 0 && !state.activeOrgId) {
+            var org = state.organizations[0];
+            state.activeOrgId = org.id;
+            loadOrgConfig(org.id, org.name);
+            updateFormInputsState();
+            if (btnTopStart) btnTopStart.disabled = (state.currentStatus === "running" || state.currentStatus === "starting");
+        }
+    }
+
     // ─── Organization API ──────────────────────────────────────────────
     async function fetchOrganizations() {
         var r = await api("GET", "/api/organizations");
@@ -283,6 +481,10 @@
             logEntry("Organizasyonlar yüklenemedi: " + errMsg, "error");
         }
         applyFiltersAndRender();
+        populateDpFilterTenantSelect();
+        populateNetFilterTenantSelect();
+        populateDevFilterTenantSelect();
+        selectDefaultOrgIfNone();
     }
 
     async function createOrganization(name, description) {
@@ -531,6 +733,26 @@
             opt.value = state.organizations[i].id;
             opt.textContent = state.organizations[i].name;
             dpTenantFilter.appendChild(opt);
+        }
+    }
+
+    function populateNetFilterTenantSelect() {
+        if (!netTenantFilter) return;
+        var firstOpt = netTenantFilter.querySelector('option[value=""]');
+        netTenantFilter.innerHTML = "";
+        if (firstOpt) {
+            netTenantFilter.appendChild(firstOpt);
+        } else {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Tüm Tenant'lar";
+            netTenantFilter.appendChild(opt);
+        }
+        for (var i = 0; i < state.organizations.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.organizations[i].id;
+            opt.textContent = state.organizations[i].name;
+            netTenantFilter.appendChild(opt);
         }
     }
 
@@ -827,10 +1049,8 @@
         drawerSubtitle.textContent = "Simülasyon ayarlarını yapılandırın";
 
         // Formu doldur
-        var tenantField = document.getElementById("tenant_id");
-        if (tenantField) tenantField.value = org.id;
-        var appNameField = document.getElementById("app_name");
-        if (appNameField && !appNameField.value) appNameField.value = org.name;
+        loadOrgConfig(orgId, org.name);
+        updateFormInputsState();
 
         drawerEl.classList.add("open");
         drawerOverlay.classList.add("open");
@@ -859,6 +1079,15 @@
         var targetContent = $("#content-" + name);
         if (targetContent) targetContent.classList.add("active");
 
+        // Sidebar linklerini güncelle
+        $$(".secondary-nav-link").forEach(function (link) {
+            if (link.getAttribute("data-tab") === name) {
+                link.classList.add("active");
+            } else {
+                link.classList.remove("active");
+            }
+        });
+
         // Sayfa başlığını güncelle
         updatePageTitle();
     }
@@ -866,7 +1095,9 @@
     function updatePageTitle() {
         var titles = {
             overview: "Organizasyonlar",
-            devices: "Cihazlar",
+            devices: "Device Profilleri",
+            networks: "Ağ Uygulamaları",
+            "device-list": "Cihazlar",
             settings: "Ayarlar"
         };
         if (pageTitleBar) {
@@ -887,11 +1118,16 @@
         document.body.classList.toggle("light-theme");
         var isLight = document.body.classList.contains("light-theme");
         themeToggle.textContent = isLight ? "☀" : "🌙";
+        localStorage.setItem("theme", isLight ? "light" : "dark");
     }
 
     // ─── Sidebar Toggle (Mobile) ───────────────────────────────────────
     function toggleSecondarySidebar() {
         secondarySidebar.classList.toggle("open");
+        var isOpen = secondarySidebar.classList.contains("open");
+        if (hamburgerBtn) {
+            hamburgerBtn.textContent = isOpen ? "✕" : "☰";
+        }
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────
@@ -929,6 +1165,8 @@
 
     function loadConfigIntoForm(cfg) {
         if (!cfg) cfg = {};
+        var isSimRunning = (state.currentStatus === "running" || state.currentStatus === "starting");
+
         for (var i = 0; i < formFields.length; i++) {
             var f = formFields[i];
             var el = document.getElementById(f.id);
@@ -937,6 +1175,14 @@
             if (val !== undefined && val !== null && val !== "") {
                 el.value = val;
             } else {
+                var isGeneral = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"].indexOf(f.id) !== -1;
+                if (isGeneral && !isSimRunning) {
+                    var localVal = localStorage.getItem("setting-" + f.id);
+                    if (localVal !== null) {
+                        el.value = localVal;
+                        continue;
+                    }
+                }
                 el.value = el.defaultValue || "";
             }
         }
@@ -1019,7 +1265,7 @@
             return;
         }
 
-        btnStart.disabled = true;
+        if (btnStart) btnStart.disabled = true;
         logEntry("Simülasyon başlatılıyor...", "info");
 
         var r = await api("POST", "/api/start", cfg);
@@ -1032,13 +1278,13 @@
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
             logEntry("Başlatma hatası: " + errMsg, "error");
             showToast(errMsg, "error");
-            btnStart.disabled = false;
+            if (btnStart) btnStart.disabled = false;
         }
     }
 
     // ─── Stop Simulation ───────────────────────────────────────────────
     async function stopSimulation() {
-        btnStop.disabled = true;
+        if (btnStop) btnStop.disabled = true;
         logEntry("Simülasyon durduruluyor...", "info");
 
         var r = await api("POST", "/api/stop");
@@ -1050,7 +1296,7 @@
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
             logEntry("Durdurma hatası: " + errMsg, "error");
             showToast(errMsg, "error");
-            btnStop.disabled = false;
+            if (btnStop) btnStop.disabled = false;
         }
     }
 
@@ -1061,6 +1307,10 @@
         link.addEventListener("click", function () {
             var tab = this.getAttribute("data-tab");
             if (tab) switchTab(tab);
+            if (window.innerWidth <= 900) {
+                secondarySidebar.classList.remove("open");
+                if (hamburgerBtn) hamburgerBtn.textContent = "☰";
+            }
         });
     });
 
@@ -1121,16 +1371,70 @@
     // Drawer
     drawerClose.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
+    if (btnSaveOrgConfig) {
+        btnSaveOrgConfig.addEventListener("click", function (e) {
+            e.preventDefault();
+            
+            var devCountEl = document.getElementById("device_count");
+            var gwCountEl = document.getElementById("gateway_count");
+            var appNameEl = document.getElementById("app_name");
+            
+            var devCount = parseInt(devCountEl ? devCountEl.value : "0", 10);
+            var gwCount = parseInt(gwCountEl ? gwCountEl.value : "0", 10);
+            var appName = appNameEl ? appNameEl.value.trim() : "";
+            
+            if (!appName) {
+                showToast("Uygulama Adı zorunludur!", "error");
+                if (appNameEl) appNameEl.focus();
+                return;
+            }
+            if (isNaN(devCount) || devCount <= 0) {
+                showToast("Cihaz Sayısı 0'dan büyük bir tam sayı olmalıdır!", "error");
+                if (devCountEl) devCountEl.focus();
+                return;
+            }
+            if (isNaN(gwCount) || gwCount <= 0) {
+                showToast("Gateway Sayısı 0'dan büyük bir tam sayı olmalıdır!", "error");
+                if (gwCountEl) gwCountEl.focus();
+                return;
+            }
+            
+            saveOrgConfig(state.activeOrgId);
+            showToast("Ayarlar başarıyla kaydedildi.", "success");
+            closeDrawer();
+        });
+    }
 
     // Start / Stop
-    btnStart.addEventListener("click", startSimulation);
-    btnStop.addEventListener("click", stopSimulation);
+    if (btnStart) btnStart.addEventListener("click", startSimulation);
+    if (btnStop) btnStop.addEventListener("click", stopSimulation);
 
     // Theme
     themeToggle.addEventListener("click", toggleTheme);
 
     // Hamburger (mobile)
-    hamburgerBtn.addEventListener("click", toggleSecondarySidebar);
+    hamburgerBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleSecondarySidebar();
+    });
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleSecondarySidebar();
+        });
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener("click", function (e) {
+        if (window.innerWidth <= 900) {
+            if (secondarySidebar && secondarySidebar.classList.contains("open")) {
+                if (!secondarySidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+                    secondarySidebar.classList.remove("open");
+                    if (hamburgerBtn) hamburgerBtn.textContent = "☰";
+                }
+            }
+        }
+    });
 
     // Device Profile table sort
     $$("#dp-table thead th.sortable").forEach(function (th) {
@@ -1184,9 +1488,733 @@
         if (e.target === dpModalOverlay) hideDpModal();
     });
 
+    // ─── Networks API ──────────────────────────────────────────────────
+    async function createApplication(name, tenantId, description) {
+        var r = await api("POST", "/api/applications", {
+            name: name,
+            tenant_id: tenantId,
+            description: description || ""
+        });
+        if (r.ok) {
+            var app = r.data;
+            logEntry("Yeni uygulama oluşturuldu: " + app.name + " (ID: " + app.id + ")", "success");
+            showToast("'" + app.name + "' uygulaması oluşturuldu.", "success");
+            await fetchApplications(state.netTenantFilter);
+            return true;
+        } else {
+            var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
+            logEntry("Uygulama oluşturma hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+            return false;
+        }
+    }
+
+    async function deleteApplication(id) {
+        var app = findNet(id);
+        if (!app) return;
+        if (!confirm("'" + app.name + "' uygulamasını silmek istediğinize emin misiniz?")) return;
+        var r = await api("DELETE", "/api/applications/" + id);
+        if (r.ok) {
+            logEntry("Uygulama silindi: " + app.name, "success");
+            showToast("'" + app.name + "' silindi.", "success");
+            await fetchApplications(state.netTenantFilter);
+        } else {
+            var errMsg = (r.data && r.data.error) || "Silme hatası";
+            logEntry("Uygulama silme hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+        }
+    }
+
+    function findNet(id) {
+        for (var i = 0; i < state.applications.length; i++) {
+            if (state.applications[i].id === id) return state.applications[i];
+        }
+        return null;
+    }
+
+    // ─── Application Table: Filter, Sort, Paginate, Render ─────────
+    function applyAppFiltersAndRender() {
+        const q = state.appSearchQuery.toLowerCase();
+        if (q) {
+            state.appFiltered = state.applications.filter(app =>
+                (app.name && app.name.toLowerCase().includes(q)) ||
+                (app.tenant_id && app.tenant_id.toLowerCase().includes(q)));
+        } else {
+            state.appFiltered = state.applications.slice();
+        }
+        const sk = state.appSort.key;
+        const sd = state.appSort.dir === "asc" ? 1 : -1;
+        state.appFiltered.sort((a, b) => {
+            const va = (a[sk] || "").toString().toLowerCase();
+            const vb = (b[sk] || "").toString().toLowerCase();
+            if (va < vb) return -1 * sd;
+            if (va > vb) return 1 * sd;
+            return 0;
+        });
+        const totalPages = Math.max(1, Math.ceil(state.appFiltered.length / state.appPageSize));
+        if (state.appPage > totalPages) state.appPage = totalPages;
+        renderAppTable();
+        renderAppPagination();
+        renderAppTotalCount();
+        updateAppSortIcons();
+    }
+
+    function renderAppTable() {
+        netTableBody.innerHTML = "";
+        if (state.appFiltered.length === 0) { netEmptyState.style.display = "block"; return; }
+        netEmptyState.style.display = "none";
+        const start = (state.appPage - 1) * state.appPageSize;
+        const end = Math.min(start + state.appPageSize, state.appFiltered.length);
+        const pageItems = state.appFiltered.slice(start, end);
+        for (let i = 0; i < pageItems.length; i++) {
+            const app = pageItems[i];
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-id", app.id);
+            tr.innerHTML =
+                `<td><span class="org-name-primary">${escapeHtml(app.name)}</span></td>` +
+                `<td><span class="status-pill active">${escapeHtml(app.tenant_id || "—")}</span></td>` +
+                `<td><div class="row-actions"><button class="row-action-btn view-btn" data-id="${app.id}" title="Görüntüle">👁</button>` +
+                `<button class="row-action-btn danger delete-btn" data-id="${app.id}" title="Sil">🗑</button></div></td>`;
+            tr.addEventListener("click", (e) => {
+                if (e.target.closest(".delete-btn")) { e.stopPropagation(); deleteApplication(app.id); return; }
+            });
+            netTableBody.appendChild(tr);
+        }
+    }
+
+    function renderAppPagination() {
+        netPaginationEl.innerHTML = "";
+        var total = state.appFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(total / state.appPageSize));
+        var current = state.appPage;
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "pagination-btn";
+        prevBtn.innerHTML = "< Geri";
+        prevBtn.disabled = (current <= 1);
+        prevBtn.addEventListener("click", function () { goToAppPage(current - 1); });
+        netPaginationEl.appendChild(prevBtn);
+        var startPage = Math.max(1, current - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (var p = startPage; p <= endPage; p++) {
+            var pageBtn = document.createElement("button");
+            pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.addEventListener("click", (function (pageNum) {
+                return function () { goToAppPage(pageNum); };
+            })(p));
+            netPaginationEl.appendChild(pageBtn);
+        }
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "pagination-btn";
+        nextBtn.innerHTML = "İleri >";
+        nextBtn.disabled = (current >= totalPages);
+        nextBtn.addEventListener("click", function () { goToAppPage(current + 1); });
+        netPaginationEl.appendChild(nextBtn);
+    }
+
+    function renderAppTotalCount() {
+        netTotalCountEl.innerHTML = "Toplam: <strong>" + state.appFiltered.length + "</strong> Uygulama";
+    }
+
+    function updateAppSortIcons() {
+        var allIcons = $$("[id^='net-sort-icon-']");
+        for (var i = 0; i < allIcons.length; i++) {
+            allIcons[i].classList.remove("active");
+            allIcons[i].textContent = "▲";
+        }
+        var icon = $("#net-sort-icon-" + state.appSort.key);
+        if (icon) {
+            icon.classList.add("active");
+            icon.textContent = state.appSort.dir === "asc" ? "▲" : "▼";
+        }
+    }
+
+    function goToAppPage(n) {
+        var totalPages = Math.max(1, Math.ceil(state.appFiltered.length / state.appPageSize));
+        if (n < 1 || n > totalPages) return;
+        state.appPage = n;
+        applyAppFiltersAndRender();
+    }
+
+    // ─── Devices API ───────────────────────────────────────────────────
+    async function fetchDevices(tenantId) {
+        var url = "/api/devices";
+        if (tenantId) url += "?tenant_id=" + encodeURIComponent(tenantId);
+        var r = await api("GET", url);
+        if (r.ok && r.data.devices) {
+            state.devList = r.data.devices;
+        } else {
+            state.devList = [];
+            var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
+            logEntry("Cihazlar yüklenemedi: " + errMsg, "error");
+        }
+        applyDevFiltersAndRender();
+    }
+
+    async function createDevice(data) {
+        var r = await api("POST", "/api/devices", data);
+        if (r.ok) {
+            var dev = r.data;
+            logEntry("Yeni cihaz oluşturuldu: " + dev.name + " (EUI: " + dev.dev_eui + ")", "success");
+            showToast("'" + dev.name + "' cihazı oluşturuldu.", "success");
+            await fetchDevices(state.devTenantFilter);
+            return true;
+        } else {
+            var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
+            logEntry("Cihaz oluşturma hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+            return false;
+        }
+    }
+
+    async function deleteDevice(devEui) {
+        var dev = findDev(devEui);
+        if (!dev) return;
+        if (!confirm("'" + dev.name + "' cihazını silmek istediğinize emin misiniz?")) return;
+        var r = await api("DELETE", "/api/devices/" + devEui);
+        if (r.ok) {
+            logEntry("Cihaz silindi: " + dev.name, "success");
+            showToast("'" + dev.name + "' silindi.", "success");
+            await fetchDevices(state.devTenantFilter);
+        } else {
+            var errMsg = (r.data && r.data.error) || "Silme hatası";
+            logEntry("Cihaz silme hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+        }
+    }
+
+    function findDev(devEui) {
+        for (var i = 0; i < state.devList.length; i++) {
+            if (state.devList[i].dev_eui === devEui) return state.devList[i];
+        }
+        return null;
+    }
+
+    // ─── Devices Table: Filter, Sort, Paginate, Render ─────────────────
+    function applyDevFiltersAndRender() {
+        var q = state.devSearchQuery.toLowerCase();
+        if (q) {
+            state.devFiltered = state.devList.filter(function (dev) {
+                return (dev.name && dev.name.toLowerCase().indexOf(q) !== -1) ||
+                       (dev.dev_eui && dev.dev_eui.toLowerCase().indexOf(q) !== -1);
+            });
+        } else {
+            state.devFiltered = state.devList.slice();
+        }
+        var sk = state.devSort.key;
+        var sd = state.devSort.dir === "asc" ? 1 : -1;
+        state.devFiltered.sort(function (a, b) {
+            var va = (a[sk] || "").toString().toLowerCase();
+            var vb = (b[sk] || "").toString().toLowerCase();
+            if (va < vb) return -1 * sd;
+            if (va > vb) return 1 * sd;
+            return 0;
+        });
+        var totalPages = Math.max(1, Math.ceil(state.devFiltered.length / state.devPageSize));
+        if (state.devPage > totalPages) state.devPage = totalPages;
+        renderDevTable();
+        renderDevPagination();
+        renderDevTotalCount();
+        updateDevSortIcons();
+    }
+
+    function renderDevTable() {
+        devTableBody.innerHTML = "";
+        if (state.devFiltered.length === 0) {
+            devEmptyState.style.display = "block";
+            return;
+        }
+        devEmptyState.style.display = "none";
+        var start = (state.devPage - 1) * state.devPageSize;
+        var end = Math.min(start + state.devPageSize, state.devFiltered.length);
+        var pageItems = state.devFiltered.slice(start, end);
+        for (var i = 0; i < pageItems.length; i++) {
+            var dev = pageItems[i];
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-id", dev.dev_eui);
+            tr.innerHTML =
+                '<td><span class="org-name-primary">' + escapeHtml(dev.name) + '</span></td>' +
+                '<td><span class="id-cell">' + escapeHtml(dev.dev_eui) + '</span></td>' +
+                '<td><span class="id-cell">' + escapeHtml(dev.device_profile_id) + '</span></td>' +
+                '<td>' +
+                    '<div class="row-actions">' +
+                        '<button class="row-action-btn danger delete-btn" data-id="' + dev.dev_eui + '" title="Sil">🗑</button>' +
+                    '</div>' +
+                '</td>';
+            tr.addEventListener("click", (function (devEui) {
+                return function (e) {
+                    if (e.target.closest(".delete-btn")) { e.stopPropagation(); deleteDevice(devEui); return; }
+                };
+            })(dev.dev_eui));
+            devTableBody.appendChild(tr);
+        }
+    }
+
+    function renderDevPagination() {
+        devPaginationEl.innerHTML = "";
+        var total = state.devFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(total / state.devPageSize));
+        var current = state.devPage;
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "pagination-btn";
+        prevBtn.innerHTML = "< Geri";
+        prevBtn.disabled = (current <= 1);
+        prevBtn.addEventListener("click", function () { goToDevPage(current - 1); });
+        devPaginationEl.appendChild(prevBtn);
+        var startPage = Math.max(1, current - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (var p = startPage; p <= endPage; p++) {
+            var pageBtn = document.createElement("button");
+            pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.addEventListener("click", (function (pageNum) {
+                return function () { goToDevPage(pageNum); };
+            })(p));
+            devPaginationEl.appendChild(pageBtn);
+        }
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "pagination-btn";
+        nextBtn.innerHTML = "İleri >";
+        nextBtn.disabled = (current >= totalPages);
+        nextBtn.addEventListener("click", function () { goToDevPage(current + 1); });
+        devPaginationEl.appendChild(nextBtn);
+    }
+
+    function renderDevTotalCount() {
+        devTotalCountEl.innerHTML = "Toplam: <strong>" + state.devFiltered.length + "</strong> Cihaz";
+    }
+
+    function updateDevSortIcons() {
+        var allIcons = $$("[id^='dev-sort-icon-']");
+        for (var i = 0; i < allIcons.length; i++) {
+            allIcons[i].classList.remove("active");
+            allIcons[i].textContent = "▲";
+        }
+        var icon = $("#dev-sort-icon-" + state.devSort.key);
+        if (icon) {
+            icon.classList.add("active");
+            icon.textContent = state.devSort.dir === "asc" ? "▲" : "▼";
+        }
+    }
+
+    function goToDevPage(n) {
+        var totalPages = Math.max(1, Math.ceil(state.devFiltered.length / state.devPageSize));
+        if (n < 1 || n > totalPages) return;
+        state.devPage = n;
+        applyDevFiltersAndRender();
+    }
+
+    // ─── Devices Modal Controls ────────────────────────────────────────
+    function populateDevAppSelect() {
+        devApp.innerHTML = "";
+        if (state.applications.length === 0) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Önce uygulama oluşturun";
+            opt.disabled = true;
+            devApp.appendChild(opt);
+            return;
+        }
+        for (var i = 0; i < state.applications.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.applications[i].id;
+            opt.textContent = state.applications[i].name;
+            devApp.appendChild(opt);
+        }
+        onDevAppChange();
+    }
+
+    function populateDevFilterTenantSelect() {
+        if (!devTenantFilter) return;
+        var firstOpt = devTenantFilter.querySelector('option[value=""]');
+        devTenantFilter.innerHTML = "";
+        if (firstOpt) {
+            devTenantFilter.appendChild(firstOpt);
+        } else {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Tüm Tenant'lar";
+            devTenantFilter.appendChild(opt);
+        }
+        for (var i = 0; i < state.organizations.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.organizations[i].id;
+            opt.textContent = state.organizations[i].name;
+            devTenantFilter.appendChild(opt);
+        }
+    }
+
+    function onDevAppChange() {
+        var appId = devApp.value;
+        devProfile.innerHTML = "";
+        var app = findNet(appId);
+        if (!app) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Uygulama bulunamadı";
+            opt.disabled = true;
+            devProfile.appendChild(opt);
+            return;
+        }
+        var tenantId = app.tenant_id;
+        var filteredDps = state.dpList.filter(function (dp) {
+            return dp.tenant_id === tenantId;
+        });
+
+        if (filteredDps.length === 0) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Bu tenant için device profile yok";
+            opt.disabled = true;
+            devProfile.appendChild(opt);
+            return;
+        }
+
+        for (var i = 0; i < filteredDps.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = filteredDps[i].id;
+            opt.textContent = filteredDps[i].name;
+            devProfile.appendChild(opt);
+        }
+    }
+
+    function showDevModal() {
+        devEui.value = "";
+        devName.value = "";
+        devDescription.value = "";
+        populateDevAppSelect();
+        devModalOverlay.style.display = "flex";
+        setTimeout(function () { devEui.focus(); }, 100);
+    }
+
+    function hideDevModal() {
+        devModalOverlay.style.display = "none";
+    }
+
+    async function handleDevModalSave() {
+        var eui = devEui.value.trim();
+        var name = devName.value.trim();
+        var appId = devApp.value;
+        var dpId = devProfile.value;
+        if (!eui || eui.length !== 16) { showToast("DevEUI 16 hex karakter olmalıdır!", "error"); devEui.focus(); return; }
+        if (!name) { showToast("Cihaz adı zorunludur!", "error"); devName.focus(); return; }
+        if (!appId) { showToast("Uygulama seçimi zorunludur!", "error"); return; }
+        if (!dpId) { showToast("Device profile seçimi zorunludur!", "error"); return; }
+
+        devModalSave.disabled = true;
+        devModalSave.textContent = "Oluşturuluyor...";
+        var ok = await createDevice({
+            dev_eui: eui,
+            name: name,
+            application_id: appId,
+            device_profile_id: dpId,
+            description: devDescription.value.trim()
+        });
+        devModalSave.disabled = false;
+        devModalSave.textContent = "Kaydet";
+        if (ok) hideDevModal();
+    }
+
+    function generateRandomDevEUI() {
+        var hex = "0123456789abcdef";
+        var res = "";
+        for (var i = 0; i < 16; i++) {
+            res += hex.charAt(Math.floor(Math.random() * 16));
+        }
+        return res;
+    }
+
+    // ─── Event Bindings for Networks & Devices ─────────────────────────
+    function bindNetAndDevEvents() {
+        netSearchInput.addEventListener("input", function () {
+            state.appSearchQuery = this.value;
+            state.appPage = 1;
+            applyAppFiltersAndRender();
+        });
+
+        netPageSizeSelect.addEventListener("change", function () {
+            state.appPageSize = parseInt(this.value, 10) || 10;
+            state.appPage = 1;
+            applyAppFiltersAndRender();
+        });
+
+        btnNetRefresh.addEventListener("click", function () {
+            fetchApplications(state.netTenantFilter);
+        });
+
+        if (netTenantFilter) {
+            netTenantFilter.addEventListener("change", function () {
+                state.netTenantFilter = this.value;
+                state.appPage = 1;
+                fetchApplications(state.netTenantFilter);
+            });
+        }
+
+        // Network table sort
+        $$("#net-table thead th.sortable").forEach(function (th) {
+            th.addEventListener("click", function () {
+                var key = this.getAttribute("data-sort");
+                if (state.appSort.key === key) {
+                    state.appSort.dir = state.appSort.dir === "asc" ? "desc" : "asc";
+                } else {
+                    state.appSort.key = key;
+                    state.appSort.dir = "asc";
+                }
+                state.appPage = 1;
+                applyAppFiltersAndRender();
+            });
+        });
+
+        btnAddDev.addEventListener("click", showDevModal);
+
+        btnRandomDevEui.addEventListener("click", function () {
+            devEui.value = generateRandomDevEUI();
+        });
+
+        devApp.addEventListener("change", onDevAppChange);
+
+        devModalClose.addEventListener("click", hideDevModal);
+        devModalCancel.addEventListener("click", hideDevModal);
+        devModalSave.addEventListener("click", handleDevModalSave);
+        devModalOverlay.addEventListener("click", function (e) {
+            if (e.target === devModalOverlay) hideDevModal();
+        });
+
+        devSearchInput.addEventListener("input", function () {
+            state.devSearchQuery = this.value;
+            state.devPage = 1;
+            applyDevFiltersAndRender();
+        });
+
+        devPageSizeSelect.addEventListener("change", function () {
+            state.devPageSize = parseInt(this.value, 10) || 5;
+            state.devPage = 1;
+            applyDevFiltersAndRender();
+        });
+
+        btnDevRefresh.addEventListener("click", function () {
+            fetchDevices(state.devTenantFilter);
+        });
+
+        if (devTenantFilter) {
+            devTenantFilter.addEventListener("change", function () {
+                state.devTenantFilter = this.value;
+                state.devPage = 1;
+                fetchDevices(state.devTenantFilter);
+            });
+        }
+    }
+
+    bindNetAndDevEvents();
+
+    // ─── Simulation Console Helpers ─────────────────────────────────────
+    function appendConsoleLog(line) {
+        if (!consoleLogContainer) return;
+        var placeholder = consoleLogContainer.querySelector(".console-placeholder");
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        // Parse and translate UTC/RFC3339 timestamp to local timezone timestamp
+        var match = line.match(/^\[([^\]]+)\]/);
+        if (match) {
+            var rawTs = match[1];
+            var date = new Date(rawTs);
+            if (!isNaN(date.getTime())) {
+                var localTs = [
+                    date.getHours().toString().padStart(2, "0"),
+                    date.getMinutes().toString().padStart(2, "0"),
+                    date.getSeconds().toString().padStart(2, "0")
+                ].join(":");
+                line = line.replace(rawTs, localTs);
+            }
+        }
+
+        var el = document.createElement("div");
+        el.className = "console-log-line";
+
+        var lowerLine = line.toLowerCase();
+        if (lowerLine.includes(" level=error") || lowerLine.includes("error:") || lowerLine.includes(" level=fatal")) {
+            el.style.color = "var(--red)";
+        } else if (lowerLine.includes(" level=warn") || lowerLine.includes("warn:")) {
+            el.style.color = "var(--yellow)";
+        } else if (lowerLine.includes("send uplink") || lowerLine.includes("uplink frame sent") || lowerLine.includes("send otaa")) {
+            el.style.color = "var(--accent)";
+        }
+
+        el.textContent = line;
+        consoleLogContainer.appendChild(el);
+
+        while (consoleLogContainer.children.length > 300) {
+            consoleLogContainer.removeChild(consoleLogContainer.firstChild);
+        }
+
+        consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
+    }
+
+    function connectLogStream() {
+        var source = new EventSource("/api/logs/stream");
+
+        source.onmessage = function (event) {
+            appendConsoleLog(event.data);
+        };
+
+        source.onerror = function (err) {
+            console.error("SSE connection error:", err);
+            source.close();
+            setTimeout(connectLogStream, 3000);
+        };
+    }
+
+    function toggleConsole() {
+        if (!bottomConsole || !btnConsoleToggle) return;
+        if (bottomConsole.classList.contains("collapsed")) {
+            bottomConsole.classList.remove("collapsed");
+            bottomConsole.classList.add("expanded");
+            btnConsoleToggle.textContent = "Daralt";
+            var savedHeight = localStorage.getItem("console-height") || "320px";
+            bottomConsole.style.height = savedHeight;
+        } else {
+            bottomConsole.classList.remove("expanded");
+            bottomConsole.classList.add("collapsed");
+            btnConsoleToggle.textContent = "Genislet";
+            bottomConsole.style.height = "";
+        }
+    }
+
+    function bindConsoleEvents() {
+        if (btnConsoleToggle && bottomConsole) {
+            btnConsoleToggle.addEventListener("click", function (e) {
+                e.stopPropagation();
+                toggleConsole();
+            });
+
+            var header = document.querySelector(".console-header");
+            if (header) {
+                header.addEventListener("click", function (e) {
+                    if (e.target.closest(".console-btn")) return;
+                    toggleConsole();
+                });
+            }
+        }
+
+        if (consoleResizeHandle && bottomConsole) {
+            consoleResizeHandle.addEventListener("mousedown", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var startY = e.clientY;
+                var startHeight = bottomConsole.getBoundingClientRect().height;
+
+                bottomConsole.classList.add("resizing");
+
+                function onMouseMove(moveEvent) {
+                    var deltaY = startY - moveEvent.clientY;
+                    var newHeight = startHeight + deltaY;
+
+                    var maxHeight = window.innerHeight * 0.8;
+                    if (newHeight < 42) {
+                        newHeight = 42;
+                    } else if (newHeight > maxHeight) {
+                        newHeight = maxHeight;
+                    }
+
+                    bottomConsole.style.height = newHeight + "px";
+
+                    if (newHeight > 60) {
+                        if (bottomConsole.classList.contains("collapsed")) {
+                            bottomConsole.classList.remove("collapsed");
+                            bottomConsole.classList.add("expanded");
+                            if (btnConsoleToggle) btnConsoleToggle.textContent = "Daralt";
+                        }
+                    } else {
+                        if (bottomConsole.classList.contains("expanded")) {
+                            bottomConsole.classList.remove("expanded");
+                            bottomConsole.classList.add("collapsed");
+                            if (btnConsoleToggle) btnConsoleToggle.textContent = "Genislet";
+                        }
+                    }
+                }
+
+                function onMouseUp() {
+                    bottomConsole.classList.remove("resizing");
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+
+                    if (bottomConsole.classList.contains("expanded")) {
+                        var customHeight = bottomConsole.style.height;
+                        localStorage.setItem("console-height", customHeight);
+                    }
+                }
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            });
+        }
+
+        if (btnConsoleClear && consoleLogContainer) {
+            btnConsoleClear.addEventListener("click", function (e) {
+                e.stopPropagation();
+                consoleLogContainer.innerHTML = "";
+                if (state.currentStatus !== "running" && state.currentStatus !== "starting") {
+                    var ph = document.createElement("div");
+                    ph.className = "console-placeholder";
+                    ph.textContent = "Simulasyon baslatildiginda canli loglar burada gorunecektir.";
+                    consoleLogContainer.appendChild(ph);
+                }
+            });
+        }
+
+        // Top bar buttons
+        if (btnTopStart) {
+            btnTopStart.addEventListener("click", function (e) {
+                e.preventDefault();
+                startSimulation();
+            });
+        }
+        if (btnTopStop) {
+            btnTopStop.addEventListener("click", function (e) {
+                e.preventDefault();
+                stopSimulation();
+            });
+        }
+    }
+
+    function bindSettingsEvents() {
+        var generalFieldIds = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"];
+        generalFieldIds.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                // Load saved setting on startup
+                var localVal = localStorage.getItem("setting-" + id);
+                if (localVal !== null) {
+                    el.value = localVal;
+                }
+                // Save setting on change
+                el.addEventListener("input", function () {
+                    localStorage.setItem("setting-" + id, this.value.trim());
+                });
+            }
+        });
+    }
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
-        logEntry("Sistem başlatılıyor...", "info");
+        bindSettingsEvents();
+        // Load saved theme
+        var savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light") {
+            document.body.classList.add("light-theme");
+            if (themeToggle) themeToggle.textContent = "☀";
+        } else {
+            document.body.classList.remove("light-theme");
+            if (themeToggle) themeToggle.textContent = "🌙";
+        }
+
+        bindConsoleEvents();
+        connectLogStream();
 
         // Health check
         var online = await checkHealth();
@@ -1202,6 +2230,14 @@
         // Load device profiles
         populateDpFilterTenantSelect();
         await fetchDeviceProfiles("");
+
+        // Load applications
+        populateNetFilterTenantSelect();
+        populateDevFilterTenantSelect();
+        await fetchApplications(state.netTenantFilter);
+
+        // Load devices
+        await fetchDevices("");
 
         // Load current state
         await pollStatus();

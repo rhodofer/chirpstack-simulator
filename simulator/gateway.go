@@ -267,13 +267,15 @@ func (g *Gateway) sendDownlinkTxAck(pl gw.DownlinkTxAck) error {
 // addDevice adds the given device to the 'coverage' of the gateway.
 // This means that any downlink sent to the gateway will be forwarded to added
 // devices (which will each validate the DevAddr and MIC).
-func (g *Gateway) addDevice(devEUI lorawan.EUI64, c chan gw.DownlinkFrame) {
+func (g *Gateway) addDevice(devEUI lorawan.EUI64, appName, deviceName string, c chan gw.DownlinkFrame) {
 	g.deviceMux.Lock()
 	defer g.deviceMux.Unlock()
 
 	log.WithFields(log.Fields{
-		"dev_eui":    devEUI,
-		"gateway_id": g.gatewayID,
+		"dev_eui":     devEUI,
+		"app_name":    appName,
+		"device_name": deviceName,
+		"gateway_id":  g.gatewayID,
 	}).Info("simulator: add device to gateway")
 
 	g.devices[devEUI] = c

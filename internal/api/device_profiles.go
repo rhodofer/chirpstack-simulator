@@ -66,23 +66,40 @@ func handleListDeviceProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantID := r.URL.Query().Get("tenant_id")
-	req := &api.ListDeviceProfilesRequest{Limit: 100}
+	var tenants []string
 	if tenantID != "" {
-		req.TenantId = tenantID
+		tenants = append(tenants, tenantID)
+	} else {
+		respTenants, err := as.Tenant().List(context.Background(), &api.ListTenantsRequest{Limit: 100})
+		if err != nil {
+			log.WithError(err).Error("device-profiles: list tenants error")
+			writeJSON(w, http.StatusBadGateway, map[string]string{
+				"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			})
+			return
+		}
+		for _, t := range respTenants.GetResult() {
+			tenants = append(tenants, t.GetId())
+		}
 	}
 
-	resp, err := as.DeviceProfile().List(context.Background(), req)
-	if err != nil {
-		log.WithError(err).Error("device-profiles: list error")
-		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
-		})
-		return
-	}
-
-	profiles := make([]DeviceProfile, 0, len(resp.GetResult()))
-	for _, dp := range resp.GetResult() {
-		profiles = append(profiles, mapDeviceProfile(dp))
+	profiles := []DeviceProfile{}
+	for _, tID := range tenants {
+		req := &api.ListDeviceProfilesRequest{Limit: 100, TenantId: tID}
+		resp, err := as.DeviceProfile().List(context.Background(), req)
+		if err != nil {
+			log.WithError(err).Warnf("device-profiles: list error for tenant %s", tID)
+			continue
+		}
+		for _, dp := range resp.GetResult() {
+			// Fetch full device profile details to get full DeviceProfile struct
+			fullDp, err := as.DeviceProfile().Get(context.Background(), &api.GetDeviceProfileRequest{Id: dp.GetId()})
+			if err != nil {
+				log.WithError(err).WithField("id", dp.GetId()).Error("device-profiles: list get detail error")
+				continue
+			}
+			profiles = append(profiles, mapDeviceProfile(fullDp.GetDeviceProfile()))
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

@@ -20,10 +20,12 @@ type Server struct {
 
 // New creates a new HTTP API server instance.
 func New(bind string) *Server {
+	InitLogHook()
 	mux := http.NewServeMux()
 	state := GetState()
 
 	// API endpoints
+	mux.HandleFunc("/api/logs/stream", handleLogStream)
 	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		handleStatus(w, r, state)
 	})
@@ -77,6 +79,44 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
+	})
+
+	mux.HandleFunc("/api/applications", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleListApplications(w, r)
+		} else if r.Method == http.MethodPost {
+			handleCreateApplication(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	})
+
+	mux.HandleFunc("/api/applications/", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Path[len("/api/applications/"):]
+		if id == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application id is required"})
+			return
+		}
+		handleDeleteApplication(w, r, id)
+	})
+
+	mux.HandleFunc("/api/devices", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleListDevices(w, r)
+		} else if r.Method == http.MethodPost {
+			handleCreateDevice(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	})
+
+	mux.HandleFunc("/api/devices/", func(w http.ResponseWriter, r *http.Request) {
+		devEUI := r.URL.Path[len("/api/devices/"):]
+		if devEUI == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
+			return
+		}
+		handleDeleteDevice(w, r, devEUI)
 	})
 
 	// UI — serves embedded frontend files at root path

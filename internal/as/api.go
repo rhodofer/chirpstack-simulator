@@ -83,6 +83,11 @@ func Setup(c config.Config) error {
 	return nil
 }
 
+// IsConnected reports whether the gRPC client connection is established.
+func IsConnected() bool {
+	return clientConn != nil
+}
+
 func Tenant() api.TenantServiceClient {
 	return api.NewTenantServiceClient(clientConn)
 }

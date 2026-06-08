@@ -67,6 +67,10 @@ type Config struct {
 	Prometheus struct {
 		Bind string `mapstructure:"bind"`
 	} `mapstructure:"prometheus"`
+
+	HTTP struct {
+		Bind string `mapstructure:"bind"`
+	} `mapstructure:"http"`
 }
 
 type DeviceConfig struct {
