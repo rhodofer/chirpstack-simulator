@@ -2415,62 +2415,69 @@
     // ─── Console Custom Theme Settings ─────────────────────────────────
     function initConsoleTheme() {
         var presets = {
+            "falt-cosmic": {
+                bg: "#070913", fg: "#e2e8f0", cu: "#ff007f", ca: "#070913", sb: "#1e1b4b", sf: "#ffffff",
+                0: "#141726", 1: "#ff5c00", 2: "#00ff87", 3: "#ffdf00", 4: "#0052ff",
+                5: "#ff007f", 6: "#00f2fe", 7: "#f1f5f9", 8: "#1f243c", 9: "#ff7b30",
+                10: "#33ff9e", 11: "#ffe533", 12: "#3375ff", 13: "#ff3399", 14: "#33f5ff",
+                15: "#ffffff"
+            },
             argonaut: {
                 bg: "#0e1019", fg: "#fffaf4", cu: "#ff0018", ca: "#0e1019", sb: "#002a3b", sf: "#ffffff",
-                ansi0: "#232323", ansi1: "#ff000f", ansi2: "#8ce10a", ansi3: "#ffb900", ansi4: "#008df8",
-                ansi5: "#6c43a6", ansi6: "#00d8eb", ansi7: "#ffffff", ansi8: "#444444", ansi9: "#ff273f",
-                ansi10: "#abe15b", ansi11: "#ffd242", ansi12: "#0092ff", ansi13: "#9a5feb", ansi14: "#67fff0",
-                ansi15: "#ffffff"
+                0: "#232323", 1: "#ff000f", 2: "#8ce10a", 3: "#ffb900", 4: "#008df8",
+                5: "#6c43a6", 6: "#00d8eb", 7: "#ffffff", 8: "#444444", 9: "#ff273f",
+                10: "#abe15b", 11: "#ffd242", 12: "#0092ff", 13: "#9a5feb", 14: "#67fff0",
+                15: "#ffffff"
             },
             afterglow: {
                 bg: "#151515", fg: "#d6dbe5", cu: "#d6dbe5", ca: "#151515", sb: "#303030", sf: "#d6dbe5",
-                ansi0: "#1c1c1c", ansi1: "#a53d3d", ansi2: "#7b963b", ansi3: "#cca04c", ansi4: "#487bb0",
-                ansi5: "#9e5a8a", ansi6: "#44a69e", ansi7: "#d0d0d0", ansi8: "#505050", ansi9: "#b84c4c",
-                ansi10: "#8fa850", ansi11: "#e0b860", ansi12: "#5c90c4", ansi13: "#b26e9e", ansi14: "#58bab0",
-                ansi15: "#f5f5f5"
+                0: "#1c1c1c", 1: "#a53d3d", 2: "#7b963b", 3: "#cca04c", 4: "#487bb0",
+                5: "#9e5a8a", 6: "#44a69e", 7: "#d0d0d0", 8: "#505050", 9: "#b84c4c",
+                10: "#8fa850", 11: "#e0b860", 12: "#5c90c4", 13: "#b26e9e", 14: "#58bab0",
+                15: "#f5f5f5"
             },
             monokai: {
                 bg: "#272822", fg: "#f8f8f2", cu: "#f8f8f0", ca: "#272822", sb: "#49483e", sf: "#f8f8f2",
-                ansi0: "#272822", ansi1: "#f92672", ansi2: "#a6e22e", ansi3: "#f4bf75", ansi4: "#66d9ef",
-                ansi5: "#ae81ff", ansi6: "#a1efe4", ansi7: "#f8f8f2", ansi8: "#75715e", ansi9: "#f92672",
-                ansi10: "#a6e22e", ansi11: "#f4bf75", ansi12: "#66d9ef", ansi13: "#ae81ff", ansi14: "#a1efe4",
-                ansi15: "#f9f8f5"
+                0: "#272822", 1: "#f92672", 2: "#a6e22e", 3: "#f4bf75", 4: "#66d9ef",
+                5: "#ae81ff", 6: "#a1efe4", 7: "#f8f8f2", 8: "#75715e", 9: "#f92672",
+                10: "#a6e22e", 11: "#f4bf75", 12: "#66d9ef", 13: "#ae81ff", 14: "#a1efe4",
+                15: "#f9f8f5"
             },
             dracula: {
                 bg: "#282a36", fg: "#f8f8f2", cu: "#f8f8f2", ca: "#282a36", sb: "#44475a", sf: "#f8f8f2",
-                ansi0: "#21222c", ansi1: "#ff5555", ansi2: "#50fa7b", ansi3: "#f1fa8c", ansi4: "#8be9fd",
-                ansi5: "#ff79c6", ansi6: "#bd93f9", ansi7: "#f8f8f2", ansi8: "#6272a4", ansi9: "#ff6e6e",
-                ansi10: "#69ff94", ansi11: "#ffffa5", ansi12: "#d6acff", ansi13: "#ff92df", ansi14: "#a4ffff",
-                ansi15: "#ffffff"
+                0: "#21222c", 1: "#ff5555", 2: "#50fa7b", 3: "#f1fa8c", 4: "#8be9fd",
+                5: "#ff79c6", 6: "#bd93f9", 7: "#f8f8f2", 8: "#6272a4", 9: "#ff6e6e",
+                10: "#69ff94", 11: "#ffffa5", 12: "#d6acff", 13: "#ff92df", 14: "#a4ffff",
+                15: "#ffffff"
             },
             "solarized-dark": {
                 bg: "#002b36", fg: "#839496", cu: "#839496", ca: "#002b36", sb: "#073642", sf: "#93a1a1",
-                ansi0: "#073642", ansi1: "#dc322f", ansi2: "#859900", ansi3: "#b58900", ansi4: "#268bd2",
-                ansi5: "#d33682", ansi6: "#2aa198", ansi7: "#eee8d5", ansi8: "#002b36", ansi9: "#cb4b16",
-                ansi10: "#586e75", ansi11: "#657b83", ansi12: "#839496", ansi13: "#6c71c4", ansi14: "#93a1a1",
-                ansi15: "#fdf6e3"
+                0: "#073642", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
+                5: "#d33682", 6: "#2aa198", 7: "#eee8d5", 8: "#002b36", 9: "#cb4b16",
+                10: "#586e75", 11: "#657b83", 12: "#839496", 13: "#6c71c4", 14: "#93a1a1",
+                15: "#fdf6e3"
             },
             "solarized-light": {
                 bg: "#fdf6e3", fg: "#586e75", cu: "#586e75", ca: "#fdf6e3", sb: "#eee8d5", sf: "#586e75",
-                ansi0: "#eee8d5", ansi1: "#dc322f", ansi2: "#859900", ansi3: "#b58900", ansi4: "#268bd2",
-                ansi5: "#d33682", ansi6: "#2aa198", ansi7: "#073642", ansi8: "#fdf6e3", ansi9: "#cb4b16",
-                ansi10: "#93a1a1", ansi11: "#839496", ansi12: "#657b83", ansi13: "#6c71c4", ansi14: "#586e75",
-                ansi15: "#073642"
+                0: "#eee8d5", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
+                5: "#d33682", 6: "#2aa198", 7: "#073642", 8: "#fdf6e3", 9: "#cb4b16",
+                10: "#93a1a1", 11: "#839496", 12: "#657b83", 13: "#6c71c4", 14: "#586e75",
+                15: "#073642"
             },
             default: {
                 bg: "#080a0f", fg: "#e2e8f0", cu: "#e2e8f0", ca: "#080a0f", sb: "#2563eb", sf: "#ffffff",
-                ansi0: "#1e293b", ansi1: "#ef4444", ansi2: "#22c55e", ansi3: "#eab308", ansi4: "#3b82f6",
-                ansi5: "#a855f7", ansi6: "#06b6d4", ansi7: "#e2e8f0", ansi8: "#475569", ansi9: "#f87171",
-                ansi10: "#4ade80", ansi11: "#facc15", ansi12: "#60a5fa", ansi13: "#c084fc", ansi14: "#22d3ee",
-                ansi15: "#ffffff"
+                0: "#1e293b", 1: "#ef4444", 2: "#22c55e", 3: "#eab308", 4: "#3b82f6",
+                5: "#a855f7", 6: "#06b6d4", 7: "#e2e8f0", 8: "#475569", 9: "#f87171",
+                10: "#4ade80", 11: "#facc15", 12: "#60a5fa", 13: "#c084fc", 14: "#22d3ee",
+                15: "#ffffff"
             }
         };
 
         var keys = ["fg", "bg", "cu", "ca", "sb", "sf", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"];
-        var currentPreset = "argonaut";
+        var currentPreset = "falt-cosmic";
 
         // Load saved theme
-        var activeTheme = Object.assign({}, presets.argonaut);
+        var activeTheme = Object.assign({}, presets["falt-cosmic"]);
         var savedTheme = localStorage.getItem("console-custom-theme");
         var savedPresetName = localStorage.getItem("console-custom-preset");
         if (savedTheme) {
@@ -2541,8 +2548,8 @@
         var btnReset = $("#btn-console-theme-reset");
         if (btnReset) {
             btnReset.addEventListener("click", function () {
-                currentPreset = "argonaut";
-                activeTheme = Object.assign({}, presets.argonaut);
+                currentPreset = "falt-cosmic";
+                activeTheme = Object.assign({}, presets["falt-cosmic"]);
                 applyTheme(activeTheme);
                 updateInputs(activeTheme);
             });
