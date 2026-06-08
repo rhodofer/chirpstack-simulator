@@ -1488,50 +1488,199 @@ body.light-theme .console-log-line {
     border-bottom: 1px solid rgba(0,0,0,0.03);
 }
 
-/* ─── Login Overlay & Card ────────────────────────────────────────── */
+/* ─── Landing & Login Page Styles ─────────────────────────────────── */
 .login-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--bg);
+    background: radial-gradient(circle at 10% 20%, #111827 0%, #030712 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    overflow-y: auto;
+    padding: 24px;
 }
 
-.login-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 36px;
+.landing-container {
+    position: relative;
+    display: flex;
+    flex-direction: row;
     width: 100%;
-    max-width: 400px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    max-width: 1100px;
+    background: rgba(17, 24, 39, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    overflow: hidden;
+    z-index: 2;
 }
 
-.login-header {
-    text-align: center;
-    margin-bottom: 28px;
+/* Glow Orbs */
+.glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.login-logo {
-    font-size: 2.5rem;
-    display: inline-block;
-    margin-bottom: 12px;
+.orb-1 {
+    width: 300px;
+    height: 300px;
+    background: #3b82f6;
+    top: -50px;
+    left: -50px;
 }
 
-.login-header h2 {
-    color: var(--text);
-    font-size: 1.6rem;
-    font-weight: 700;
+.orb-2 {
+    width: 400px;
+    height: 400px;
+    background: #6366f1;
+    bottom: -100px;
+    right: -100px;
+}
+
+/* Left Hero section */
+.landing-hero {
+    flex: 1.2;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative;
+    z-index: 3;
+}
+
+.landing-logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.landing-logo-icon {
+    font-size: 2rem;
+    color: #6366f1;
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+}
+
+.landing-logo-text {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.landing-title {
+    font-size: 2.3rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 20px;
+    letter-spacing: -0.8px;
+    background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.landing-subtitle {
+    font-size: 1rem;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+.landing-features {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.landing-feature-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 16px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.landing-feature-card:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+    transform: translateY(-2px);
+}
+
+.landing-feature-card .feat-icon {
+    font-size: 1.3rem;
+    padding: 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 8px;
+    color: #6366f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+}
+
+.landing-feature-card .feat-content h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f1f5f9;
     margin-bottom: 4px;
 }
 
-.login-header p {
-    color: var(--text-dim);
+.landing-feature-card .feat-content p {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+/* Right Login section */
+.landing-login-panel {
+    flex: 0.9;
+    padding: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 3;
+    background: rgba(3, 7, 18, 0.15);
+}
+
+.landing-login-panel .login-card {
+    background: transparent;
+    border: none;
+    padding: 0;
+    max-width: 100%;
+    box-shadow: none;
+}
+
+.landing-login-panel .login-header {
+    text-align: left;
+    margin-bottom: 28px;
+}
+
+.landing-login-panel .login-header h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.landing-login-panel .login-header p {
+    color: #94a3b8;
     font-size: 0.88rem;
 }
 
@@ -1552,6 +1701,21 @@ body.light-theme .console-log-line {
     font-size: 0.95rem;
     font-weight: 600;
     margin-top: 8px;
+}
+
+/* Responsive adjustment */
+@media (max-width: 900px) {
+    .landing-container {
+        flex-direction: column;
+    }
+    .landing-hero {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 40px 24px;
+    }
+    .landing-login-panel {
+        padding: 40px 24px;
+    }
 }
 
 /* Logout Button in Secondary Sidebar Footer */
