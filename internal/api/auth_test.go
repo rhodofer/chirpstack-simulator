@@ -10,8 +10,8 @@ import (
 )
 
 func TestHandleLogin(t *testing.T) {
-	// 1. Success case: admin / admin
-	body, _ := json.Marshal(LoginRequest{Username: "admin", Password: "admin"})
+	// 1. Success case: admin@falt.com / admin123
+	body, _ := json.Marshal(LoginRequest{Username: "admin@falt.com", Password: "admin123"})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -40,7 +40,7 @@ func TestHandleLogin(t *testing.T) {
 	}
 
 	// 2. Failure case: wrong password
-	bodyWrong, _ := json.Marshal(LoginRequest{Username: "admin", Password: "wrong"})
+	bodyWrong, _ := json.Marshal(LoginRequest{Username: "admin@falt.com", Password: "wrong"})
 	reqWrong := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(bodyWrong))
 	wWrong := httptest.NewRecorder()
 

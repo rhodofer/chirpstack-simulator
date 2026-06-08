@@ -27,7 +27,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Username == "admin" && req.Password == "admin" {
+	if req.Username == "admin@falt.com" && req.Password == "admin123" {
 		cookie := &http.Cookie{
 			Name:     "sim_session",
 			Value:    sessionToken,
