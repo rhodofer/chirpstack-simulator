@@ -2415,6 +2415,13 @@
     // ─── Console Custom Theme Settings ─────────────────────────────────
     function initConsoleTheme() {
         var presets = {
+            argonaut: {
+                bg: "#0e1019", fg: "#fffaf4", cu: "#ff0018", ca: "#0e1019", sb: "#002a3b", sf: "#ffffff",
+                ansi0: "#232323", ansi1: "#ff000f", ansi2: "#8ce10a", ansi3: "#ffb900", ansi4: "#008df8",
+                ansi5: "#6c43a6", ansi6: "#00d8eb", ansi7: "#ffffff", ansi8: "#444444", ansi9: "#ff273f",
+                ansi10: "#abe15b", ansi11: "#ffd242", ansi12: "#0092ff", ansi13: "#9a5feb", ansi14: "#67fff0",
+                ansi15: "#ffffff"
+            },
             afterglow: {
                 bg: "#151515", fg: "#d6dbe5", cu: "#d6dbe5", ca: "#151515", sb: "#303030", sf: "#d6dbe5",
                 ansi0: "#1c1c1c", ansi1: "#a53d3d", ansi2: "#7b963b", ansi3: "#cca04c", ansi4: "#487bb0",
@@ -2460,10 +2467,10 @@
         };
 
         var keys = ["fg", "bg", "cu", "ca", "sb", "sf", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"];
-        var currentPreset = "afterglow";
+        var currentPreset = "argonaut";
 
         // Load saved theme
-        var activeTheme = Object.assign({}, presets.afterglow);
+        var activeTheme = Object.assign({}, presets.argonaut);
         var savedTheme = localStorage.getItem("console-custom-theme");
         var savedPresetName = localStorage.getItem("console-custom-preset");
         if (savedTheme) {
@@ -2534,8 +2541,8 @@
         var btnReset = $("#btn-console-theme-reset");
         if (btnReset) {
             btnReset.addEventListener("click", function () {
-                currentPreset = "afterglow";
-                activeTheme = Object.assign({}, presets.afterglow);
+                currentPreset = "argonaut";
+                activeTheme = Object.assign({}, presets.argonaut);
                 applyTheme(activeTheme);
                 updateInputs(activeTheme);
             });
