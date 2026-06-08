@@ -53,6 +53,8 @@
     // Modal
     var modalOverlay      = $("#modal-overlay");
     var modalOrgName      = $("#modal-org-name");
+    var modalOrgId        = $("#modal-org-id");
+    var btnRandomId       = $("#btn-random-id");
     var modalOrgDesc      = $("#modal-org-desc");
     var modalClose        = $("#modal-close");
     var modalCancel       = $("#modal-cancel");
@@ -655,8 +657,17 @@
     }
 
     // ─── Modal Controls ────────────────────────────────────────────────
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0;
+            var v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     function showAddModal() {
         modalOrgName.value = "";
+        modalOrgId.value = "";
         modalOrgDesc.value = "";
         modalOverlay.style.display = "flex";
         setTimeout(function () { modalOrgName.focus(); }, 100);
@@ -788,6 +799,12 @@
     modalClose.addEventListener("click", hideAddModal);
     modalCancel.addEventListener("click", hideAddModal);
     modalSave.addEventListener("click", handleModalSave);
+    if (btnRandomId) {
+        btnRandomId.addEventListener("click", function () {
+            modalOrgId.value = generateUUID();
+            modalOrgId.focus();
+        });
+    }
     modalOverlay.addEventListener("click", function (e) {
         if (e.target === modalOverlay) hideAddModal();
     });
