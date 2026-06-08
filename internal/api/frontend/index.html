@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChirpStack Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+
+        <!-- ═══ SECONDARY SIDEBAR (256px, alt menü + liste) ══════════════ -->
+        <aside class="secondary-sidebar" id="secondary-sidebar">
+            <div class="secondary-sidebar-header">
+                <div class="secondary-sidebar-brand">
+                    <div class="secondary-brand-icon">⚡</div>
+                    <span class="secondary-brand-text">iofeSaaS</span>
+                </div>
+            </div>
+
+            <nav class="secondary-nav">
+                <!-- Genel Bakış -->
+                <div class="secondary-nav-group open">
+                    <div class="secondary-nav-link active" data-tab="overview">
+                        <span class="nav-icon">☰</span>
+                        <span>Genel Bakış</span>
+                    </div>
+                </div>
+
+                <!-- Dashboardlar -->
+                <div class="secondary-nav-group">
+                    <div class="secondary-nav-link" data-tab="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboardlar</span>
+                        <span class="coming-soon">Yakında</span>
+                    </div>
+                </div>
+
+                <!-- Yönetim (açılır menü) -->
+                <div class="secondary-nav-group open">
+                    <div class="secondary-nav-group-header" data-group="yonetim">
+                        <span class="secondary-nav-group-label">
+                            <span class="group-icon">🏢</span>
+                            Yönetim
+                        </span>
+                        <span class="secondary-nav-group-chevron">▶</span>
+                    </div>
+                    <div class="secondary-nav-group-items">
+                        <div class="secondary-nav-link active" data-tab="overview">
+                            <span class="nav-icon">•</span>
+                            <span>Organizasyonlar</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Birimler</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Varlıklar</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Kullanıcı Yönetimi</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uygulamalar (açılır menü) -->
+                <div class="secondary-nav-group">
+                    <div class="secondary-nav-group-header" data-group="uygulamalar">
+                        <span class="secondary-nav-group-label">
+                            <span class="group-icon">⚙</span>
+                            Uygulamalar
+                        </span>
+                        <span class="secondary-nav-group-chevron">▶</span>
+                    </div>
+                    <div class="secondary-nav-group-items">
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Ağ Uygulamaları</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Ağ Geçitleri</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Cihazlar</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Cihaz Profilleri</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Varlık Profilleri</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                        <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                            <span class="nav-icon">•</span>
+                            <span>Gruplar</span>
+                            <span class="coming-soon">Yakında</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Veri & Analiz -->
+                <div class="secondary-nav-group">
+                    <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                        <span class="nav-icon">📊</span>
+                        <span>Veri & Analiz</span>
+                        <span class="coming-soon">Yakında</span>
+                    </div>
+                </div>
+
+                <!-- Canlı Konsol -->
+                <div class="secondary-nav-group">
+                    <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                        <span class="nav-icon">▶</span>
+                        <span>Canlı Konsol</span>
+                        <span class="coming-soon">Yakında</span>
+                    </div>
+                </div>
+
+                <!-- Güvenlik & Yetki -->
+                <div class="secondary-nav-group">
+                    <div class="secondary-nav-link" style="opacity:0.5; pointer-events:none;">
+                        <span class="nav-icon">🛡</span>
+                        <span>Güvenlik & Yetki</span>
+                        <span class="coming-soon">Yakında</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="secondary-sidebar-footer">
+                <span class="version-info">v<span id="version-text">—</span></span>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN ══════════════════════════════════════════════════════ -->
+        <main class="main">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <button class="hamburger-btn" id="hamburger-btn">☰</button>
+                    <div class="page-title-bar" id="page-title-bar">Organizasyonlar</div>
+                </div>
+                <div class="top-bar-right">
+                    <span id="connection-badge" class="badge badge-offline">Bağlantı Yok</span>
+                    <span id="status-badge" class="badge badge-idle">IDLE</span>
+                    <span id="uptime-badge" class="badge badge-uptime" style="display:none;"></span>
+                    <button class="theme-toggle" id="theme-toggle" title="Tema Değiştir">🌙</button>
+                </div>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="main-scroll">
+
+                <!-- ═══ TAB: GENEL BAKIŞ (Organizasyonlar) ═══════════════════ -->
+                <div class="tab-content active" id="content-overview">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Organizasyonlar</h1>
+                            <p class="page-subtitle">Sistemdeki ana organizasyonları ve üst çatı yapıları yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <button class="btn btn-primary btn-sm" id="btn-add-org">
+                                <span class="btn-icon">+</span> Yeni Organizasyon Ekle
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="search-input" placeholder="Organizasyon ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="table-wrapper">
+                        <table class="data-table" id="org-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        Organizasyon Adı <span class="sort-icon" id="sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="status">
+                                        Durum <span class="sort-icon" id="sort-icon-status">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="id">
+                                        ID <span class="sort-icon" id="sort-icon-id">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="date">
+                                        Kayıt Tarihi <span class="sort-icon" id="sort-icon-date">▲</span>
+                                    </th>
+                                    <th style="text-align:right;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="org-table-body">
+                                <!-- JS tarafından doldurulacak -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty state -->
+                        <div class="empty-state" id="empty-state" style="display:none;">
+                            <div class="empty-state-icon">📭</div>
+                            <div class="empty-state-title">Henüz organizasyon yok</div>
+                            <div class="empty-state-text">"Yeni Organizasyon Ekle" butonuyla başlayın.</div>
+                        </div>
+                    </div>
+
+                    <!-- Table Footer / Pagination -->
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label">Sayfa Başına:</span>
+                                <select class="page-size-select" id="page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="total-count">
+                                Toplam: <strong>0</strong> Organizasyon
+                            </span>
+                        </div>
+                        <div class="pagination" id="pagination">
+                            <!-- JS tarafından doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB: CİHAZLAR (Placeholder) ══════════════════════════ -->
+                <div class="tab-content" id="content-devices">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Cihazlar</h1>
+                            <p class="page-subtitle">Tüm LoRaWAN cihazlarını görüntüleyin ve yönetin.</p>
+                        </div>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <div class="empty-state-title">Cihaz Yönetimi Yakında</div>
+                        <div class="empty-state-text">Bu bölüm şu anda geliştirme aşamasındadır.</div>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB: AYARLAR (Placeholder) ═══════════════════════════ -->
+                <div class="tab-content" id="content-settings">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Ayarlar</h1>
+                            <p class="page-subtitle">Sistem ve bağlantı ayarlarını görüntüleyin.</p>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-label">Sunucu Durumu</div>
+                            <div class="stat-value" id="stat-server-status">—</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Versiyon</div>
+                            <div class="stat-value" id="stat-server-version">—</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Simülasyon Durumu</div>
+                            <div class="stat-value" id="stat-sim-status">—</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Uptime</div>
+                            <div class="stat-value" id="stat-uptime">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Log Panel -->
+                    <div class="table-wrapper" style="margin-top:16px;">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border-soft);">
+                            <h2 style="font-size:0.95rem; font-weight:600;">Sistem Logları</h2>
+                        </div>
+                        <div class="log-container" id="log-container"></div>
+                    </div>
+                </div>
+
+            </div><!-- /.main-scroll -->
+        </main>
+    </div>
+
+    <!-- ═══ DRAWER (Simülasyon Ayarları) ════════════════════════════════ -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="drawer" id="org-drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <div class="drawer-title" id="drawer-title">Organizasyon</div>
+                <div class="drawer-subtitle" id="drawer-subtitle">Simülasyon ayarlarını yapılandırın</div>
+            </div>
+            <button class="drawer-close" id="drawer-close">✕</button>
+        </div>
+        <div class="drawer-body">
+            <form id="config-form" autocomplete="off">
+                <fieldset>
+                    <legend>ChirpStack Bağlantı</legend>
+                    <div class="form-group">
+                        <label for="tenant_id">Tenant ID</label>
+                        <input type="text" id="tenant_id" name="tenant_id" placeholder="ChirpStack Tenant UUID" readonly>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="app_name">Uygulama Adı</label>
+                            <input type="text" id="app_name" name="app_name" placeholder="simulasyon">
+                        </div>
+                        <div class="form-group">
+                            <label for="device_prefix">Cihaz Öneki</label>
+                            <input type="text" id="device_prefix" name="device_prefix" placeholder="sim-dev">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="duration">Süre (0=süresiz)</label>
+                            <input type="text" id="duration" name="duration" placeholder="0s">
+                        </div>
+                        <div class="form-group">
+                            <label for="activation_time">Aktivasyon Süresi</label>
+                            <input type="text" id="activation_time" name="activation_time" placeholder="30s">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Cihaz & Gateway</legend>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="device_count">Cihaz Sayısı</label>
+                            <input type="number" id="device_count" name="device_count" min="1" max="1000" placeholder="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="gateway_count">Gateway Sayısı</label>
+                            <input type="number" id="gateway_count" name="gateway_count" min="1" max="100" placeholder="2">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="uplink_interval">Uplink Aralığı</label>
+                            <input type="text" id="uplink_interval" name="uplink_interval" placeholder="30s">
+                        </div>
+                        <div class="form-group">
+                            <label for="f_port">FPort</label>
+                            <input type="number" id="f_port" name="f_port" min="1" max="223" placeholder="10">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="payload">Payload (hex)</label>
+                        <input type="text" id="payload" name="payload" placeholder="010203">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>RF Parametreleri</legend>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="frequency">Frekans (Hz)</label>
+                            <input type="number" id="frequency" name="frequency" placeholder="868100000">
+                        </div>
+                        <div class="form-group">
+                            <label for="bandwidth">Bant Genişliği (Hz)</label>
+                            <input type="number" id="bandwidth" name="bandwidth" placeholder="125000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="spreading_factor">Spreading Factor</label>
+                        <input type="number" id="spreading_factor" name="spreading_factor" min="7" max="12" placeholder="7">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>MQTT Topic Şablonları</legend>
+                    <div class="form-group">
+                        <label for="event_topic_template">Event Topic</label>
+                        <input type="text" id="event_topic_template" name="event_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="command_topic_template">Command Topic</label>
+                        <input type="text" id="command_topic_template" name="command_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn btn-secondary btn-sm" id="btn-start">
+                ▶ Başlat
+            </button>
+            <button class="btn btn-danger btn-sm" id="btn-stop" disabled>
+                ⏹ Durdur
+            </button>
+        </div>
+    </aside>
+
+    <!-- ═══ MODAL (Yeni Organizasyon) ═══════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Yeni Organizasyon Ekle</h3>
+                <button class="modal-close-btn" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modal-org-name">Organizasyon Adı *</label>
+                    <input type="text" id="modal-org-name" placeholder="Örn: Test Organizasyonu" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="modal-org-desc">Açıklama (isteğe bağlı)</label>
+                    <input type="text" id="modal-org-desc" placeholder="Örn: Test amaçlı organizasyon">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="modal-cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST ═══════════════════════════════════════════════════════ -->
+    <div class="toast" id="toast" style="display:none;"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
