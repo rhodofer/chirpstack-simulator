@@ -60,6 +60,31 @@
     var modalCancel       = $("#modal-cancel");
     var modalSave         = $("#modal-save");
 
+    // Device Profile tab
+    var dpTableBody         = $("#dp-table-body");
+    var dpEmptyState        = $("#dp-empty-state");
+    var dpTotalCountEl      = $("#dp-total-count");
+    var dpSearchInput       = $("#dp-search-input");
+    var btnDpRefresh        = $("#btn-dp-refresh");
+    var dpPageSizeSelect    = $("#dp-page-size-select");
+    var dpPaginationEl      = $("#dp-pagination");
+    var dpTenantFilter      = $("#dp-tenant-select");
+    var btnAddDp            = $("#btn-add-dp");
+    var dpModalOverlay      = $("#dp-modal-overlay");
+    var dpName              = $("#dp-name");
+    var dpTenant            = $("#dp-tenant");
+    var dpDescription       = $("#dp-description");
+    var dpRegion            = $("#dp-region");
+    var dpMacVersion        = $("#dp-mac-version");
+    var dpRegParams         = $("#dp-reg-params");
+    var dpAdrAlg            = $("#dp-adr-alg");
+    var dpSupportsOtaa      = $("#dp-supports-otaa");
+    var dpSupportsClassB    = $("#dp-supports-class-b");
+    var dpSupportsClassC    = $("#dp-supports-class-c");
+    var dpModalClose        = $("#dp-modal-close");
+    var dpModalCancel       = $("#dp-modal-cancel");
+    var dpModalSave         = $("#dp-modal-save");
+
     // Settings tab
     var statServerStatus  = $("#stat-server-status");
     var statServerVersion = $("#stat-server-version");
@@ -82,7 +107,14 @@
         currentTab: "overview",
         drawerOpen: false,
         drawerMode: "edit",
-        currentStatus: "idle"
+        currentStatus: "idle",
+        dpList: [],
+        dpFiltered: [],
+        dpSort: { key: "name", dir: "asc" },
+        dpPage: 1,
+        dpPageSize: 5,
+        dpSearchQuery: "",
+        dpTenantFilter: ""
     };
 
     var pollTimer = null;
@@ -296,6 +328,277 @@
             logEntry("Organizasyon silme hatası: " + errMsg, "error");
             showToast(errMsg, "error");
         }
+    }
+
+    // ─── Device Profile API ────────────────────────────────────────────
+    async function fetchDeviceProfiles(tenantId) {
+        var url = "/api/device-profiles";
+        if (tenantId) url += "?tenant_id=" + encodeURIComponent(tenantId);
+        var r = await api("GET", url);
+        if (r.ok && r.data.device_profiles) {
+            state.dpList = r.data.device_profiles;
+        } else {
+            state.dpList = [];
+            var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
+            logEntry("Device profilleri yüklenemedi: " + errMsg, "error");
+        }
+        applyDpFiltersAndRender();
+    }
+
+    async function createDeviceProfile(data) {
+        var r = await api("POST", "/api/device-profiles", data);
+        if (r.ok) {
+            var dp = r.data;
+            logEntry("Yeni device profile oluşturuldu: " + dp.name + " (ID: " + dp.id + ")", "success");
+            showToast("'" + dp.name + "' profili oluşturuldu.", "success");
+            await fetchDeviceProfiles(state.dpTenantFilter);
+            return true;
+        } else {
+            var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
+            logEntry("Device profile oluşturma hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+            return false;
+        }
+    }
+
+    // ─── Device Profile Table: Filter, Sort, Paginate, Render ─────────
+    function applyDpFiltersAndRender() {
+        var q = state.dpSearchQuery.toLowerCase();
+        if (q) {
+            state.dpFiltered = state.dpList.filter(function (dp) {
+                return (dp.name && dp.name.toLowerCase().indexOf(q) !== -1) ||
+                       (dp.region && dp.region.toLowerCase().indexOf(q) !== -1);
+            });
+        } else {
+            state.dpFiltered = state.dpList.slice();
+        }
+        var sk = state.dpSort.key;
+        var sd = state.dpSort.dir === "asc" ? 1 : -1;
+        state.dpFiltered.sort(function (a, b) {
+            var va = (a[sk] || "").toString().toLowerCase();
+            var vb = (b[sk] || "").toString().toLowerCase();
+            if (va < vb) return -1 * sd;
+            if (va > vb) return 1 * sd;
+            return 0;
+        });
+        var totalPages = Math.max(1, Math.ceil(state.dpFiltered.length / state.dpPageSize));
+        if (state.dpPage > totalPages) state.dpPage = totalPages;
+        renderDpTable();
+        renderDpPagination();
+        renderDpTotalCount();
+        updateDpSortIcons();
+    }
+
+    function renderDpTable() {
+        dpTableBody.innerHTML = "";
+        if (state.dpFiltered.length === 0) {
+            dpEmptyState.style.display = "block";
+            return;
+        }
+        dpEmptyState.style.display = "none";
+        var start = (state.dpPage - 1) * state.dpPageSize;
+        var end = Math.min(start + state.dpPageSize, state.dpFiltered.length);
+        var pageItems = state.dpFiltered.slice(start, end);
+        for (var i = 0; i < pageItems.length; i++) {
+            var dp = pageItems[i];
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-id", dp.id);
+            tr.innerHTML =
+                '<td><span class="org-name-primary">' + escapeHtml(dp.name) + '</span></td>' +
+                '<td><span class="status-pill active">' + escapeHtml(dp.region || "—") + '</span></td>' +
+                '<td><span class="id-cell">' + escapeHtml((dp.mac_version || "").replace("LORAWAN_", "")) + '</span></td>' +
+                '<td>' + (dp.supports_otaa ? '✓' : '—') + '</td>' +
+                '<td>' +
+                    '<div class="row-actions">' +
+                        '<button class="row-action-btn view-btn" data-id="' + dp.id + '" title="Görüntüle">👁</button>' +
+                        '<button class="row-action-btn danger delete-btn" data-id="' + dp.id + '" title="Sil">🗑</button>' +
+                    '</div>' +
+                '</td>';
+            tr.addEventListener("click", (function (id) {
+                return function (e) {
+                    if (e.target.closest(".delete-btn")) { e.stopPropagation(); deleteDeviceProfile(id); return; }
+                    if (e.target.closest(".view-btn")) { e.stopPropagation(); viewDeviceProfile(id); return; }
+                };
+            })(dp.id));
+            dpTableBody.appendChild(tr);
+        }
+    }
+
+    function renderDpPagination() {
+        dpPaginationEl.innerHTML = "";
+        var total = state.dpFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(total / state.dpPageSize));
+        var current = state.dpPage;
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "pagination-btn";
+        prevBtn.innerHTML = "< Geri";
+        prevBtn.disabled = (current <= 1);
+        prevBtn.addEventListener("click", function () { goToDpPage(current - 1); });
+        dpPaginationEl.appendChild(prevBtn);
+        var startPage = Math.max(1, current - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (var p = startPage; p <= endPage; p++) {
+            var pageBtn = document.createElement("button");
+            pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.addEventListener("click", (function (pageNum) {
+                return function () { goToDpPage(pageNum); };
+            })(p));
+            dpPaginationEl.appendChild(pageBtn);
+        }
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "pagination-btn";
+        nextBtn.innerHTML = "İleri >";
+        nextBtn.disabled = (current >= totalPages);
+        nextBtn.addEventListener("click", function () { goToDpPage(current + 1); });
+        dpPaginationEl.appendChild(nextBtn);
+    }
+
+    function renderDpTotalCount() {
+        dpTotalCountEl.innerHTML = "Toplam: <strong>" + state.dpFiltered.length + "</strong> Profil";
+    }
+
+    function updateDpSortIcons() {
+        var allIcons = $$("[id^='dp-sort-icon-']");
+        for (var i = 0; i < allIcons.length; i++) {
+            allIcons[i].classList.remove("active");
+            allIcons[i].textContent = "▲";
+        }
+        var icon = $("#dp-sort-icon-" + state.dpSort.key);
+        if (icon) {
+            icon.classList.add("active");
+            icon.textContent = state.dpSort.dir === "asc" ? "▲" : "▼";
+        }
+    }
+
+    function goToDpPage(n) {
+        var totalPages = Math.max(1, Math.ceil(state.dpFiltered.length / state.dpPageSize));
+        if (n < 1 || n > totalPages) return;
+        state.dpPage = n;
+        applyDpFiltersAndRender();
+    }
+
+    function viewDeviceProfile(id) {
+        var dp = findDp(id);
+        if (!dp) return;
+        alert(
+            "ID: " + dp.id + "\n" +
+            "Ad: " + dp.name + "\n" +
+            "Tenant: " + dp.tenant_id + "\n" +
+            "Bölge: " + dp.region + "\n" +
+            "MAC: " + dp.mac_version + "\n" +
+            "RegParams: " + dp.reg_params_revision + "\n" +
+            "OTAA: " + (dp.supports_otaa ? "Evet" : "Hayır") + "\n" +
+            "Class B: " + (dp.supports_class_b ? "Evet" : "Hayır") + "\n" +
+            "Class C: " + (dp.supports_class_c ? "Evet" : "Hayır") + "\n" +
+            "ADR: " + (dp.adr_algorithm_id || "default")
+        );
+    }
+
+    // ─── Device Profile Modal ──────────────────────────────────────────
+    function populateDpTenantSelect() {
+        dpTenant.innerHTML = "";
+        if (state.organizations.length === 0) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Önce organizasyon oluşturun";
+            opt.disabled = true;
+            dpTenant.appendChild(opt);
+            return;
+        }
+        for (var i = 0; i < state.organizations.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.organizations[i].id;
+            opt.textContent = state.organizations[i].name;
+            dpTenant.appendChild(opt);
+        }
+    }
+
+    function populateDpFilterTenantSelect() {
+        var firstOpt = dpTenantFilter.querySelector('option[value=""]');
+        dpTenantFilter.innerHTML = "";
+        if (firstOpt) {
+            dpTenantFilter.appendChild(firstOpt);
+        } else {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Tüm Tenant'lar";
+            dpTenantFilter.appendChild(opt);
+        }
+        for (var i = 0; i < state.organizations.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.organizations[i].id;
+            opt.textContent = state.organizations[i].name;
+            dpTenantFilter.appendChild(opt);
+        }
+    }
+
+    function showDpModal() {
+        dpName.value = "";
+        dpDescription.value = "";
+        dpRegion.value = "EU868";
+        dpMacVersion.value = "LORAWAN_1_0_3";
+        dpRegParams.value = "B";
+        dpAdrAlg.value = "default";
+        dpSupportsOtaa.checked = true;
+        dpSupportsClassB.checked = false;
+        dpSupportsClassC.checked = false;
+        populateDpTenantSelect();
+        dpModalOverlay.style.display = "flex";
+        setTimeout(function () { dpName.focus(); }, 100);
+    }
+
+    function hideDpModal() {
+        dpModalOverlay.style.display = "none";
+    }
+
+    async function handleDpModalSave() {
+        var name = dpName.value.trim();
+        var tenantId = dpTenant.value;
+        if (!name) { showToast("Profil adı zorunludur!", "error"); dpName.focus(); return; }
+        if (!tenantId) { showToast("Tenant seçimi zorunludur!", "error"); return; }
+        dpModalSave.disabled = true;
+        dpModalSave.textContent = "Oluşturuluyor...";
+        var data = {
+            name: name,
+            tenant_id: tenantId,
+            description: dpDescription.value.trim(),
+            region: dpRegion.value,
+            mac_version: dpMacVersion.value,
+            reg_params_revision: dpRegParams.value,
+            adr_algorithm_id: dpAdrAlg.value || "default",
+            supports_otaa: dpSupportsOtaa.checked,
+            supports_class_b: dpSupportsClassB.checked,
+            supports_class_c: dpSupportsClassC.checked
+        };
+        var ok = await createDeviceProfile(data);
+        dpModalSave.disabled = false;
+        dpModalSave.textContent = "Kaydet";
+        if (ok) hideDpModal();
+    }
+
+    async function deleteDeviceProfile(id) {
+        var dp = findDp(id);
+        if (!dp) return;
+        if (!confirm("'" + dp.name + "' profilini silmek istediğinize emin misiniz?")) return;
+        var r = await api("DELETE", "/api/device-profiles/" + id);
+        if (r.ok) {
+            logEntry("Device profile silindi: " + dp.name, "success");
+            showToast("'" + dp.name + "' silindi.", "success");
+            await fetchDeviceProfiles(state.dpTenantFilter);
+        } else {
+            var errMsg = (r.data && r.data.error) || "Silme hatası";
+            logEntry("Device profile silme hatası: " + errMsg, "error");
+            showToast(errMsg, "error");
+        }
+    }
+
+    function findDp(id) {
+        for (var i = 0; i < state.dpList.length; i++) {
+            if (state.dpList[i].id === id) return state.dpList[i];
+        }
+        return null;
     }
 
     // ─── Table: Sort, Filter, Paginate, Render ─────────────────────────
@@ -829,6 +1132,58 @@
     // Hamburger (mobile)
     hamburgerBtn.addEventListener("click", toggleSecondarySidebar);
 
+    // Device Profile table sort
+    $$("#dp-table thead th.sortable").forEach(function (th) {
+        th.addEventListener("click", function () {
+            var key = this.getAttribute("data-sort");
+            if (state.dpSort.key === key) {
+                state.dpSort.dir = state.dpSort.dir === "asc" ? "desc" : "asc";
+            } else {
+                state.dpSort.key = key;
+                state.dpSort.dir = "asc";
+            }
+            state.dpPage = 1;
+            applyDpFiltersAndRender();
+        });
+    });
+
+    // Device Profile search
+    dpSearchInput.addEventListener("input", function () {
+        state.dpSearchQuery = this.value;
+        state.dpPage = 1;
+        applyDpFiltersAndRender();
+    });
+
+    // Device Profile page size
+    dpPageSizeSelect.addEventListener("change", function () {
+        state.dpPageSize = parseInt(this.value, 10) || 5;
+        state.dpPage = 1;
+        applyDpFiltersAndRender();
+    });
+
+    // Device Profile refresh
+    btnDpRefresh.addEventListener("click", function () {
+        fetchDeviceProfiles(state.dpTenantFilter);
+    });
+
+    // Device Profile tenant filter
+    dpTenantFilter.addEventListener("change", function () {
+        state.dpTenantFilter = this.value;
+        state.dpPage = 1;
+        fetchDeviceProfiles(state.dpTenantFilter);
+    });
+
+    // Add device profile
+    btnAddDp.addEventListener("click", showDpModal);
+
+    // Device Profile modal
+    dpModalClose.addEventListener("click", hideDpModal);
+    dpModalCancel.addEventListener("click", hideDpModal);
+    dpModalSave.addEventListener("click", handleDpModalSave);
+    dpModalOverlay.addEventListener("click", function (e) {
+        if (e.target === dpModalOverlay) hideDpModal();
+    });
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
         logEntry("Sistem başlatılıyor...", "info");
@@ -843,6 +1198,10 @@
 
         // Load organizations from ChirpStack API
         await fetchOrganizations();
+
+        // Load device profiles
+        populateDpFilterTenantSelect();
+        await fetchDeviceProfiles("");
 
         // Load current state
         await pollStatus();
