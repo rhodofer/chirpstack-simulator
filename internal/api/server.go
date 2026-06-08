@@ -21,6 +21,9 @@ type Server struct {
 // New creates a new HTTP API server instance.
 func New(bind string) *Server {
 	InitLogHook()
+	if err := SetupDB(); err != nil {
+		log.WithError(err).Fatal("api: failed to initialize sqlite database")
+	}
 	mux := http.NewServeMux()
 	state := GetState()
 
@@ -54,6 +57,22 @@ func New(bind string) *Server {
 			return
 		}
 		handleDeleteOrganization(w, r, id)
+	})
+
+	// GET/POST /api/org-configs/{orgID}
+	mux.HandleFunc("/api/org-configs/", func(w http.ResponseWriter, r *http.Request) {
+		orgID := r.URL.Path[len("/api/org-configs/"):]
+		if orgID == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetOrgConfig(w, r, orgID)
+		} else if r.Method == http.MethodPost {
+			handleSaveOrgConfig(w, r, orgID)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
 	})
 
 	mux.HandleFunc("/api/device-profiles", func(w http.ResponseWriter, r *http.Request) {

@@ -386,52 +386,127 @@
         }
     }
 
-    function saveOrgConfig(orgId) {
+    async function saveOrgConfig(orgId) {
         if (!orgId) return;
         var tenantEl = document.getElementById("tenant_id");
         var appNameEl = document.getElementById("app_name");
         var devPrefixEl = document.getElementById("device_prefix");
         var devCountEl = document.getElementById("device_count");
         var gwCountEl = document.getElementById("gateway_count");
+
+        // global settings
+        var durationEl = document.getElementById("duration");
+        var actTimeEl = document.getElementById("activation_time");
+        var uplinkEl = document.getElementById("uplink_interval");
+        var fPortEl = document.getElementById("f_port");
+        var payloadEl = document.getElementById("payload");
+        var freqEl = document.getElementById("frequency");
+        var bwEl = document.getElementById("bandwidth");
+        var sfEl = document.getElementById("spreading_factor");
+        var eventEl = document.getElementById("event_topic_template");
+        var cmdEl = document.getElementById("command_topic_template");
+
         var data = {
             tenant_id: tenantEl ? tenantEl.value.trim() : orgId,
             app_name: appNameEl ? appNameEl.value.trim() : "",
             device_prefix: devPrefixEl ? devPrefixEl.value.trim() : "sim-dev",
-            device_count: devCountEl ? devCountEl.value.trim() : "5",
-            gateway_count: gwCountEl ? gwCountEl.value.trim() : "2"
+            device_count: parseInt(devCountEl ? devCountEl.value : "5", 10),
+            gateway_count: parseInt(gwCountEl ? gwCountEl.value : "2", 10),
+            duration: durationEl ? durationEl.value.trim() : "5m",
+            activation_time: actTimeEl ? actTimeEl.value.trim() : "1m",
+            uplink_interval: uplinkEl ? uplinkEl.value.trim() : "5m",
+            f_port: parseInt(fPortEl ? fPortEl.value : "10", 10),
+            payload: payloadEl ? payloadEl.value.trim() : "010203",
+            frequency: parseInt(freqEl ? freqEl.value : "868100000", 10),
+            bandwidth: parseInt(bwEl ? bwEl.value : "125000", 10),
+            spreading_factor: parseInt(sfEl ? sfEl.value : "7", 10),
+            event_topic_template: eventEl ? eventEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
+            command_topic_template: cmdEl ? cmdEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
         };
-        localStorage.setItem("sim-org-config-" + orgId, JSON.stringify(data));
+
+        var btnSave = document.getElementById("btn-save-org-config");
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.textContent = "Kaydediliyor...";
+        }
+
+        var r = await api("POST", "/api/org-configs/" + orgId, data);
+        
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.textContent = "✓ Ayarları Kaydet";
+        }
+
+        if (r.ok) {
+            logEntry("Ayarlar sunucu veritabanına (SQLite) başarıyla kaydedildi.", "success");
+            showToast("Ayarlar başarıyla kaydedildi.", "success");
+            closeDrawer();
+        } else {
+            var errMsg = (r.data && r.data.error) || "Kaydetme hatası";
+            logEntry("Ayarlar kaydedilemedi: " + errMsg, "error");
+            showToast("Kaydetme hatası: " + errMsg, "error");
+        }
     }
 
-    function loadOrgConfig(orgId, orgName) {
+    async function loadOrgConfig(orgId, orgName) {
         if (!orgId) return;
-        var raw = localStorage.getItem("sim-org-config-" + orgId);
+
         var tenantField = document.getElementById("tenant_id");
         var appNameField = document.getElementById("app_name");
         var devPrefixField = document.getElementById("device_prefix");
         var devCountField = document.getElementById("device_count");
         var gwCountField = document.getElementById("gateway_count");
 
-        if (raw) {
-            try {
-                var data = JSON.parse(raw);
-                if (tenantField) tenantField.value = data.tenant_id || orgId;
-                if (appNameField) appNameField.value = data.app_name || orgName || "";
-                if (devPrefixField) devPrefixField.value = data.device_prefix || "sim-dev";
-                if (devCountField) devCountField.value = data.device_count || "5";
-                if (gwCountField) gwCountField.value = data.gateway_count || "2";
-                return;
-            } catch (e) {
-                console.error("Failed to parse org config", e);
-            }
+        // global settings
+        var durationField = document.getElementById("duration");
+        var actTimeField = document.getElementById("activation_time");
+        var uplinkField = document.getElementById("uplink_interval");
+        var fPortField = document.getElementById("f_port");
+        var payloadField = document.getElementById("payload");
+        var freqField = document.getElementById("frequency");
+        var bwField = document.getElementById("bandwidth");
+        var sfField = document.getElementById("spreading_factor");
+        var eventField = document.getElementById("event_topic_template");
+        var cmdField = document.getElementById("command_topic_template");
+
+        var r = await api("GET", "/api/org-configs/" + orgId);
+        if (r.ok && r.data && r.data.tenant_id) {
+            var data = r.data;
+            if (tenantField) tenantField.value = data.tenant_id || orgId;
+            if (appNameField) appNameField.value = data.app_name || orgName || "";
+            if (devPrefixField) devPrefixField.value = data.device_prefix || "sim-dev";
+            if (devCountField) devCountField.value = data.device_count || "5";
+            if (gwCountField) gwCountField.value = data.gateway_count || "2";
+
+            // global settings
+            if (durationField) durationField.value = data.duration || "5m";
+            if (actTimeField) actTimeField.value = data.activation_time || "1m";
+            if (uplinkField) uplinkField.value = data.uplink_interval || "5m";
+            if (fPortField) fPortField.value = data.f_port || "10";
+            if (payloadField) payloadField.value = data.payload || "010203";
+            if (freqField) freqField.value = data.frequency || "868100000";
+            if (bwField) bwField.value = data.bandwidth || "125000";
+            if (sfField) sfField.value = data.spreading_factor || "7";
+            if (eventField) eventField.value = data.event_topic_template || "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}";
+            if (cmdField) cmdField.value = data.command_topic_template || "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}";
+            return;
         }
 
-        // Fallback/defaults if no saved config
+        // Fallback/defaults if no saved config in SQLite
         if (tenantField) tenantField.value = orgId;
         if (appNameField) appNameField.value = orgName || "";
         if (devPrefixField) devPrefixField.value = "sim-dev";
         if (devCountField) devCountField.value = "5";
         if (gwCountField) gwCountField.value = "2";
+
+        var generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"];
+        generalFields.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                var localVal = localStorage.getItem("setting-" + id);
+                el.value = localVal !== null ? localVal : el.defaultValue || "";
+            }
+        });
     }
 
     function updateFormInputsState() {
@@ -460,11 +535,11 @@
         if (btnSaveOrgConfig) btnSaveOrgConfig.disabled = isSimRunning;
     }
 
-    function selectDefaultOrgIfNone() {
+    async function selectDefaultOrgIfNone() {
         if (state.organizations.length > 0 && !state.activeOrgId) {
             var org = state.organizations[0];
             state.activeOrgId = org.id;
-            loadOrgConfig(org.id, org.name);
+            await loadOrgConfig(org.id, org.name);
             updateFormInputsState();
             if (btnTopStart) btnTopStart.disabled = (state.currentStatus === "running" || state.currentStatus === "starting");
         }
@@ -484,7 +559,7 @@
         populateDpFilterTenantSelect();
         populateNetFilterTenantSelect();
         populateDevFilterTenantSelect();
-        selectDefaultOrgIfNone();
+        await selectDefaultOrgIfNone();
     }
 
     async function createOrganization(name, description) {
@@ -1038,7 +1113,7 @@
     }
 
     // ─── Drawer ────────────────────────────────────────────────────────
-    function openDrawer(orgId) {
+    async function openDrawer(orgId) {
         var org = findOrg(orgId);
         if (!org) return;
 
@@ -1049,7 +1124,7 @@
         drawerSubtitle.textContent = "Simülasyon ayarlarını yapılandırın";
 
         // Formu doldur
-        loadOrgConfig(orgId, org.name);
+        await loadOrgConfig(orgId, org.name);
         updateFormInputsState();
 
         drawerEl.classList.add("open");
@@ -1372,7 +1447,7 @@
     drawerClose.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
     if (btnSaveOrgConfig) {
-        btnSaveOrgConfig.addEventListener("click", function (e) {
+        btnSaveOrgConfig.addEventListener("click", async function (e) {
             e.preventDefault();
             
             var devCountEl = document.getElementById("device_count");
@@ -1399,9 +1474,7 @@
                 return;
             }
             
-            saveOrgConfig(state.activeOrgId);
-            showToast("Ayarlar başarıyla kaydedildi.", "success");
-            closeDrawer();
+            await saveOrgConfig(state.activeOrgId);
         });
     }
 
