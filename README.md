@@ -288,7 +288,7 @@ Simülatör API'si global filtreleme ve tenant-scoped veri erişimini destekler:
 
 ### 5. Frontend ve Simülatör İyileştirmeleri (Yeni Özellikler)
 Geliştirilen modern arayüz ve simülatör altyapısında aşağıdaki özellikler eklenmiştir:
-- **Organizasyon Bazlı Konfigürasyon Kalıcılığı:** Her organizasyonun çekmecesindeki simülasyon ayarları (Cihaz Sayısı, Gateway Sayısı, Cihaz Öneki vb.) bağımsız olarak `localStorage` (`sim-org-config-{orgId}`) üzerinde saklanır ve organizasyon seçildiğinde otomatik yüklenir.
+- **Organizasyon Bazlı Konfigürasyon Kalıcılığı:** Her organizasyonun çekmecesindeki simülasyon ayarları (Cihaz Sayısı, Gateway Sayısı, Cihaz Öneki ve tüm çalışma ayarları) tarayıcı yerine sunucudaki **SQLite** veritabanında (`simulator.db`) kalıcı olarak saklanır ve organizasyon seçildiğinde API üzerinden otomatik çekilir.
 - **Ayarları Kaydetme ve Doğrulama:** Çekmecede yapılan değişikliklerin geçerli olması için explicit bir **"✓ Ayarları Kaydet"** butonu bulunur. Cihaz/Gateway sayılarının sıfırdan büyük olması ve uygulama adının boş bırakılmaması gibi temel doğrulama adımları barındırır.
 - **Simülasyon Esnasında Arayüz Kilitleme (Input Lock):** Simülasyon aktifken (`running` veya `starting` durumunda) hatalı çalışma yapılandırmasını önlemek adına hem çekmecedeki ayarlar hem de genel ayarlar sayfasındaki tüm giriş alanları kilitlenir.
 - **Genişletilebilir Canlı Log Konsolu:** Alt panelde yer alan log terminali sürükle-bırak ile dikey olarak yeniden boyutlandırılabilir, daraltılıp genişletilebilir.
