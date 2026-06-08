@@ -286,6 +286,14 @@ Simülatör API'si global filtreleme ve tenant-scoped veri erişimini destekler:
 - **API Davranışı:** `handleListApplications`, `handleListDevices` ve `handleListDeviceProfiles` handler'ları, `tenant_id` parametresi boş (`""`) gönderildiğinde tüm tenant'lar/organizasyonlar arasında arama yaparak birleştirilmiş liste döner.
 - **Frontend Sync:** Arayüzde `net-tenant-select` ve `dp-tenant-select` gibi tenant filtreleme seçimleri yapıldığında ilgili API istekleri bu tenant parametresi ile yenilenir.
 
+### 5. Frontend ve Simülatör İyileştirmeleri (Yeni Özellikler)
+Geliştirilen modern arayüz ve simülatör altyapısında aşağıdaki özellikler eklenmiştir:
+- **Organizasyon Bazlı Konfigürasyon Kalıcılığı:** Her organizasyonun çekmecesindeki simülasyon ayarları (Cihaz Sayısı, Gateway Sayısı, Cihaz Öneki vb.) bağımsız olarak `localStorage` (`sim-org-config-{orgId}`) üzerinde saklanır ve organizasyon seçildiğinde otomatik yüklenir.
+- **Ayarları Kaydetme ve Doğrulama:** Çekmecede yapılan değişikliklerin geçerli olması için explicit bir **"✓ Ayarları Kaydet"** butonu bulunur. Cihaz/Gateway sayılarının sıfırdan büyük olması ve uygulama adının boş bırakılmaması gibi temel doğrulama adımları barındırır.
+- **Simülasyon Esnasında Arayüz Kilitleme (Input Lock):** Simülasyon aktifken (`running` veya `starting` durumunda) hatalı çalışma yapılandırmasını önlemek adına hem çekmecedeki ayarlar hem de genel ayarlar sayfasındaki tüm giriş alanları kilitlenir.
+- **Genişletilebilir Canlı Log Konsolu:** Alt panelde yer alan log terminali sürükle-bırak ile dikey olarak yeniden boyutlandırılabilir, daraltılıp genişletilebilir.
+- **Detaylı Cihaz ve Uygulama Logları:** Canlı log akışında hangi cihazın (`device_name` ve `dev_eui`) hangi uygulamaya (`app_name`) veri veya OTAA isteği gönderdiği JSON parametreleriyle açıkça listelenir.
+
 
 ## License
 
