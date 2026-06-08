@@ -24,7 +24,6 @@ type DeviceProfile struct {
 	SupportsClassC      bool   `json:"supports_class_c"`
 	Region              string `json:"region"`
 	AdrAlgorithmId      string `json:"adr_algorithm_id"`
-	PayloadCodecRuntime string `json:"payload_codec_runtime"`
 }
 
 // CreateDeviceProfileRequest is the HTTP request body for creating a device profile.
@@ -39,7 +38,6 @@ type CreateDeviceProfileRequest struct {
 	SupportsClassC      bool   `json:"supports_class_c"`
 	Region              string `json:"region"`
 	AdrAlgorithmId      string `json:"adr_algorithm_id"`
-	PayloadCodecRuntime string `json:"payload_codec_runtime"`
 }
 
 func mapDeviceProfile(dp *api.DeviceProfile) DeviceProfile {
@@ -58,7 +56,6 @@ func mapDeviceProfile(dp *api.DeviceProfile) DeviceProfile {
 		SupportsClassC:      dp.GetSupportsClassC(),
 		Region:              dp.GetRegion().String(),
 		AdrAlgorithmId:      dp.GetAdrAlgorithmId(),
-		PayloadCodecRuntime: dp.GetPayloadCodecRuntime().String(),
 	}
 }
 
@@ -190,7 +187,6 @@ func handleCreateDeviceProfile(w http.ResponseWriter, r *http.Request) {
 		SupportsClassC:      req.SupportsClassC,
 		Region:              region.String(),
 		AdrAlgorithmId:      profile.AdrAlgorithmId,
-		PayloadCodecRuntime: req.PayloadCodecRuntime,
 	})
 }
 
