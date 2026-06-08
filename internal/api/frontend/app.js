@@ -141,6 +141,15 @@
     var devModalCancel      = $("#dev-modal-cancel");
     var devModalSave        = $("#dev-modal-save");
 
+    // Login references
+    var loginOverlay      = $("#login-overlay");
+    var loginForm         = $("#login-form");
+    var loginUsername     = $("#login-username");
+    var loginPassword     = $("#login-password");
+    var loginError        = $("#login-error");
+    var btnLoginSubmit    = $("#btn-login-submit");
+    var btnLogout         = $("#logout-btn");
+
     // ─── State ─────────────────────────────────────────────────────────
     var state = {
         organizations: [],
@@ -217,6 +226,9 @@
         }
         try {
             var resp = await fetch(path, opts);
+            if (resp.status === 401 && path !== "/api/auth/login" && path !== "/api/auth/status") {
+                showLoginScreen();
+            }
             var data = await resp.json();
             return { ok: resp.ok, status: resp.status, data: data };
         } catch (err) {
@@ -2127,17 +2139,28 @@
         consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
     }
 
+    var logSource = null;
     function connectLogStream() {
-        var source = new EventSource("/api/logs/stream");
+        if (logSource) {
+            logSource.close();
+        }
+        logSource = new EventSource("/api/logs/stream");
 
-        source.onmessage = function (event) {
+        logSource.onmessage = function (event) {
             appendConsoleLog(event.data);
         };
 
-        source.onerror = function (err) {
+        logSource.onerror = function (err) {
             console.error("SSE connection error:", err);
-            source.close();
-            setTimeout(connectLogStream, 3000);
+            if (logSource) {
+                logSource.close();
+                logSource = null;
+            }
+            checkAuthStatus().then(function (auth) {
+                if (auth) {
+                    setTimeout(connectLogStream, 3000);
+                }
+            });
         };
     }
 
@@ -2273,20 +2296,92 @@
         });
     }
 
-    // ─── Init ──────────────────────────────────────────────────────────
-    async function init() {
-        bindSettingsEvents();
-        // Load saved theme
-        var savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "light") {
-            document.body.classList.add("light-theme");
-            if (themeToggle) themeToggle.textContent = "☀";
-        } else {
-            document.body.classList.remove("light-theme");
-            if (themeToggle) themeToggle.textContent = "🌙";
+    // ─── Authentication Controls ───────────────────────────────────────
+    async function checkAuthStatus() {
+        var r = await api("GET", "/api/auth/status");
+        return (r.ok && r.data && r.data.authenticated);
+    }
+
+    function showLoginScreen() {
+        if (loginOverlay) {
+            loginOverlay.style.display = "flex";
+        }
+        if (loginUsername) {
+            loginUsername.value = "";
+            loginPassword.value = "";
+            if (loginError) loginError.style.display = "none";
+            setTimeout(function() { loginUsername.focus(); }, 100);
+        }
+    }
+
+    function hideLoginScreen() {
+        if (loginOverlay) {
+            loginOverlay.style.display = "none";
+        }
+    }
+
+    function bindAuthEvents() {
+        if (loginForm) {
+            loginForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                var username = loginUsername.value.trim();
+                var password = loginPassword.value;
+
+                if (btnLoginSubmit) {
+                    btnLoginSubmit.disabled = true;
+                    btnLoginSubmit.textContent = "Giriş yapılıyor...";
+                }
+
+                var r = await api("POST", "/api/auth/login", {
+                    username: username,
+                    password: password
+                });
+
+                if (btnLoginSubmit) {
+                    btnLoginSubmit.disabled = false;
+                    btnLoginSubmit.textContent = "Giriş Yap";
+                }
+
+                if (r.ok) {
+                    hideLoginScreen();
+                    logEntry("Kullanıcı girişi başarılı.", "success");
+                    showToast("Giriş başarılı.", "success");
+                    await loadDashboardData();
+                } else {
+                    var errMsg = (r.data && r.data.error) || "Giriş başarısız.";
+                    if (loginError) {
+                        loginError.textContent = errMsg;
+                        loginError.style.display = "block";
+                    }
+                    loginPassword.value = "";
+                    loginPassword.focus();
+                }
+            });
         }
 
-        bindConsoleEvents();
+        if (btnLogout) {
+            btnLogout.addEventListener("click", async function (e) {
+                e.preventDefault();
+                if (!confirm("Çıkış yapmak istediğinize emin misiniz?")) return;
+
+                var r = await api("GET", "/api/auth/logout");
+                if (r.ok) {
+                    stopPolling();
+                    if (logSource) {
+                        logSource.close();
+                        logSource = null;
+                    }
+                    if (consoleLogContainer) consoleLogContainer.innerHTML = "";
+                    logEntry("Oturum kapatıldı.", "info");
+                    showLoginScreen();
+                } else {
+                    showToast("Çıkış hatası", "error");
+                }
+            });
+        }
+    }
+
+    async function loadDashboardData() {
         connectLogStream();
 
         // Health check
@@ -2315,6 +2410,33 @@
         // Load current state
         await pollStatus();
         startPolling();
+    }
+
+    // ─── Init ──────────────────────────────────────────────────────────
+    async function init() {
+        bindSettingsEvents();
+        bindAuthEvents();
+        
+        // Load saved theme
+        var savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light") {
+            document.body.classList.add("light-theme");
+            if (themeToggle) themeToggle.textContent = "☀";
+        } else {
+            document.body.classList.remove("light-theme");
+            if (themeToggle) themeToggle.textContent = "🌙";
+        }
+
+        bindConsoleEvents();
+
+        // Check authentication status
+        var authenticated = await checkAuthStatus();
+        if (authenticated) {
+            hideLoginScreen();
+            await loadDashboardData();
+        } else {
+            showLoginScreen();
+        }
     }
 
     init();

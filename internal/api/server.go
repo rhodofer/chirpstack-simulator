@@ -27,19 +27,24 @@ func New(bind string) *Server {
 	mux := http.NewServeMux()
 	state := GetState()
 
+	// Auth endpoints
+	mux.HandleFunc("/api/auth/login", handleLogin)
+	mux.HandleFunc("/api/auth/logout", handleLogout)
+	mux.HandleFunc("/api/auth/status", handleAuthStatus)
+
 	// API endpoints
-	mux.HandleFunc("/api/logs/stream", handleLogStream)
-	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/logs/stream", requireAuth(handleLogStream))
+	mux.HandleFunc("/api/status", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStatus(w, r, state)
-	})
-	mux.HandleFunc("/api/start", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/api/start", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStart(w, r, state)
-	})
-	mux.HandleFunc("/api/stop", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/api/stop", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStop(w, r, state)
-	})
+	}))
 	mux.HandleFunc("/api/health", handleHealth)
-	mux.HandleFunc("/api/organizations", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListOrganizations(w, r)
 		} else if r.Method == http.MethodPost {
@@ -47,20 +52,20 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
 	// DELETE /api/organizations/{id}
-	mux.HandleFunc("/api/organizations/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/organizations/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
 			return
 		}
 		handleDeleteOrganization(w, r, id)
-	})
+	}))
 
 	// GET/POST /api/org-configs/{orgID}
-	mux.HandleFunc("/api/org-configs/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/org-configs/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		orgID := r.URL.Path[len("/api/org-configs/"):]
 		if orgID == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
@@ -73,9 +78,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/device-profiles", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/device-profiles", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDeviceProfiles(w, r)
 		} else if r.Method == http.MethodPost {
@@ -83,9 +88,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/device-profiles/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/device-profiles/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/device-profiles/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device profile id is required"})
@@ -98,9 +103,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/applications", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListApplications(w, r)
 		} else if r.Method == http.MethodPost {
@@ -108,18 +113,18 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/applications/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/applications/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application id is required"})
 			return
 		}
 		handleDeleteApplication(w, r, id)
-	})
+	}))
 
-	mux.HandleFunc("/api/devices", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/devices", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDevices(w, r)
 		} else if r.Method == http.MethodPost {
@@ -127,16 +132,16 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/devices/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/devices/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		devEUI := r.URL.Path[len("/api/devices/"):]
 		if devEUI == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 			return
 		}
 		handleDeleteDevice(w, r, devEUI)
-	})
+	}))
 
 	// UI — serves embedded frontend files at root path
 	mux.Handle("/", uiHandler())

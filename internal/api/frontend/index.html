@@ -83,6 +83,7 @@
 
             <div class="secondary-sidebar-footer">
                 <span class="version-info">v<span id="version-text">—</span></span>
+                <button class="logout-btn" id="logout-btn" title="Çıkış Yap">🚪 Çıkış</button>
             </div>
         </aside>
 
@@ -764,6 +765,29 @@
     </div>
 
     <div class="toast" id="toast" style="display:none;"></div>
+
+    <!-- ═══ LOGIN PAGE OVERLAY ═════════════════════════════════════════ -->
+    <div class="login-overlay" id="login-overlay" style="display:none;">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-logo">⚡</span>
+                <h2>iofeSaaS</h2>
+                <p>ChirpStack Simülatörüne Giriş Yapın</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Kullanıcı Adı</label>
+                    <input type="text" id="login-username" placeholder="admin" required autofocus autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Şifre</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="login-error-msg" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
 
     <script src="app.js?v=4"></script>
 </body>
