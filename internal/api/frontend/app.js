@@ -2412,6 +2412,163 @@
         startPolling();
     }
 
+    // ─── Console Custom Theme Settings ─────────────────────────────────
+    function initConsoleTheme() {
+        var presets = {
+            afterglow: {
+                bg: "#151515", fg: "#d6dbe5", cu: "#d6dbe5", ca: "#151515", sb: "#303030", sf: "#d6dbe5",
+                ansi0: "#1c1c1c", ansi1: "#a53d3d", ansi2: "#7b963b", ansi3: "#cca04c", ansi4: "#487bb0",
+                ansi5: "#9e5a8a", ansi6: "#44a69e", ansi7: "#d0d0d0", ansi8: "#505050", ansi9: "#b84c4c",
+                ansi10: "#8fa850", ansi11: "#e0b860", ansi12: "#5c90c4", ansi13: "#b26e9e", ansi14: "#58bab0",
+                ansi15: "#f5f5f5"
+            },
+            monokai: {
+                bg: "#272822", fg: "#f8f8f2", cu: "#f8f8f0", ca: "#272822", sb: "#49483e", sf: "#f8f8f2",
+                ansi0: "#272822", ansi1: "#f92672", ansi2: "#a6e22e", ansi3: "#f4bf75", ansi4: "#66d9ef",
+                ansi5: "#ae81ff", ansi6: "#a1efe4", ansi7: "#f8f8f2", ansi8: "#75715e", ansi9: "#f92672",
+                ansi10: "#a6e22e", ansi11: "#f4bf75", ansi12: "#66d9ef", ansi13: "#ae81ff", ansi14: "#a1efe4",
+                ansi15: "#f9f8f5"
+            },
+            dracula: {
+                bg: "#282a36", fg: "#f8f8f2", cu: "#f8f8f2", ca: "#282a36", sb: "#44475a", sf: "#f8f8f2",
+                ansi0: "#21222c", ansi1: "#ff5555", ansi2: "#50fa7b", ansi3: "#f1fa8c", ansi4: "#8be9fd",
+                ansi5: "#ff79c6", ansi6: "#bd93f9", ansi7: "#f8f8f2", ansi8: "#6272a4", ansi9: "#ff6e6e",
+                ansi10: "#69ff94", ansi11: "#ffffa5", ansi12: "#d6acff", ansi13: "#ff92df", ansi14: "#a4ffff",
+                ansi15: "#ffffff"
+            },
+            "solarized-dark": {
+                bg: "#002b36", fg: "#839496", cu: "#839496", ca: "#002b36", sb: "#073642", sf: "#93a1a1",
+                ansi0: "#073642", ansi1: "#dc322f", ansi2: "#859900", ansi3: "#b58900", ansi4: "#268bd2",
+                ansi5: "#d33682", ansi6: "#2aa198", ansi7: "#eee8d5", ansi8: "#002b36", ansi9: "#cb4b16",
+                ansi10: "#586e75", ansi11: "#657b83", ansi12: "#839496", ansi13: "#6c71c4", ansi14: "#93a1a1",
+                ansi15: "#fdf6e3"
+            },
+            "solarized-light": {
+                bg: "#fdf6e3", fg: "#586e75", cu: "#586e75", ca: "#fdf6e3", sb: "#eee8d5", sf: "#586e75",
+                ansi0: "#eee8d5", ansi1: "#dc322f", ansi2: "#859900", ansi3: "#b58900", ansi4: "#268bd2",
+                ansi5: "#d33682", ansi6: "#2aa198", ansi7: "#073642", ansi8: "#fdf6e3", ansi9: "#cb4b16",
+                ansi10: "#93a1a1", ansi11: "#839496", ansi12: "#657b83", ansi13: "#6c71c4", ansi14: "#586e75",
+                ansi15: "#073642"
+            },
+            default: {
+                bg: "#080a0f", fg: "#e2e8f0", cu: "#e2e8f0", ca: "#080a0f", sb: "#2563eb", sf: "#ffffff",
+                ansi0: "#1e293b", ansi1: "#ef4444", ansi2: "#22c55e", ansi3: "#eab308", ansi4: "#3b82f6",
+                ansi5: "#a855f7", ansi6: "#06b6d4", ansi7: "#e2e8f0", ansi8: "#475569", ansi9: "#f87171",
+                ansi10: "#4ade80", ansi11: "#facc15", ansi12: "#60a5fa", ansi13: "#c084fc", ansi14: "#22d3ee",
+                ansi15: "#ffffff"
+            }
+        };
+
+        var keys = ["fg", "bg", "cu", "ca", "sb", "sf", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"];
+        var currentPreset = "afterglow";
+
+        // Load saved theme
+        var activeTheme = Object.assign({}, presets.afterglow);
+        var savedTheme = localStorage.getItem("console-custom-theme");
+        var savedPresetName = localStorage.getItem("console-custom-preset");
+        if (savedTheme) {
+            try {
+                activeTheme = JSON.parse(savedTheme);
+                if (savedPresetName) currentPreset = savedPresetName;
+            } catch(e) {}
+        }
+
+        function applyTheme(themeObj) {
+            var targets = [$("#console-log-container"), $("#console-preview")];
+            targets.forEach(function (el) {
+                if (!el) return;
+                el.style.setProperty("--c-fg", themeObj.fg);
+                el.style.setProperty("--c-bg", themeObj.bg);
+                el.style.setProperty("--c-cu", themeObj.cu);
+                el.style.setProperty("--c-ca", themeObj.ca);
+                el.style.setProperty("--c-sb", themeObj.sb);
+                el.style.setProperty("--c-sf", themeObj.sf);
+                keys.forEach(function (key) {
+                    if (key !== "fg" && key !== "bg" && key !== "cu" && key !== "ca" && key !== "sb" && key !== "sf") {
+                        el.style.setProperty("--c-ansi-" + key, themeObj[key]);
+                    }
+                });
+            });
+        }
+
+        function updateInputs(themeObj) {
+            keys.forEach(function (key) {
+                var input = $("#c-color-" + key);
+                if (input) {
+                    input.value = themeObj[key];
+                }
+            });
+            var presetSelect = $("#console-theme-preset");
+            if (presetSelect) presetSelect.value = currentPreset;
+        }
+
+        applyTheme(activeTheme);
+        updateInputs(activeTheme);
+
+        keys.forEach(function (key) {
+            var input = $("#c-color-" + key);
+            if (input) {
+                input.addEventListener("input", function () {
+                    activeTheme[key] = this.value;
+                    currentPreset = "custom";
+                    var presetSelect = $("#console-theme-preset");
+                    if (presetSelect) presetSelect.value = "custom";
+                    applyTheme(activeTheme);
+                });
+            }
+        });
+
+        var presetSelect = $("#console-theme-preset");
+        if (presetSelect) {
+            presetSelect.addEventListener("change", function () {
+                var selected = this.value;
+                if (selected !== "custom" && presets[selected]) {
+                    currentPreset = selected;
+                    activeTheme = Object.assign({}, presets[selected]);
+                    applyTheme(activeTheme);
+                    updateInputs(activeTheme);
+                }
+            });
+        }
+
+        var btnReset = $("#btn-console-theme-reset");
+        if (btnReset) {
+            btnReset.addEventListener("click", function () {
+                currentPreset = "afterglow";
+                activeTheme = Object.assign({}, presets.afterglow);
+                applyTheme(activeTheme);
+                updateInputs(activeTheme);
+            });
+        }
+
+        var btnSave = $("#btn-console-theme-save");
+        if (btnSave) {
+            btnSave.addEventListener("click", function () {
+                localStorage.setItem("console-custom-theme", JSON.stringify(activeTheme));
+                localStorage.setItem("console-custom-preset", currentPreset);
+                showToast("Konsol teması başarıyla uygulandı ve kaydedildi!", "success");
+            });
+        }
+
+        var btnPreviewDark = $("#btn-console-mode-dark");
+        var btnPreviewLight = $("#btn-console-mode-light");
+        var previewContainer = $("#console-preview");
+        if (btnPreviewDark && btnPreviewLight && previewContainer) {
+            btnPreviewDark.addEventListener("click", function () {
+                btnPreviewDark.classList.add("active");
+                btnPreviewLight.classList.remove("active");
+                previewContainer.style.background = activeTheme.bg;
+                previewContainer.style.color = activeTheme.fg;
+            });
+            btnPreviewLight.addEventListener("click", function () {
+                btnPreviewLight.classList.add("active");
+                btnPreviewDark.classList.remove("active");
+                previewContainer.style.background = "#ffffff";
+                previewContainer.style.color = "#151515";
+            });
+        }
+    }
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
         bindSettingsEvents();
@@ -2428,6 +2585,7 @@
         }
 
         bindConsoleEvents();
+        initConsoleTheme();
 
         // Check authentication status
         var authenticated = await checkAuthStatus();

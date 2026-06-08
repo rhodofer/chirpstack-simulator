@@ -1747,3 +1747,117 @@ body.light-theme .console-log-line {
     background: rgba(239, 68, 68, 0.06);
 }
 
+/* ─── Console Custom Theme Styles ────────────────────────────────── */
+#console-log-container, #console-preview {
+    background-color: var(--c-bg) !important;
+    color: var(--c-fg) !important;
+}
+
+#console-preview {
+    background: #151515;
+    color: #d6dbe5;
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.console-theme-selector {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.color-palette-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--bg-deepest);
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.color-swatch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 4px 8px;
+    min-width: 48px;
+    transition: all 0.2s ease;
+}
+
+.color-swatch-item:hover {
+    border-color: var(--accent);
+}
+
+.color-swatch-item label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.color-swatch-item input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    background: none;
+    width: 24px;
+    height: 18px;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.color-swatch-item input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-swatch-item input[type="color"]::-webkit-color-swatch {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.btn-console-mode {
+    background: var(--bg-deepest);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: var(--radius-xs);
+    transition: all 0.2s ease;
+}
+
+.btn-console-mode.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.preview-prompt {
+    color: var(--c-ansi-2) !important;
+}
+.preview-dir {
+    color: var(--c-ansi-4) !important;
+}
+.preview-exe {
+    color: var(--c-ansi-3) !important;
+}
+.preview-err {
+    color: var(--c-ansi-1) !important;
+}
+

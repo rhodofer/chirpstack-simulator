@@ -495,6 +495,82 @@
                         </div>
                     </div>
 
+                    <!-- Konsol Tema Ayarları -->
+                    <div class="table-wrapper" style="margin-top:16px; padding:20px 24px;">
+                        <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">Konsol Tema Ayarları</h2>
+                        <div class="console-theme-selector" style="display: flex; flex-direction: column; gap: 20px;">
+                            
+                            <!-- Presets -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="console-theme-preset">Hazır Temalar (Presets)</label>
+                                    <select id="console-theme-preset" style="width: 100%;">
+                                        <option value="afterglow" selected>Afterglow</option>
+                                        <option value="monokai">Monokai</option>
+                                        <option value="dracula">Dracula</option>
+                                        <option value="solarized-dark">Solarized Dark</option>
+                                        <option value="solarized-light">Solarized Light</option>
+                                        <option value="default">Default Dark</option>
+                                        <option value="custom">Özel (Custom)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>Önizleme Modu</label>
+                                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                        <button type="button" class="btn-console-mode active" id="btn-console-mode-dark">Koyu Mod</button>
+                                        <button type="button" class="btn-console-mode" id="btn-console-mode-light">Açık Mod</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Color Palette Swatch Grid -->
+                            <div>
+                                <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Renk Paleti (Swatches)</label>
+                                <div class="color-palette-grid">
+                                    <div class="color-swatch-item" title="Yazı Rengi (Foreground)"><label>FG</label><input type="color" id="c-color-fg"></div>
+                                    <div class="color-swatch-item" title="Arka Plan Rengi (Background)"><label>BG</label><input type="color" id="c-color-bg"></div>
+                                    <div class="color-swatch-item" title="İmleç Rengi (Cursor)"><label>CU</label><input type="color" id="c-color-cu"></div>
+                                    <div class="color-swatch-item" title="İmleç Vurgu (Cursor Accent)"><label>CA</label><input type="color" id="c-color-ca"></div>
+                                    <div class="color-swatch-item" title="Seçim Arka Planı (Selection BG)"><label>SB</label><input type="color" id="c-color-sb"></div>
+                                    <div class="color-swatch-item" title="Seçim Yazı Rengi (Selection FG)"><label>SF</label><input type="color" id="c-color-sf"></div>
+                                    <div class="color-swatch-item" title="Siyah (ANSI 0)"><label>0</label><input type="color" id="c-color-0"></div>
+                                    <div class="color-swatch-item" title="Kırmızı (ANSI 1)"><label>1</label><input type="color" id="c-color-1"></div>
+                                    <div class="color-swatch-item" title="Yeşil (ANSI 2)"><label>2</label><input type="color" id="c-color-2"></div>
+                                    <div class="color-swatch-item" title="Sarı (ANSI 3)"><label>3</label><input type="color" id="c-color-3"></div>
+                                    <div class="color-swatch-item" title="Mavi (ANSI 4)"><label>4</label><input type="color" id="c-color-4"></div>
+                                    <div class="color-swatch-item" title="Magenta (ANSI 5)"><label>5</label><input type="color" id="c-color-5"></div>
+                                    <div class="color-swatch-item" title="Cyan (ANSI 6)"><label>6</label><input type="color" id="c-color-6"></div>
+                                    <div class="color-swatch-item" title="Beyaz (ANSI 7)"><label>7</label><input type="color" id="c-color-7"></div>
+                                    <div class="color-swatch-item" title="Açık Siyah (ANSI 8)"><label>8</label><input type="color" id="c-color-8"></div>
+                                    <div class="color-swatch-item" title="Açık Kırmızı (ANSI 9)"><label>9</label><input type="color" id="c-color-9"></div>
+                                    <div class="color-swatch-item" title="Açık Yeşil (ANSI 10)"><label>10</label><input type="color" id="c-color-10"></div>
+                                    <div class="color-swatch-item" title="Açık Sarı (ANSI 11)"><label>11</label><input type="color" id="c-color-11"></div>
+                                    <div class="color-swatch-item" title="Açık Mavi (ANSI 12)"><label>12</label><input type="color" id="c-color-12"></div>
+                                    <div class="color-swatch-item" title="Açık Magenta (ANSI 13)"><label>13</label><input type="color" id="c-color-13"></div>
+                                    <div class="color-swatch-item" title="Açık Cyan (ANSI 14)"><label>14</label><input type="color" id="c-color-14"></div>
+                                    <div class="color-swatch-item" title="Açık Beyaz (ANSI 15)"><label>15</label><input type="color" id="c-color-15"></div>
+                                </div>
+                            </div>
+
+                            <!-- Preview Terminal -->
+                            <div>
+                                <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Önizleme (Live Preview)</label>
+                                <div class="console-preview" id="console-preview">
+<span class="preview-prompt">john@doe-pc$</span> ls
+-rwxr-xr-x 1 root <span class="preview-dir">Documents</span>
+-rwxr-xr-x 1 root <span class="preview-exe">run_simulator.sh</span>
+-rwxr-xr-x 1 root <span class="preview-err">error_report.log</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-console-theme-reset">Varsayılana Sıfırla</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="btn-console-theme-save">✓ Temayı Kaydet ve Uygula</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Log Panel -->
                     <div class="table-wrapper" style="margin-top:16px;">
                         <div style="padding:16px 20px; border-bottom:1px solid var(--border-soft);">
