@@ -1,0 +1,189 @@
+    <!-- ═══ MODAL (Yeni Organizasyon) ═══════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Yeni Organizasyon Ekle</h3>
+                <button class="modal-close-btn" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modal-org-name">Organizasyon Adı *</label>
+                    <input type="text" id="modal-org-name" placeholder="Örn: Test Organizasyonu" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="modal-org-id">Referans ID (opsiyonel)</label>
+                    <div class="input-with-button">
+                        <input type="text" id="modal-org-id" placeholder="Boş bırakılırsa ChirpStack otomatik oluşturur">
+                        <button type="button" class="btn-random" id="btn-random-id" title="Rastgele ID Üret">🎲</button>
+                    </div>
+                    <span class="form-hint">Sadece referans amaçlıdır. ChirpStack kendi ID'sini üretir.</span>
+                </div>
+                <div class="form-group">
+                    <label for="modal-org-desc">Açıklama (isteğe bağlı)</label>
+                    <input type="text" id="modal-org-desc" placeholder="Örn: Test amaçlı organizasyon">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="modal-cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL (Yeni Device Profile) ═══════════════════════════════ -->
+    <div class="modal-overlay" id="dp-modal-overlay" style="display:none;">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3>Yeni Device Profile</h3>
+                <button class="modal-close-btn" id="dp-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dp-name">Profil Adı *</label>
+                    <input type="text" id="dp-name" placeholder="Örn: EU868 OTAA Profile" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="dp-tenant">Tenant *</label>
+                    <select id="dp-tenant"></select>
+                </div>
+                <div class="form-group">
+                    <label for="dp-description">Açıklama (opsiyonel)</label>
+                    <input type="text" id="dp-description" placeholder="Profil açıklaması">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dp-region">Bölge *</label>
+                        <select id="dp-region">
+                            <option value="EU868" selected>EU868</option>
+                            <option value="US915">US915</option>
+                            <option value="AS923">AS923</option>
+                            <option value="AU915">AU915</option>
+                            <option value="IN865">IN865</option>
+                            <option value="KR920">KR920</option>
+                            <option value="RU864">RU864</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dp-mac-version">MAC Versiyon *</label>
+                        <select id="dp-mac-version">
+                            <option value="LORAWAN_1_0_0">1.0.0</option>
+                            <option value="LORAWAN_1_0_1">1.0.1</option>
+                            <option value="LORAWAN_1_0_2">1.0.2</option>
+                            <option value="LORAWAN_1_0_3" selected>1.0.3</option>
+                            <option value="LORAWAN_1_0_4">1.0.4</option>
+                            <option value="LORAWAN_1_1_0">1.1.0</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dp-reg-params">Regional Parameters *</label>
+                        <select id="dp-reg-params">
+                            <option value="A">A</option>
+                            <option value="B" selected>B</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dp-adr-alg">ADR Algoritması</label>
+                        <input type="text" id="dp-adr-alg" placeholder="default" value="default">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dp-supports-otaa" checked>
+                        OTAA (Over-The-Air Activation) destekler
+                    </label>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="dp-supports-class-b">
+                            Class B destekler
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="dp-supports-class-c">
+                            Class C destekler
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="dp-modal-cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="dp-modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST ═══════════════════════════════════════════════════════ -->
+    <!-- ═══ MODAL (Yeni Uygulama / Application) ════════════════════════ -->
+    <div class="modal-overlay" id="net-modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Yeni Uygulama Ekle</h3>
+                <button class="modal-close-btn" id="net-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="net-name">Uygulama Adı *</label>
+                    <input type="text" id="net-name" placeholder="Örn: Sensor Ağı" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="net-tenant">Tenant (Organizasyon) *</label>
+                    <select id="net-tenant"></select>
+                </div>
+                <div class="form-group">
+                    <label for="net-description">Açıklama (opsiyonel)</label>
+                    <input type="text" id="net-description" placeholder="Uygulama açıklaması">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="net-modal-cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="net-modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL (Yeni Cihaz / Device) ════════════════════════════════ -->
+    <div class="modal-overlay" id="dev-modal-overlay" style="display:none;">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3>Yeni Cihaz Ekle</h3>
+                <button class="modal-close-btn" id="dev-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dev-eui">DevEUI * <span style="font-weight:400; font-size:0.8em;">(16 hex karakter)</span></label>
+                    <div class="input-with-button">
+                        <input type="text" id="dev-eui" placeholder="0102030405060708" maxlength="16">
+                        <button type="button" class="btn-random" id="btn-random-dev-eui" title="Rastgele DevEUI Üret">🎲</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dev-name">Cihaz Adı *</label>
+                    <input type="text" id="dev-name" placeholder="Örn: Sensor-001">
+                </div>
+                <div class="form-group">
+                    <label for="dev-app">Uygulama *</label>
+                    <select id="dev-app"></select>
+                </div>
+                <div class="form-group">
+                    <label for="dev-profile">Device Profile *</label>
+                    <select id="dev-profile">
+                        <option value="">Önce uygulama seçin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dev-description">Açıklama (opsiyonel)</label>
+                    <input type="text" id="dev-description" placeholder="Cihaz açıklaması">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="dev-modal-cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="dev-modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" style="display:none;"></div>

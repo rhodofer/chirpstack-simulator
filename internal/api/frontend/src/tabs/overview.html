@@ -1,0 +1,77 @@
+                <!-- ═══ TAB: GENEL BAKIŞ (Organizasyonlar) ═══════════════════ -->
+                <div class="tab-content active" id="content-overview">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Organizasyonlar</h1>
+                            <p class="page-subtitle">Sistemdeki ana organizasyonları ve üst çatı yapıları yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <button class="btn btn-primary btn-sm" id="btn-add-org">
+                                <span class="btn-icon">+</span> Yeni Organizasyon Ekle
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="search-input" placeholder="Organizasyon ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="table-wrapper">
+                        <table class="data-table" id="org-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        Organizasyon Adı <span class="sort-icon" id="sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="status">
+                                        Durum <span class="sort-icon" id="sort-icon-status">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="id">
+                                        ID <span class="sort-icon" id="sort-icon-id">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="date">
+                                        Kayıt Tarihi <span class="sort-icon" id="sort-icon-date">▲</span>
+                                    </th>
+                                    <th style="text-align:right;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="org-table-body">
+                                <!-- JS tarafından doldurulacak -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty state -->
+                        <div class="empty-state" id="empty-state" style="display:none;">
+                            <div class="empty-state-icon">📭</div>
+                            <div class="empty-state-title">Henüz organizasyon yok</div>
+                            <div class="empty-state-text">"Yeni Organizasyon Ekle" butonuyla başlayın.</div>
+                        </div>
+                    </div>
+
+                    <!-- Table Footer / Pagination -->
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label">Sayfa Başına:</span>
+                                <select class="page-size-select" id="page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="total-count">
+                                Toplam: <strong>0</strong> Organizasyon
+                            </span>
+                        </div>
+                        <div class="pagination" id="pagination">
+                            <!-- JS tarafından doldurulacak -->
+                        </div>
+                    </div>
+                </div>

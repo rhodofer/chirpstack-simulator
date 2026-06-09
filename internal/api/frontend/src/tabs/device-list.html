@@ -1,0 +1,65 @@
+                <div class="tab-content" id="content-device-list">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Cihazlar</h1>
+                            <p class="page-subtitle">ChirpStack uygulamalarına ait LoRaWAN cihazlarını yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <select class="page-size-select" id="dev-tenant-select" style="max-width: 240px;">
+                                <option value="">Tüm Tenant'lar</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="btn-add-dev">
+                                <span class="btn-icon">+</span> Yeni Cihaz
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="dev-search-input" placeholder="Cihaz ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-dev-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dev-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        Cihaz Adı <span class="sort-icon" id="dev-sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dev_eui">
+                                        DevEUI <span class="sort-icon" id="dev-sort-icon-dev_eui">▲</span>
+                                    </th>
+                                    <th>Device Profile</th>
+                                    <th style="text-align:right;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dev-table-body"></tbody>
+                        </table>
+
+                        <div class="empty-state" id="dev-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📟</div>
+                            <div class="empty-state-title">Henüz cihaz yok</div>
+                            <div class="empty-state-text">"Yeni Cihaz" butonuyla başlayın.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label">Sayfa Başına:</span>
+                                <select class="page-size-select" id="dev-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="dev-total-count">
+                                Toplam: <strong>0</strong> Cihaz
+                            </span>
+                        </div>
+                        <div class="pagination" id="dev-pagination"></div>
+                    </div>
+                </div>

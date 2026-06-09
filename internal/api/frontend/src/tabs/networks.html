@@ -1,0 +1,64 @@
+                <div class="tab-content" id="content-networks">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Ağ Uygulamaları</h1>
+                            <p class="page-subtitle">ChirpStack tenant'larına ait LoRaWAN uygulamalarını yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <select class="page-size-select" id="net-tenant-select" style="max-width: 240px;">
+                                <option value="">Tüm Tenant'lar</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="btn-add-net">
+                                <span class="btn-icon">+</span> Yeni Uygulama
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="net-search-input" placeholder="Uygulama ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-net-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="net-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        Uygulama Adı <span class="sort-icon" id="net-sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="tenant_id">
+                                        Tenant ID <span class="sort-icon" id="net-sort-icon-tenant_id">▲</span>
+                                    </th>
+                                    <th style="text-align:right;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="net-table-body"></tbody>
+                        </table>
+
+                        <div class="empty-state" id="net-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📡</div>
+                            <div class="empty-state-title">Henüz uygulama yok</div>
+                            <div class="empty-state-text">"Yeni Uygulama" butonuyla başlayın.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label">Sayfa Başına:</span>
+                                <select class="page-size-select" id="net-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="net-total-count">
+                                Toplam: <strong>0</strong> Uygulama
+                            </span>
+                        </div>
+                        <div class="pagination" id="net-pagination"></div>
+                    </div>
+                </div>

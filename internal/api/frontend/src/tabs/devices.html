@@ -1,0 +1,70 @@
+                <div class="tab-content" id="content-devices">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title">Device Profilleri</h1>
+                            <p class="page-subtitle">ChirpStack tenant'larına ait LoRaWAN device profillerini yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <select class="page-size-select" id="dp-tenant-select" style="max-width: 240px;">
+                                <option value="">Tüm Tenant'lar</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="btn-add-dp">
+                                <span class="btn-icon">+</span> Yeni Device Profile
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="dp-search-input" placeholder="Device profile ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-dp-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dp-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        Profil Adı <span class="sort-icon" id="dp-sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="region">
+                                        Bölge <span class="sort-icon" id="dp-sort-icon-region">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="mac_version">
+                                        MAC Versiyon <span class="sort-icon" id="dp-sort-icon-mac_version">▲</span>
+                                    </th>
+                                    <th>OTAA</th>
+                                    <th style="text-align:right;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dp-table-body">
+                            </tbody>
+                        </table>
+
+                        <div class="empty-state" id="dp-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📡</div>
+                            <div class="empty-state-title">Henüz device profile yok</div>
+                            <div class="empty-state-text">"Yeni Device Profile" butonuyla başlayın.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label">Sayfa Başına:</span>
+                                <select class="page-size-select" id="dp-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="dp-total-count">
+                                Toplam: <strong>0</strong> Profil
+                            </span>
+                        </div>
+                        <div class="pagination" id="dp-pagination"></div>
+                    </div>
+                </div>
