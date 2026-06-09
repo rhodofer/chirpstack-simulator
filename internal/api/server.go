@@ -362,28 +362,7 @@ func buildConfig(req StartRequest) config.Config {
 	cfg := config.C
 
 	// Override simulator with single entry from HTTP request.
-	cfg.Simulator = []struct {
-		TenantID         string        `mapstructure:"tenant_id"`
-		Duration         time.Duration `mapstructure:"duration"`
-		ActivationTime   time.Duration `mapstructure:"activation_time"`
-		AppName          string        `mapstructure:"app_name"`
-		DeviceNamePrefix string        `mapstructure:"device_name_prefix"`
-		Device           struct {
-			Count           int           `mapstructure:"count"`
-			UplinkInterval  time.Duration `mapstructure:"uplink_interval"`
-			FPort           uint8         `mapstructure:"f_port"`
-			Payload         string        `mapstructure:"payload"`
-			Frequency       int           `mapstructure:"frequency"`
-			Bandwidth       int           `mapstructure:"bandwidth"`
-			SpreadingFactor int           `mapstructure:"spreading_factor"`
-		} `mapstructure:"device"`
-		Gateway struct {
-			MinCount             int    `mapstructure:"min_count"`
-			MaxCount             int    `mapstructure:"max_count"`
-			EventTopicTemplate   string `mapstructure:"event_topic_template"`
-			CommandTopicTemplate string `mapstructure:"command_topic_template"`
-		} `mapstructure:"gateway"`
-	}{{
+	cfg.Simulator = []config.SimulatorConfig{{
 		TenantID:         req.TenantID,
 		Duration:         duration,
 		ActivationTime:   activationTime,

@@ -38,9 +38,9 @@ func init() {
 
 	viper.BindPFlag("general.log_level", rootCmd.PersistentFlags().Lookup("log-level"))
 
-	viper.SetDefault("application_server.api.server", "127.0.0.1:8080")
-	viper.SetDefault("application_server.integration.mqtt.server", "tcp://127.0.0.1:1883")
-	viper.SetDefault("network_server.gateway.backend.mqtt.server", "tcp://127.0.0.1:1883")
+	viper.SetDefault("chirpstack.api.server", "127.0.0.1:8080")
+	viper.SetDefault("chirpstack.integration.mqtt.server", "tcp://127.0.0.1:1883")
+	viper.SetDefault("chirpstack.gateway.backend.mqtt.server", "tcp://127.0.0.1:1883")
 	viper.SetDefault("prometheus.bind", "0.0.0.0:9001")
 	viper.SetDefault("http.bind", "0.0.0.0:9002")
 
@@ -66,11 +66,16 @@ func initConfig() {
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("$HOME/.config/chirpstack-simulator")
 		viper.AddConfigPath("/etc/chirpstack-simulator")
+		
+		// Also try simulator.toml which is used locally
 		if err := viper.ReadInConfig(); err != nil {
-			switch err.(type) {
-			case viper.ConfigFileNotFoundError:
-			default:
-				log.WithError(err).Fatal("read configuration file error")
+			viper.SetConfigName("simulator")
+			if err2 := viper.ReadInConfig(); err2 != nil {
+				switch err2.(type) {
+				case viper.ConfigFileNotFoundError:
+				default:
+					log.WithError(err2).Fatal("read configuration file error")
+				}
 			}
 		}
 	}

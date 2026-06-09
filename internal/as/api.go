@@ -53,7 +53,7 @@ func Setup(c config.Config) error {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	conn, err := grpc.DialContext(ctx, conf.API.Server, dialOpts...)
