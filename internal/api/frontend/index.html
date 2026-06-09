@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChirpStack Simulator</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <div class="app">
@@ -76,6 +76,10 @@
                         <div class="secondary-nav-link" data-tab="settings">
                             <span class="nav-icon">•</span>
                             <span>Ayarlar</span>
+                        </div>
+                        <div class="secondary-nav-link" data-tab="console">
+                            <span class="nav-icon">•</span>
+                            <span>Konsol</span>
                         </div>
                     </div>
                 </div>
@@ -393,213 +397,277 @@
                     </div>
                 </div>
 
-                <!-- ═══ TAB: AYARLAR (Placeholder) ═══════════════════════════ -->
+                <!-- ═══ TAB: AYARLAR ═══════════════════════════ -->
                 <div class="tab-content" id="content-settings">
                     <div class="page-header">
                         <div class="page-header-left">
                             <h1 class="page-title">Ayarlar</h1>
-                            <p class="page-subtitle">Sistem ve bağlantı ayarlarını görüntüleyin.</p>
-                        </div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="stat-label">Sunucu Durumu</div>
-                            <div class="stat-value" id="stat-server-status">—</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Versiyon</div>
-                            <div class="stat-value" id="stat-server-version">—</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Simülasyon Durumu</div>
-                            <div class="stat-value" id="stat-sim-status">—</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Uptime</div>
-                            <div class="stat-value" id="stat-uptime">—</div>
-                    </div>
-
-                    <!-- Genel Simülasyon Ayarları -->
-                    <div class="table-wrapper" style="margin-top:16px; padding:20px 24px;">
-                        <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">Genel Simülasyon Ayarları</h2>
-                        <div class="settings-form-grid" style="display: flex; flex-direction: column; gap: 24px;">
-                            
-                            <!-- RF Parametreleri -->
-                            <div>
-                                <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">RF Parametreleri</h3>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="frequency">Frekans (Hz)</label>
-                                        <input type="number" id="frequency" name="frequency" placeholder="868100000" value="868100000">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="bandwidth">Bant Genişliği (Hz)</label>
-                                        <input type="number" id="bandwidth" name="bandwidth" placeholder="125000" value="125000">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="spreading_factor">Spreading Factor</label>
-                                        <input type="number" id="spreading_factor" name="spreading_factor" min="7" max="12" placeholder="7" value="7">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Telemetri Ayarları -->
-                            <div>
-                                <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">Telemetri Ayarları</h3>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="uplink_interval">Uplink Aralığı</label>
-                                        <input type="text" id="uplink_interval" name="uplink_interval" placeholder="30s" value="30s">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="f_port">FPort</label>
-                                        <input type="number" id="f_port" name="f_port" min="1" max="223" placeholder="10" value="10">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="payload">Payload (hex)</label>
-                                        <input type="text" id="payload" name="payload" placeholder="010203" value="010203">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Zamanlama Parametreleri -->
-                            <div>
-                                <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">Zamanlama Parametreleri</h3>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="duration">Süre (0=süresiz)</label>
-                                        <input type="text" id="duration" name="duration" placeholder="0s" value="0s">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="activation_time">Aktivasyon Süresi</label>
-                                        <input type="text" id="activation_time" name="activation_time" placeholder="30s" value="30s">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- MQTT Topic Şablonları -->
-                            <div>
-                                <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">MQTT Topic Şablonları</h3>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="event_topic_template">Event Topic Şablonu</label>
-                                        <input type="text" id="event_topic_template" name="event_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}" value="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom:0;">
-                                        <label for="command_topic_template">Command Topic Şablonu</label>
-                                        <input type="text" id="command_topic_template" name="command_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}" value="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}">
-                                    </div>
-                                </div>
-                            </div>
-
+                            <p class="page-subtitle">Sistem, bağlantı ve konsol ayarlarını yönetin.</p>
                         </div>
                     </div>
 
-                    <!-- Konsol Tema Ayarları -->
-                    <div class="table-wrapper" style="margin-top:16px; padding:20px 24px;">
-                        <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">Konsol Tema Ayarları</h2>
-                        <div class="console-theme-selector" style="display: flex; flex-direction: column; gap: 20px;">
-                            
-                            <!-- Presets -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                                <div class="form-group" style="margin-bottom:0;">
-                                    <label for="console-theme-preset">Hazır Temalar (Presets)</label>
-                                    <select id="console-theme-preset" style="width: 100%;">
-                                        <option value="falt-cosmic" selected>Falt Cosmic</option>
-                                        <option value="argonaut">Argonaut</option>
-                                        <option value="afterglow">Afterglow</option>
-                                        <option value="monokai">Monokai</option>
-                                        <option value="dracula">Dracula</option>
-                                        <option value="solarized-dark">Solarized Dark</option>
-                                        <option value="solarized-light">Solarized Light</option>
-                                        <option value="default">Default Dark</option>
-                                        <option value="custom">Özel (Custom)</option>
-                                    </select>
+                    <div class="settings-layout">
+                        <!-- Left Navigation Sidebar -->
+                        <div class="settings-sidebar">
+                            <div class="settings-sidebar-group">
+                                <div class="settings-sidebar-title">Hesap & Sistem</div>
+                                <div class="settings-sidebar-links">
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link active" data-settings-tab="general">
+                                        <i class="fas fa-sliders-h" style="margin-right:8px; width:16px; opacity:0.8;"></i> Genel Ayarlar
+                                    </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="connections">
+                                        <i class="fas fa-network-wired" style="margin-right:8px; width:16px; opacity:0.8;"></i> Bağlantı Ayarları
+                                    </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="theme">
+                                        <i class="fas fa-palette" style="margin-right:8px; width:16px; opacity:0.8;"></i> Konsol Teması
+                                    </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="logs">
+                                        <i class="fas fa-terminal" style="margin-right:8px; width:16px; opacity:0.8;"></i> Sistem Logları
+                                    </button>
                                 </div>
-                                <div class="form-group" style="margin-bottom:0;">
-                                    <label>Önizleme Modu</label>
-                                    <div style="display: flex; gap: 8px; margin-top: 4px;">
-                                        <button type="button" class="btn-console-mode active" id="btn-console-mode-dark">Koyu Mod</button>
-                                        <button type="button" class="btn-console-mode" id="btn-console-mode-light">Açık Mod</button>
+                            </div>
+                        </div>
+
+                        <!-- Right Content Area -->
+                        <div class="settings-main-content">
+                            <!-- Sub Tab: Genel Ayarlar -->
+                            <div class="settings-sub-content active" id="settings-sub-general">
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">Genel Simülasyon Ayarları</h2>
+                                    <div class="settings-form-grid" style="display: flex; flex-direction: column; gap: 24px;">
+                                        <!-- RF Parametreleri -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">RF Parametreleri</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="frequency">Frekans (Hz)</label>
+                                                    <input type="number" id="frequency" name="frequency" placeholder="868100000" value="868100000">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="bandwidth">Bant Genişliği (Hz)</label>
+                                                    <input type="number" id="bandwidth" name="bandwidth" placeholder="125000" value="125000">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="spreading_factor">Spreading Factor</label>
+                                                    <input type="number" id="spreading_factor" name="spreading_factor" min="7" max="12" placeholder="7" value="7">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Telemetri Ayarları -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">Telemetri Ayarları</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="uplink_interval">Uplink Aralığı</label>
+                                                    <input type="text" id="uplink_interval" name="uplink_interval" placeholder="30s" value="30s">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="f_port">FPort</label>
+                                                    <input type="number" id="f_port" name="f_port" min="1" max="223" placeholder="10" value="10">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="payload">Payload (hex)</label>
+                                                    <input type="text" id="payload" name="payload" placeholder="010203" value="010203">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Zamanlama Parametreleri -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">Zamanlama Parametreleri</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="duration">Süre (0=süresiz)</label>
+                                                    <input type="text" id="duration" name="duration" placeholder="0s" value="0s">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="activation_time">Aktivasyon Süresi</label>
+                                                    <input type="text" id="activation_time" name="activation_time" placeholder="30s" value="30s">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- MQTT Topic Şablonları -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">MQTT Topic Şablonları</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="event_topic_template">Event Topic Şablonu</label>
+                                                    <input type="text" id="event_topic_template" name="event_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}" value="eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="command_topic_template">Command Topic Şablonu</label>
+                                                    <input type="text" id="command_topic_template" name="command_topic_template" placeholder="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}" value="eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Color Palette Swatch Grid -->
-                            <div>
-                                <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Renk Paleti (Swatches)</label>
-                                <div class="color-palette-grid">
-                                    <div class="color-swatch-item" title="Yazı Rengi (Foreground)"><label>FG</label><input type="color" id="c-color-fg"></div>
-                                    <div class="color-swatch-item" title="Arka Plan Rengi (Background)"><label>BG</label><input type="color" id="c-color-bg"></div>
-                                    <div class="color-swatch-item" title="İmleç Rengi (Cursor)"><label>CU</label><input type="color" id="c-color-cu"></div>
-                                    <div class="color-swatch-item" title="İmleç Vurgu (Cursor Accent)"><label>CA</label><input type="color" id="c-color-ca"></div>
-                                    <div class="color-swatch-item" title="Seçim Arka Planı (Selection BG)"><label>SB</label><input type="color" id="c-color-sb"></div>
-                                    <div class="color-swatch-item" title="Seçim Yazı Rengi (Selection FG)"><label>SF</label><input type="color" id="c-color-sf"></div>
-                                    <div class="color-swatch-item" title="Siyah (ANSI 0)"><label>0</label><input type="color" id="c-color-0"></div>
-                                    <div class="color-swatch-item" title="Kırmızı (ANSI 1)"><label>1</label><input type="color" id="c-color-1"></div>
-                                    <div class="color-swatch-item" title="Yeşil (ANSI 2)"><label>2</label><input type="color" id="c-color-2"></div>
-                                    <div class="color-swatch-item" title="Sarı (ANSI 3)"><label>3</label><input type="color" id="c-color-3"></div>
-                                    <div class="color-swatch-item" title="Mavi (ANSI 4)"><label>4</label><input type="color" id="c-color-4"></div>
-                                    <div class="color-swatch-item" title="Magenta (ANSI 5)"><label>5</label><input type="color" id="c-color-5"></div>
-                                    <div class="color-swatch-item" title="Cyan (ANSI 6)"><label>6</label><input type="color" id="c-color-6"></div>
-                                    <div class="color-swatch-item" title="Beyaz (ANSI 7)"><label>7</label><input type="color" id="c-color-7"></div>
-                                    <div class="color-swatch-item" title="Açık Siyah (ANSI 8)"><label>8</label><input type="color" id="c-color-8"></div>
-                                    <div class="color-swatch-item" title="Açık Kırmızı (ANSI 9)"><label>9</label><input type="color" id="c-color-9"></div>
-                                    <div class="color-swatch-item" title="Açık Yeşil (ANSI 10)"><label>10</label><input type="color" id="c-color-10"></div>
-                                    <div class="color-swatch-item" title="Açık Sarı (ANSI 11)"><label>11</label><input type="color" id="c-color-11"></div>
-                                    <div class="color-swatch-item" title="Açık Mavi (ANSI 12)"><label>12</label><input type="color" id="c-color-12"></div>
-                                    <div class="color-swatch-item" title="Açık Magenta (ANSI 13)"><label>13</label><input type="color" id="c-color-13"></div>
-                                    <div class="color-swatch-item" title="Açık Cyan (ANSI 14)"><label>14</label><input type="color" id="c-color-14"></div>
-                                    <div class="color-swatch-item" title="Açık Beyaz (ANSI 15)"><label>15</label><input type="color" id="c-color-15"></div>
+                            <!-- Sub Tab: Bağlantı Ayarları -->
+                            <div class="settings-sub-content" id="settings-sub-connections">
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">ChirpStack & Broker Bağlantı Ayarları</h2>
+                                    <form id="connections-form" style="display: flex; flex-direction: column; gap: 24px;">
+                                        <!-- ChirpStack API Settings -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">ChirpStack API</h3>
+                                            <div style="display:grid; grid-template-columns: 1fr; gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="conn-api-server">ChirpStack API Sunucusu (Host:Port)</label>
+                                                    <input type="text" id="conn-api-server" name="api_server" placeholder="192.168.1.103:8080" required>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="conn-api-key">API Anahtarı (JWT Token)</label>
+                                                    <input type="password" id="conn-api-key" name="api_key" placeholder="API Key..." required>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0; display:flex; align-items:center; gap:8px;">
+                                                    <input type="checkbox" id="conn-api-insecure" name="api_insecure" style="width:auto; cursor:pointer;">
+                                                    <label for="conn-api-insecure" style="margin-bottom:0; cursor:pointer;">Güvensiz Bağlantı (Insecure/TLS'siz)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- MQTT Settings -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">MQTT Broker Bağlantıları</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="conn-integration-mqtt">ChirpStack MQTT Integration Server</label>
+                                                    <input type="text" id="conn-integration-mqtt" name="integration_mqtt_server" placeholder="tcp://192.168.1.103:1883" required>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="conn-gateway-mqtt">ChirpStack Gateway MQTT Server</label>
+                                                    <input type="text" id="conn-gateway-mqtt" name="gateway_mqtt_server" placeholder="tcp://192.168.1.103:1883" required>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action buttons -->
+                                        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
+                                            <button type="submit" class="btn" id="btn-save-connections" style="background:var(--accent); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                                <i class="fas fa-save"></i> Kaydet ve Bağlan
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
 
-                            <!-- Preview Terminal -->
-                            <div>
-                                <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Önizleme (Live Preview)</label>
-                                <div class="console-preview" id="console-preview">
+                            <!-- Sub Tab: Konsol Teması -->
+                            <div class="settings-sub-content" id="settings-sub-theme">
+                                <!-- Konsol Tema Ayarları -->
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;">Konsol Tema Ayarları</h2>
+                                    <div class="console-theme-selector" style="display: flex; flex-direction: column; gap: 20px;">
+                                        
+                                        <!-- Presets -->
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="console-theme-preset">Hazır Temalar (Presets)</label>
+                                                <select id="console-theme-preset" style="width: 100%;">
+                                                    <option value="falt-cosmic" selected>Falt Cosmic</option>
+                                                    <option value="argonaut">Argonaut</option>
+                                                    <option value="afterglow">Afterglow</option>
+                                                    <option value="monokai">Monokai</option>
+                                                    <option value="dracula">Dracula</option>
+                                                    <option value="solarized-dark">Solarized Dark</option>
+                                                    <option value="solarized-light">Solarized Light</option>
+                                                    <option value="default">Default Dark</option>
+                                                    <option value="custom">Özel (Custom)</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label>Önizleme Modu</label>
+                                                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                                    <button type="button" class="btn-console-mode active" id="btn-console-mode-dark">Koyu Mod</button>
+                                                    <button type="button" class="btn-console-mode" id="btn-console-mode-light">Açık Mod</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Color Palette Swatch Grid -->
+                                        <div>
+                                            <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Renk Paleti (Swatches)</label>
+                                            <div class="color-palette-grid">
+                                                <div class="color-swatch-item" title="Yazı Rengi (Foreground)"><label>FG</label><input type="color" id="c-color-fg"></div>
+                                                <div class="color-swatch-item" title="Arka Plan Rengi (Background)"><label>BG</label><input type="color" id="c-color-bg"></div>
+                                                <div class="color-swatch-item" title="İmleç Rengi (Cursor)"><label>CU</label><input type="color" id="c-color-cu"></div>
+                                                <div class="color-swatch-item" title="İmleç Vurgu (Cursor Accent)"><label>CA</label><input type="color" id="c-color-ca"></div>
+                                                <div class="color-swatch-item" title="Seçim Arka Planı (Selection BG)"><label>SB</label><input type="color" id="c-color-sb"></div>
+                                                <div class="color-swatch-item" title="Seçim Yazı Rengi (Selection FG)"><label>SF</label><input type="color" id="c-color-sf"></div>
+                                                <div class="color-swatch-item" title="Siyah (ANSI 0)"><label>0</label><input type="color" id="c-color-0"></div>
+                                                <div class="color-swatch-item" title="Kırmızı (ANSI 1)"><label>1</label><input type="color" id="c-color-1"></div>
+                                                <div class="color-swatch-item" title="Yeşil (ANSI 2)"><label>2</label><input type="color" id="c-color-2"></div>
+                                                <div class="color-swatch-item" title="Sarı (ANSI 3)"><label>3</label><input type="color" id="c-color-3"></div>
+                                                <div class="color-swatch-item" title="Mavi (ANSI 4)"><label>4</label><input type="color" id="c-color-4"></div>
+                                                <div class="color-swatch-item" title="Magenta (ANSI 5)"><label>5</label><input type="color" id="c-color-5"></div>
+                                                <div class="color-swatch-item" title="Cyan (ANSI 6)"><label>6</label><input type="color" id="c-color-6"></div>
+                                                <div class="color-swatch-item" title="Beyaz (ANSI 7)"><label>7</label><input type="color" id="c-color-7"></div>
+                                                <div class="color-swatch-item" title="Açık Siyah (ANSI 8)"><label>8</label><input type="color" id="c-color-8"></div>
+                                                <div class="color-swatch-item" title="Açık Kırmızı (ANSI 9)"><label>9</label><input type="color" id="c-color-9"></div>
+                                                <div class="color-swatch-item" title="Açık Yeşil (ANSI 10)"><label>10</label><input type="color" id="c-color-10"></div>
+                                                <div class="color-swatch-item" title="Açık Sarı (ANSI 11)"><label>11</label><input type="color" id="c-color-11"></div>
+                                                <div class="color-swatch-item" title="Açık Mavi (ANSI 12)"><label>12</label><input type="color" id="c-color-12"></div>
+                                                <div class="color-swatch-item" title="Açık Magenta (ANSI 13)"><label>13</label><input type="color" id="c-color-13"></div>
+                                                <div class="color-swatch-item" title="Açık Cyan (ANSI 14)"><label>14</label><input type="color" id="c-color-14"></div>
+                                                <div class="color-swatch-item" title="Açık Beyaz (ANSI 15)"><label>15</label><input type="color" id="c-color-15"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Preview Terminal -->
+                                        <div>
+                                            <label style="font-size: 0.8rem; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 600;">Önizleme (Live Preview)</label>
+                                            <div class="console-preview" id="console-preview">
 <span class="preview-prompt">john@doe-pc$</span> ls
 -rwxr-xr-x 1 root <span class="preview-dir">Documents</span>
 -rwxr-xr-x 1 root <span class="preview-exe">run_simulator.sh</span>
 -rwxr-xr-x 1 root <span class="preview-err">error_report.log</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action Buttons -->
+                                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                                            <button type="button" class="btn btn-secondary btn-sm" id="btn-console-theme-reset">Varsayılana Sıfırla</button>
+                                            <button type="button" class="btn btn-primary btn-sm" id="btn-console-theme-save">✓ Temayı Kaydet ve Uygula</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                                <button type="button" class="btn btn-secondary btn-sm" id="btn-console-theme-reset">Varsayılana Sıfırla</button>
-                                <button type="button" class="btn btn-primary btn-sm" id="btn-console-theme-save">✓ Temayı Kaydet ve Uygula</button>
+                            <!-- Sub Tab: Sistem Logları -->
+                            <div class="settings-sub-content" id="settings-sub-logs">
+                                <div class="table-wrapper">
+                                    <div style="padding:16px 20px; border-bottom:1px solid var(--border-soft);">
+                                        <h2 style="font-size:0.95rem; font-weight:600;">Sistem Logları</h2>
+                                    </div>
+                                    <div class="log-container" id="log-container"></div>
+                                </div>
                             </div>
+                        </div> <!-- /.settings-main-content -->
+                    </div> <!-- /.settings-layout -->
+                </div>
+
+                <!-- CONSOLE TAB -->
+                <div class="tab-content" id="content-console">
+                    <div class="page-header">
+                        <div class="page-header-text">
+                            <h1 class="page-title">Canlı Log Konsolu</h1>
+                            <p class="page-subtitle">Simülasyon cihazlarına ait veri akışını gerçek zamanlı izleyin.</p>
+                        </div>
+                        <div class="page-header-actions">
+                            <button class="btn btn-outline" id="btn-console-clear">🧹 Ekranı Temizle</button>
                         </div>
                     </div>
-
-                    <!-- Log Panel -->
-                    <div class="table-wrapper" style="margin-top:16px;">
-                        <div style="padding:16px 20px; border-bottom:1px solid var(--border-soft);">
-                            <h2 style="font-size:0.95rem; font-weight:600;">Sistem Logları</h2>
+                    <div class="table-wrapper" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+                        <div class="console-body" id="console-log-container" style="flex: 1; padding: 16px; overflow-y: auto;">
+                            <div class="console-placeholder">Simülasyon başlatıldığında canlı loglar burada görünecektir.</div>
                         </div>
-                        <div class="log-container" id="log-container"></div>
                     </div>
                 </div>
 
             </div><!-- /.main-scroll -->
-
-            <!-- Bottom Console -->
-            <div class="bottom-console collapsed" id="bottom-console">
-                <div class="console-resize-handle" id="console-resize-handle"></div>
-                <div class="console-header">
-                    <div class="console-title">
-                        <span class="console-dot text-success"></span> Simülasyon Canlı Log Konsolu
-                    </div>
-                    <div class="console-actions">
-                        <button class="console-btn" id="btn-console-clear" title="Temizle">🧹 Temizle</button>
-                        <button class="console-btn" id="btn-console-toggle" title="Aç/Kapat">▲ Genişlet</button>
-                    </div>
-                </div>
-                <div class="console-body" id="console-log-container">
-                    <div class="console-placeholder">Simülasyon başlatıldığında canlı loglar burada görünecektir.</div>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -912,6 +980,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

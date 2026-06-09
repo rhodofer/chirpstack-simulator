@@ -1,5 +1,5 @@
 # 1. Aşama: Go kodunu derleme (Builder Stage)
-FROM golang:1.21-alpine AS builder
+FROM golang:alpine AS builder
 
 RUN apk add --no-cache git make bash
 

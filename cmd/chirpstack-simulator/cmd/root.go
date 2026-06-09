@@ -50,6 +50,7 @@ func init() {
 
 func initConfig() {
 	config.Version = version
+	config.CfgFile = cfgFile
 
 	if cfgFile != "" {
 		b, err := ioutil.ReadFile(cfgFile)

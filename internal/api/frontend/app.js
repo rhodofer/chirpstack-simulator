@@ -17,6 +17,7 @@
     var hamburgerBtn      = $("#hamburger-btn");
     var sidebarCloseBtn   = $("#sidebar-close-btn");
     var versionText       = $("#version-text");
+    var pageTitleBar      = $("#page-title-bar");
 
     // Top bar
     var connectionBadge   = $("#connection-badge");
@@ -193,6 +194,224 @@
     };
 
     var pollTimer = null;
+
+    // ─── Global Theme State & Helpers ──────────────────────────────────
+    var presets = {
+        "falt-cosmic": {
+            bg: "#070913", fg: "#e2e8f0", cu: "#ff007f", ca: "#070913", sb: "#1e1b4b", sf: "#ffffff",
+            0: "#141726", 1: "#ff5c00", 2: "#00ff87", 3: "#ffdf00", 4: "#0052ff",
+            5: "#ff007f", 6: "#00f2fe", 7: "#f1f5f9", 8: "#1f243c", 9: "#ff7b30",
+            10: "#33ff9e", 11: "#ffe533", 12: "#3375ff", 13: "#ff3399", 14: "#33f5ff",
+            15: "#ffffff"
+        },
+        argonaut: {
+            bg: "#0e1019", fg: "#fffaf4", cu: "#ff0018", ca: "#0e1019", sb: "#002a3b", sf: "#ffffff",
+            0: "#232323", 1: "#ff000f", 2: "#8ce10a", 3: "#ffb900", 4: "#008df8",
+            5: "#6c43a6", 6: "#00d8eb", 7: "#ffffff", 8: "#444444", 9: "#ff273f",
+            10: "#abe15b", 11: "#ffd242", 12: "#0092ff", 13: "#9a5feb", 14: "#67fff0",
+            15: "#ffffff"
+        },
+        afterglow: {
+            bg: "#151515", fg: "#d6dbe5", cu: "#d6dbe5", ca: "#151515", sb: "#303030", sf: "#d6dbe5",
+            0: "#1c1c1c", 1: "#a53d3d", 2: "#7b963b", 3: "#cca04c", 4: "#487bb0",
+            5: "#9e5a8a", 6: "#44a69e", 7: "#d0d0d0", 8: "#505050", 9: "#b84c4c",
+            10: "#8fa850", 11: "#e0b860", 12: "#5c90c4", 13: "#b26e9e", 14: "#58bab0",
+            15: "#f5f5f5"
+        },
+        monokai: {
+            bg: "#272822", fg: "#f8f8f2", cu: "#f8f8f0", ca: "#272822", sb: "#49483e", sf: "#f8f8f2",
+            0: "#272822", 1: "#f92672", 2: "#a6e22e", 3: "#f4bf75", 4: "#66d9ef",
+            5: "#ae81ff", 6: "#a1efe4", 7: "#f8f8f2", 8: "#75715e", 9: "#f92672",
+            10: "#a6e22e", 11: "#f4bf75", 12: "#66d9ef", 13: "#ae81ff", 14: "#a1efe4",
+            15: "#f9f8f5"
+        },
+        dracula: {
+            bg: "#282a36", fg: "#f8f8f2", cu: "#f8f8f2", ca: "#282a36", sb: "#44475a", sf: "#f8f8f2",
+            0: "#21222c", 1: "#ff5555", 2: "#50fa7b", 3: "#f1fa8c", 4: "#8be9fd",
+            5: "#ff79c6", 6: "#bd93f9", 7: "#f8f8f2", 8: "#6272a4", 9: "#ff6e6e",
+            10: "#69ff94", 11: "#ffffa5", 12: "#d6acff", 13: "#ff92df", 14: "#a4ffff",
+            15: "#ffffff"
+        },
+        "solarized-dark": {
+            bg: "#002b36", fg: "#839496", cu: "#839496", ca: "#002b36", sb: "#073642", sf: "#93a1a1",
+            0: "#073642", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
+            5: "#d33682", 6: "#2aa198", 7: "#eee8d5", 8: "#002b36", 9: "#cb4b16",
+            10: "#586e75", 11: "#657b83", 12: "#839496", 13: "#6c71c4", 14: "#93a1a1",
+            15: "#fdf6e3"
+        },
+        "solarized-light": {
+            bg: "#fdf6e3", fg: "#586e75", cu: "#586e75", ca: "#fdf6e3", sb: "#eee8d5", sf: "#586e75",
+            0: "#eee8d5", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
+            5: "#d33682", 6: "#2aa198", 7: "#073642", 8: "#fdf6e3", 9: "#cb4b16",
+            10: "#93a1a1", 11: "#839496", 12: "#657b83", 13: "#6c71c4", 14: "#586e75",
+            15: "#073642"
+        },
+        default: {
+            bg: "#080a0f", fg: "#e2e8f0", cu: "#e2e8f0", ca: "#080a0f", sb: "#2563eb", sf: "#ffffff",
+            0: "#1e293b", 1: "#ef4444", 2: "#22c55e", 3: "#eab308", 4: "#3b82f6",
+            5: "#a855f7", 6: "#06b6d4", 7: "#e2e8f0", 8: "#475569", 9: "#f87171",
+            10: "#4ade80", 11: "#facc15", 12: "#60a5fa", 13: "#c084fc", 14: "#22d3ee",
+            15: "#ffffff"
+        }
+    };
+
+    var keys = ["fg", "bg", "cu", "ca", "sb", "sf", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"];
+    var currentPreset = "falt-cosmic";
+    var activeTheme = Object.assign({}, presets["falt-cosmic"]);
+
+    function normalizeHex(hex) {
+        if (!hex) return "#000000";
+        hex = hex.trim();
+        if (hex.startsWith("#")) hex = hex.slice(1);
+        if (hex.length === 3) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        return "#" + hex;
+    }
+
+    function hexToRgb(hex) {
+        hex = normalizeHex(hex);
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        return r + "," + g + "," + b;
+    }
+
+    function adjustColorBrightness(hex, percent) {
+        hex = normalizeHex(hex);
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+
+        var amt = Math.round(2.55 * percent);
+        r = Math.max(0, Math.min(255, r + amt));
+        g = Math.max(0, Math.min(255, g + amt));
+        b = Math.max(0, Math.min(255, b + amt));
+
+        var rHex = r.toString(16).padStart(2, '0');
+        var gHex = g.toString(16).padStart(2, '0');
+        var bHex = b.toString(16).padStart(2, '0');
+
+        return "#" + rHex + gHex + bHex;
+    }
+
+    function isLightColor(hex) {
+        hex = normalizeHex(hex);
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        var luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luma > 128;
+    }
+
+    function applyGlobalTheme(themeObj) {
+        var root = document.documentElement;
+        if (!root) return;
+
+        var bg = normalizeHex(themeObj.bg);
+        var fg = normalizeHex(themeObj.fg);
+        var cu = normalizeHex(themeObj.cu);
+        var sb = normalizeHex(themeObj.sb);
+
+        var isLight = isLightColor(bg);
+
+        var bgDeepest, bgCard, bgField, bgSidebar, bgSecSidebar;
+        var text, textDim;
+        var border, borderSoft;
+
+        if (isLight) {
+            bgDeepest = adjustColorBrightness(bg, -5);
+            bgCard = "#ffffff";
+            bgField = adjustColorBrightness(bg, -3);
+            bgSidebar = sb;
+            bgSecSidebar = adjustColorBrightness(sb, -5);
+
+            text = fg;
+            textDim = adjustColorBrightness(fg, 30);
+
+            border = adjustColorBrightness(bg, -15);
+            borderSoft = adjustColorBrightness(bg, -8);
+        } else {
+            bgDeepest = adjustColorBrightness(bg, -12);
+            bgCard = adjustColorBrightness(bg, 8);
+            bgField = adjustColorBrightness(bg, 14);
+            bgSidebar = sb;
+            bgSecSidebar = adjustColorBrightness(sb, -8);
+
+            text = fg;
+            textDim = adjustColorBrightness(fg, -30);
+
+            border = adjustColorBrightness(bg, 18);
+            borderSoft = adjustColorBrightness(bg, 10);
+        }
+
+        var accent = cu;
+        var accentHover = adjustColorBrightness(cu, isLight ? -10 : 10);
+        var accentSoft = "rgba(" + hexToRgb(cu) + ", 0.12)";
+
+        var green = normalizeHex(themeObj[2] || themeObj[10] || "#22c55e");
+        var red = normalizeHex(themeObj[1] || themeObj[9] || "#ef4444");
+        var yellow = normalizeHex(themeObj[3] || themeObj[11] || "#eab308");
+        var blue = normalizeHex(themeObj[4] || themeObj[12] || "#3b82f6");
+
+        root.style.setProperty("--bg", bg);
+        root.style.setProperty("--bg-deepest", bgDeepest);
+        root.style.setProperty("--bg-card", bgCard);
+        root.style.setProperty("--bg-field", bgField);
+        root.style.setProperty("--bg-sidebar", bgSidebar);
+        root.style.setProperty("--bg-secondary-sidebar", bgSecSidebar);
+
+        root.style.setProperty("--text", text);
+        root.style.setProperty("--text-dim", textDim);
+
+        root.style.setProperty("--border", border);
+        root.style.setProperty("--border-soft", borderSoft);
+
+        root.style.setProperty("--accent", accent);
+        root.style.setProperty("--accent-hover", accentHover);
+        root.style.setProperty("--accent-soft", accentSoft);
+
+        root.style.setProperty("--green", green);
+        root.style.setProperty("--red", red);
+        root.style.setProperty("--yellow", yellow);
+        root.style.setProperty("--blue", blue);
+
+        // Inject all 16 ANSI colors (0 to 15) to :root
+        for (var i = 0; i <= 15; i++) {
+            var val = themeObj[i] || presets["falt-cosmic"][i];
+            root.style.setProperty("--ansi-" + i, normalizeHex(val));
+        }
+    }
+
+    function applyTheme(themeObj) {
+        var targets = [$("#console-log-container"), $("#console-preview")];
+        targets.forEach(function (el) {
+            if (!el) return;
+            el.style.setProperty("--c-fg", themeObj.fg);
+            el.style.setProperty("--c-bg", themeObj.bg);
+            el.style.setProperty("--c-cu", themeObj.cu);
+            el.style.setProperty("--c-ca", themeObj.ca);
+            el.style.setProperty("--c-sb", themeObj.sb);
+            el.style.setProperty("--c-sf", themeObj.sf);
+            keys.forEach(function (key) {
+                if (key !== "fg" && key !== "bg" && key !== "cu" && key !== "ca" && key !== "sb" && key !== "sf") {
+                    el.style.setProperty("--c-ansi-" + key, themeObj[key]);
+                }
+            });
+        });
+        applyGlobalTheme(themeObj);
+    }
+
+    function updateInputs(themeObj) {
+        keys.forEach(function (key) {
+            var input = $("#c-color-" + key);
+            if (input) {
+                input.value = themeObj[key];
+            }
+        });
+        var presetSelect = $("#console-theme-preset");
+        if (presetSelect) presetSelect.value = currentPreset;
+    }
 
     // ─── Default Config ────────────────────────────────────────────────
     function defaultConfig() {
@@ -1185,7 +1404,8 @@
             devices: "Device Profilleri",
             networks: "Ağ Uygulamaları",
             "device-list": "Cihazlar",
-            settings: "Ayarlar"
+            settings: "Ayarlar",
+            console: "Canlı Log Konsolu"
         };
         if (pageTitleBar) {
             pageTitleBar.textContent = titles[state.currentTab] || "Genel Bakış";
@@ -1202,10 +1422,26 @@
 
     // ─── Theme Toggle ──────────────────────────────────────────────────
     function toggleTheme() {
-        document.body.classList.toggle("light-theme");
-        var isLight = document.body.classList.contains("light-theme");
-        themeToggle.textContent = isLight ? "☀" : "🌙";
-        localStorage.setItem("theme", isLight ? "light" : "dark");
+        var isLight = isLightColor(activeTheme.bg);
+        if (isLight) {
+            var savedPreset = localStorage.getItem("console-custom-preset") || "falt-cosmic";
+            if (savedPreset === "custom" || isLightColor(presets[savedPreset] ? presets[savedPreset].bg : "#000000")) {
+                savedPreset = "falt-cosmic";
+            }
+            currentPreset = savedPreset;
+            activeTheme = Object.assign({}, presets[savedPreset]);
+        } else {
+            currentPreset = "solarized-light";
+            activeTheme = Object.assign({}, presets["solarized-light"]);
+        }
+        applyTheme(activeTheme);
+        updateInputs(activeTheme);
+
+        localStorage.setItem("console-custom-theme", JSON.stringify(activeTheme));
+        localStorage.setItem("console-custom-preset", currentPreset);
+
+        var currentIsLight = isLightColor(activeTheme.bg);
+        themeToggle.textContent = currentIsLight ? "☀" : "🌙";
     }
 
     // ─── Sidebar Toggle (Mobile) ───────────────────────────────────────
@@ -2164,91 +2400,7 @@
         };
     }
 
-    function toggleConsole() {
-        if (!bottomConsole || !btnConsoleToggle) return;
-        if (bottomConsole.classList.contains("collapsed")) {
-            bottomConsole.classList.remove("collapsed");
-            bottomConsole.classList.add("expanded");
-            btnConsoleToggle.textContent = "Daralt";
-            var savedHeight = localStorage.getItem("console-height") || "320px";
-            bottomConsole.style.height = savedHeight;
-        } else {
-            bottomConsole.classList.remove("expanded");
-            bottomConsole.classList.add("collapsed");
-            btnConsoleToggle.textContent = "Genislet";
-            bottomConsole.style.height = "";
-        }
-    }
-
     function bindConsoleEvents() {
-        if (btnConsoleToggle && bottomConsole) {
-            btnConsoleToggle.addEventListener("click", function (e) {
-                e.stopPropagation();
-                toggleConsole();
-            });
-
-            var header = document.querySelector(".console-header");
-            if (header) {
-                header.addEventListener("click", function (e) {
-                    if (e.target.closest(".console-btn")) return;
-                    toggleConsole();
-                });
-            }
-        }
-
-        if (consoleResizeHandle && bottomConsole) {
-            consoleResizeHandle.addEventListener("mousedown", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                var startY = e.clientY;
-                var startHeight = bottomConsole.getBoundingClientRect().height;
-
-                bottomConsole.classList.add("resizing");
-
-                function onMouseMove(moveEvent) {
-                    var deltaY = startY - moveEvent.clientY;
-                    var newHeight = startHeight + deltaY;
-
-                    var maxHeight = window.innerHeight * 0.8;
-                    if (newHeight < 42) {
-                        newHeight = 42;
-                    } else if (newHeight > maxHeight) {
-                        newHeight = maxHeight;
-                    }
-
-                    bottomConsole.style.height = newHeight + "px";
-
-                    if (newHeight > 60) {
-                        if (bottomConsole.classList.contains("collapsed")) {
-                            bottomConsole.classList.remove("collapsed");
-                            bottomConsole.classList.add("expanded");
-                            if (btnConsoleToggle) btnConsoleToggle.textContent = "Daralt";
-                        }
-                    } else {
-                        if (bottomConsole.classList.contains("expanded")) {
-                            bottomConsole.classList.remove("expanded");
-                            bottomConsole.classList.add("collapsed");
-                            if (btnConsoleToggle) btnConsoleToggle.textContent = "Genislet";
-                        }
-                    }
-                }
-
-                function onMouseUp() {
-                    bottomConsole.classList.remove("resizing");
-                    document.removeEventListener("mousemove", onMouseMove);
-                    document.removeEventListener("mouseup", onMouseUp);
-
-                    if (bottomConsole.classList.contains("expanded")) {
-                        var customHeight = bottomConsole.style.height;
-                        localStorage.setItem("console-height", customHeight);
-                    }
-                }
-
-                document.addEventListener("mousemove", onMouseMove);
-                document.addEventListener("mouseup", onMouseUp);
-            });
-        }
 
         if (btnConsoleClear && consoleLogContainer) {
             btnConsoleClear.addEventListener("click", function (e) {
@@ -2294,6 +2446,31 @@
                 });
             }
         });
+
+        var connForm = $("#connections-form");
+        if (connForm) {
+            connForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                var btn = $("#btn-save-connections");
+                if (!btn) return;
+                var oldText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bağlanıyor...';
+
+                var payload = {
+                    api_server: $("#conn-api-server").value.trim(),
+                    api_key: $("#conn-api-key").value.trim(),
+                    api_insecure: $("#conn-api-insecure").checked,
+                    integration_mqtt_server: $("#conn-integration-mqtt").value.trim(),
+                    gateway_mqtt_server: $("#conn-gateway-mqtt").value.trim()
+                };
+
+                var ok = await saveSystemConfig(payload);
+                
+                btn.disabled = false;
+                btn.innerHTML = oldText;
+            });
+        }
     }
 
     // ─── Authentication Controls ───────────────────────────────────────
@@ -2362,7 +2539,6 @@
         if (btnLogout) {
             btnLogout.addEventListener("click", async function (e) {
                 e.preventDefault();
-                if (!confirm("Çıkış yapmak istediğinize emin misiniz?")) return;
 
                 var r = await api("GET", "/api/auth/logout");
                 if (r.ok) {
@@ -2407,116 +2583,65 @@
         // Load devices
         await fetchDevices("");
 
+        // Load connections settings
+        await fetchSystemConfig();
+
         // Load current state
         await pollStatus();
         startPolling();
     }
 
+    // ─── API Helper: Fetch System Connection Config ────────────────────
+    async function fetchSystemConfig() {
+        var r = await api("GET", "/api/config");
+        if (r.ok) {
+            var data = r.data;
+            var apiServerInput = $("#conn-api-server");
+            var apiKeyInput = $("#conn-api-key");
+            var apiInsecureInput = $("#conn-api-insecure");
+            var integrationMqttInput = $("#conn-integration-mqtt");
+            var gatewayMqttInput = $("#conn-gateway-mqtt");
+
+            if (apiServerInput) apiServerInput.value = data.api_server || "";
+            if (apiKeyInput) apiKeyInput.value = data.api_key || "";
+            if (apiInsecureInput) apiInsecureInput.checked = !!data.api_insecure;
+            if (integrationMqttInput) integrationMqttInput.value = data.integration_mqtt_server || "";
+            if (gatewayMqttInput) gatewayMqttInput.value = data.gateway_mqtt_server || "";
+            
+            logEntry("Bağlantı ayarları yüklendi.", "success");
+        } else {
+            var err = (r.data && r.data.error) || "Bilinmeyen hata";
+            logEntry("Bağlantı ayarları alınamadı: " + err, "error");
+        }
+    }
+
+    // ─── API Helper: Save System Connection Config ─────────────────────
+    async function saveSystemConfig(payload) {
+        var r = await api("POST", "/api/config", payload);
+        if (r.ok) {
+            showToast("Bağlantı ayarları başarıyla kaydedildi.", "success");
+            logEntry("Bağlantı ayarları kaydedildi ve yeni bağlantılar kuruldu.", "success");
+            
+            // Re-load data to ensure we pull using the new connection configuration
+            await fetchOrganizations();
+            await fetchDeviceProfiles("");
+            if (state.netTenantFilter) {
+                await fetchApplications(state.netTenantFilter);
+            } else {
+                await fetchApplications("");
+            }
+            await fetchDevices("");
+            return true;
+        } else {
+            var err = (r.data && r.data.error) || "Bilinmeyen hata";
+            showToast("Hata: " + err, "error");
+            logEntry("Bağlantı ayarları güncellenemedi: " + err, "error");
+            return false;
+        }
+    }
+
     // ─── Console Custom Theme Settings ─────────────────────────────────
     function initConsoleTheme() {
-        var presets = {
-            "falt-cosmic": {
-                bg: "#070913", fg: "#e2e8f0", cu: "#ff007f", ca: "#070913", sb: "#1e1b4b", sf: "#ffffff",
-                0: "#141726", 1: "#ff5c00", 2: "#00ff87", 3: "#ffdf00", 4: "#0052ff",
-                5: "#ff007f", 6: "#00f2fe", 7: "#f1f5f9", 8: "#1f243c", 9: "#ff7b30",
-                10: "#33ff9e", 11: "#ffe533", 12: "#3375ff", 13: "#ff3399", 14: "#33f5ff",
-                15: "#ffffff"
-            },
-            argonaut: {
-                bg: "#0e1019", fg: "#fffaf4", cu: "#ff0018", ca: "#0e1019", sb: "#002a3b", sf: "#ffffff",
-                0: "#232323", 1: "#ff000f", 2: "#8ce10a", 3: "#ffb900", 4: "#008df8",
-                5: "#6c43a6", 6: "#00d8eb", 7: "#ffffff", 8: "#444444", 9: "#ff273f",
-                10: "#abe15b", 11: "#ffd242", 12: "#0092ff", 13: "#9a5feb", 14: "#67fff0",
-                15: "#ffffff"
-            },
-            afterglow: {
-                bg: "#151515", fg: "#d6dbe5", cu: "#d6dbe5", ca: "#151515", sb: "#303030", sf: "#d6dbe5",
-                0: "#1c1c1c", 1: "#a53d3d", 2: "#7b963b", 3: "#cca04c", 4: "#487bb0",
-                5: "#9e5a8a", 6: "#44a69e", 7: "#d0d0d0", 8: "#505050", 9: "#b84c4c",
-                10: "#8fa850", 11: "#e0b860", 12: "#5c90c4", 13: "#b26e9e", 14: "#58bab0",
-                15: "#f5f5f5"
-            },
-            monokai: {
-                bg: "#272822", fg: "#f8f8f2", cu: "#f8f8f0", ca: "#272822", sb: "#49483e", sf: "#f8f8f2",
-                0: "#272822", 1: "#f92672", 2: "#a6e22e", 3: "#f4bf75", 4: "#66d9ef",
-                5: "#ae81ff", 6: "#a1efe4", 7: "#f8f8f2", 8: "#75715e", 9: "#f92672",
-                10: "#a6e22e", 11: "#f4bf75", 12: "#66d9ef", 13: "#ae81ff", 14: "#a1efe4",
-                15: "#f9f8f5"
-            },
-            dracula: {
-                bg: "#282a36", fg: "#f8f8f2", cu: "#f8f8f2", ca: "#282a36", sb: "#44475a", sf: "#f8f8f2",
-                0: "#21222c", 1: "#ff5555", 2: "#50fa7b", 3: "#f1fa8c", 4: "#8be9fd",
-                5: "#ff79c6", 6: "#bd93f9", 7: "#f8f8f2", 8: "#6272a4", 9: "#ff6e6e",
-                10: "#69ff94", 11: "#ffffa5", 12: "#d6acff", 13: "#ff92df", 14: "#a4ffff",
-                15: "#ffffff"
-            },
-            "solarized-dark": {
-                bg: "#002b36", fg: "#839496", cu: "#839496", ca: "#002b36", sb: "#073642", sf: "#93a1a1",
-                0: "#073642", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
-                5: "#d33682", 6: "#2aa198", 7: "#eee8d5", 8: "#002b36", 9: "#cb4b16",
-                10: "#586e75", 11: "#657b83", 12: "#839496", 13: "#6c71c4", 14: "#93a1a1",
-                15: "#fdf6e3"
-            },
-            "solarized-light": {
-                bg: "#fdf6e3", fg: "#586e75", cu: "#586e75", ca: "#fdf6e3", sb: "#eee8d5", sf: "#586e75",
-                0: "#eee8d5", 1: "#dc322f", 2: "#859900", 3: "#b58900", 4: "#268bd2",
-                5: "#d33682", 6: "#2aa198", 7: "#073642", 8: "#fdf6e3", 9: "#cb4b16",
-                10: "#93a1a1", 11: "#839496", 12: "#657b83", 13: "#6c71c4", 14: "#586e75",
-                15: "#073642"
-            },
-            default: {
-                bg: "#080a0f", fg: "#e2e8f0", cu: "#e2e8f0", ca: "#080a0f", sb: "#2563eb", sf: "#ffffff",
-                0: "#1e293b", 1: "#ef4444", 2: "#22c55e", 3: "#eab308", 4: "#3b82f6",
-                5: "#a855f7", 6: "#06b6d4", 7: "#e2e8f0", 8: "#475569", 9: "#f87171",
-                10: "#4ade80", 11: "#facc15", 12: "#60a5fa", 13: "#c084fc", 14: "#22d3ee",
-                15: "#ffffff"
-            }
-        };
-
-        var keys = ["fg", "bg", "cu", "ca", "sb", "sf", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"];
-        var currentPreset = "falt-cosmic";
-
-        // Load saved theme
-        var activeTheme = Object.assign({}, presets["falt-cosmic"]);
-        var savedTheme = localStorage.getItem("console-custom-theme");
-        var savedPresetName = localStorage.getItem("console-custom-preset");
-        if (savedTheme) {
-            try {
-                activeTheme = JSON.parse(savedTheme);
-                if (savedPresetName) currentPreset = savedPresetName;
-            } catch(e) {}
-        }
-
-        function applyTheme(themeObj) {
-            var targets = [$("#console-log-container"), $("#console-preview")];
-            targets.forEach(function (el) {
-                if (!el) return;
-                el.style.setProperty("--c-fg", themeObj.fg);
-                el.style.setProperty("--c-bg", themeObj.bg);
-                el.style.setProperty("--c-cu", themeObj.cu);
-                el.style.setProperty("--c-ca", themeObj.ca);
-                el.style.setProperty("--c-sb", themeObj.sb);
-                el.style.setProperty("--c-sf", themeObj.sf);
-                keys.forEach(function (key) {
-                    if (key !== "fg" && key !== "bg" && key !== "cu" && key !== "ca" && key !== "sb" && key !== "sf") {
-                        el.style.setProperty("--c-ansi-" + key, themeObj[key]);
-                    }
-                });
-            });
-        }
-
-        function updateInputs(themeObj) {
-            keys.forEach(function (key) {
-                var input = $("#c-color-" + key);
-                if (input) {
-                    input.value = themeObj[key];
-                }
-            });
-            var presetSelect = $("#console-theme-preset");
-            if (presetSelect) presetSelect.value = currentPreset;
-        }
-
-        applyTheme(activeTheme);
         updateInputs(activeTheme);
 
         keys.forEach(function (key) {
@@ -2560,7 +2685,7 @@
             btnSave.addEventListener("click", function () {
                 localStorage.setItem("console-custom-theme", JSON.stringify(activeTheme));
                 localStorage.setItem("console-custom-preset", currentPreset);
-                showToast("Konsol teması başarıyla uygulandı ve kaydedildi!", "success");
+                window.location.reload();
             });
         }
 
@@ -2583,19 +2708,56 @@
         }
     }
 
+    function initSettingsSubTabs() {
+        var tabButtons = $$(".settings-tab-btn");
+        var subContents = $$(".settings-sub-content");
+        
+        tabButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var targetTab = this.getAttribute("data-settings-tab");
+                
+                // Update active class on buttons
+                tabButtons.forEach(function (b) {
+                    if (b === btn) {
+                        b.classList.add("active");
+                    } else {
+                        b.classList.remove("active");
+                    }
+                });
+                
+                // Show/hide sub contents
+                subContents.forEach(function (content) {
+                    if (content.getAttribute("id") === "settings-sub-" + targetTab) {
+                        content.classList.add("active");
+                    } else {
+                        content.classList.remove("active");
+                    }
+                });
+            });
+        });
+    }
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
         bindSettingsEvents();
         bindAuthEvents();
+        initSettingsSubTabs();
         
-        // Load saved theme
-        var savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "light") {
-            document.body.classList.add("light-theme");
-            if (themeToggle) themeToggle.textContent = "☀";
-        } else {
-            document.body.classList.remove("light-theme");
-            if (themeToggle) themeToggle.textContent = "🌙";
+        // Load saved console/system theme
+        var savedTheme = localStorage.getItem("console-custom-theme");
+        var savedPresetName = localStorage.getItem("console-custom-preset");
+        if (savedTheme) {
+            try {
+                activeTheme = JSON.parse(savedTheme);
+                if (savedPresetName) currentPreset = savedPresetName;
+            } catch(e) {}
+        }
+        applyTheme(activeTheme);
+
+        // Update top-right button text/icon
+        var currentIsLight = isLightColor(activeTheme.bg);
+        if (themeToggle) {
+            themeToggle.textContent = currentIsLight ? "☀" : "🌙";
         }
 
         bindConsoleEvents();

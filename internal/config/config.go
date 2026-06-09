@@ -83,3 +83,7 @@ type DeviceConfig struct {
 
 // C holds the global configuration.
 var C Config
+
+// CfgFile holds the loaded config file path.
+var CfgFile string
+

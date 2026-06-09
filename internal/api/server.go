@@ -34,6 +34,15 @@ func New(bind string) *Server {
 
 	// API endpoints
 	mux.HandleFunc("/api/logs/stream", requireAuth(handleLogStream))
+	mux.HandleFunc("/api/config", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleGetSystemConfig(w, r)
+		} else if r.Method == http.MethodPost {
+			handleSaveSystemConfig(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	}))
 	mux.HandleFunc("/api/status", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStatus(w, r, state)
 	}))
