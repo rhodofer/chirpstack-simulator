@@ -12,3 +12,8 @@ integ/simulator-config/integ.toml
 
 # builds
 /build/
+chirpstack-simulator
+*.exe
+
+# database
+*.db
