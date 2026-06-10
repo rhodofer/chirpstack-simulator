@@ -1,0 +1,67 @@
+    <!-- ═══ LANDING & LOGIN PAGE ═══════════════════════════════════════ -->
+    <div class="login-overlay" id="login-overlay" style="display:none;">
+        <div class="landing-container">
+            <!-- Background Glow Orbs -->
+            <div class="glow-orb orb-1"></div>
+            <div class="glow-orb orb-2"></div>
+            
+            <!-- Left Side: Hero Section -->
+            <div class="landing-hero">
+                <div class="landing-logo-container">
+                    <span class="landing-logo-icon">⚡</span>
+                    <span class="landing-logo-text">iofeSaaS</span>
+                </div>
+                <h1 class="landing-title">LoRaWAN Simülasyonunu Yeniden Keşfedin</h1>
+                <p class="landing-subtitle">
+                    ChirpStack entegrasyonu ile milyonlarca cihazı ve ağ geçidini gerçek zamanlı simüle edin, 
+                    yük testlerinizi dakikalar içinde başlatın ve veri akışını izleyin.
+                </p>
+                
+                <div class="landing-features">
+                    <div class="landing-feature-card">
+                        <span class="feat-icon">📊</span>
+                        <div class="feat-content">
+                            <h4>Canlı Metrik Takibi</h4>
+                            <p>Cihaz aktivasyonlarını ve anlık log akışını interaktif konsoldan izleyin.</p>
+                        </div>
+                    </div>
+                    <div class="landing-feature-card">
+                        <span class="feat-icon">📁</span>
+                        <div class="feat-content">
+                            <h4>SQLite & Kalıcı Veri</h4>
+                            <p>Organizasyon ve simülasyon ayarlarınızı kalıcı veritabanında saklayın.</p>
+                        </div>
+                    </div>
+                    <div class="landing-feature-card">
+                        <span class="feat-icon">⚡</span>
+                        <div class="feat-content">
+                            <h4>Yüksek Performans</h4>
+                            <p>Düşük gecikmeli Go motoru sayesinde binlerce mesajı kesintisiz iletin.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side: Login Panel -->
+            <div class="landing-login-panel">
+                <div class="login-card">
+                    <div class="login-header">
+                        <h2>Giriş Yapın</h2>
+                        <p>Simülatör paneline erişmek için bilgilerinizi girin.</p>
+                    </div>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-username">Kullanıcı Adı</label>
+                            <input type="text" id="login-username" placeholder="admin@falt.com" required autofocus autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Şifre</label>
+                            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                        </div>
+                        <div id="login-error" class="login-error-msg" style="display:none;"></div>
+                        <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit">Giriş Yap</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>

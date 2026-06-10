@@ -1,0 +1,50 @@
+    <!-- ═══ DRAWER (Simülasyon Ayarları) ════════════════════════════════ -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="drawer" id="org-drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <div class="drawer-title" id="drawer-title">Organizasyon</div>
+                <div class="drawer-subtitle" id="drawer-subtitle">Simülasyon ayarlarını yapılandırın</div>
+            </div>
+            <button class="drawer-close" id="drawer-close">✕</button>
+        </div>
+        <div class="drawer-body">
+            <form id="config-form" autocomplete="off">
+                <fieldset>
+                    <legend>ChirpStack Bağlantı</legend>
+                    <div class="form-group">
+                        <label for="tenant_id">Tenant ID</label>
+                        <input type="text" id="tenant_id" name="tenant_id" placeholder="ChirpStack Tenant UUID" readonly>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="app_name">Uygulama Adı</label>
+                            <input type="text" id="app_name" name="app_name" placeholder="simulasyon">
+                        </div>
+                        <div class="form-group">
+                            <label for="device_prefix">Cihaz Öneki</label>
+                            <input type="text" id="device_prefix" name="device_prefix" placeholder="sim-dev">
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Cihaz & Gateway</legend>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="device_count">Cihaz Sayısı</label>
+                            <input type="number" id="device_count" name="device_count" min="1" max="1000" placeholder="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="gateway_count">Gateway Sayısı</label>
+                            <input type="number" id="gateway_count" name="gateway_count" min="1" max="100" placeholder="2">
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn btn-secondary btn-sm" id="btn-save-org-config" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                ✓ Ayarları Kaydet
+            </button>
+        </div>
+    </aside>

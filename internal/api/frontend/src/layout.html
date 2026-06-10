@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChirpStack Simulator</title>
+    <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+    <div class="app">
+
+{{SIDEBAR}}
+
+        <!-- ═══ MAIN ══════════════════════════════════════════════════════ -->
+        <main class="main">
+{{TOPBAR}}
+
+            <!-- Scrollable Content -->
+            <div class="main-scroll">
+
+{{TAB_OVERVIEW}}
+
+{{TAB_DEVICES}}
+
+{{TAB_NETWORKS}}
+
+{{TAB_DEVICE_LIST}}
+
+{{TAB_SETTINGS}}
+
+{{TAB_CONSOLE}}
+
+{{TAB_INFO}}
+
+            </div><!-- /.main-scroll -->
+        </main>
+    </div>
+
+{{DRAWER}}
+
+{{MODALS}}
+
+{{LOGIN}}
+
+    <!-- ═══ LOCK OVERLAY ════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="loading-lock-overlay" style="display:none; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.75);">
+        <div class="spinner-loader"></div>
+        <div class="lock-message" id="loading-lock-message">Simülatör yeniden başlatılıyor...</div>
+    </div>
+
+    <script src="app.js?v=5"></script>
+</body>
+</html>

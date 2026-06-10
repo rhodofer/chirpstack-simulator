@@ -1,0 +1,80 @@
+                <!-- ═══ TAB: GENEL BAKIŞ (Organizasyonlar) ═══════════════════ -->
+                <div class="tab-content active" id="content-overview">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title" data-i18n="title_overview">Organizasyonlar</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_overview">Sistemdeki ana organizasyonları ve üst çatı yapıları yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <button class="btn btn-primary btn-sm" id="btn-add-org" style="display:none;" data-i18n="btn_add_org">
+                                <span class="btn-icon">+</span> Yeni Organizasyon Ekle
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="search-input" data-i18n-placeholder="placeholder_search_org" placeholder="Organizasyon ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="table-wrapper">
+                        <table class="data-table" id="org-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        <span data-i18n="table_org_name">Organizasyon Adı</span> <span class="sort-icon" id="sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="status">
+                                        <span data-i18n="table_org_status">Durum</span> <span class="sort-icon" id="sort-icon-status">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="id">
+                                        <span data-i18n="table_org_id">ID</span> <span class="sort-icon" id="sort-icon-id">▲</span>
+                                    </th>
+                                    <th><span data-i18n="table_org_net_count">Ağ Sayısı</span></th>
+                                    <th><span data-i18n="table_org_dp_count">Profil Sayısı</span></th>
+                                    <th><span data-i18n="table_org_dev_count">Cihaz Sayısı</span></th>
+                                    <th class="sortable" data-sort="date">
+                                        <span data-i18n="table_org_date">Kayıt Tarihi</span> <span class="sort-icon" id="sort-icon-date">▲</span>
+                                    </th>
+                                    <th style="text-align:right;" data-i18n="table_actions">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="org-table-body">
+                                <!-- JS tarafından doldurulacak -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty state -->
+                        <div class="empty-state" id="empty-state" style="display:none;">
+                            <div class="empty-state-icon">📭</div>
+                            <div class="empty-state-title" data-i18n="empty_state_org_title">Henüz organizasyon yok</div>
+                            <div class="empty-state-text" data-i18n="empty_state_org_text">Üst bardaki "Yeni Oluştur" butonuyla hızlı kurulum yapabilirsiniz.</div>
+                        </div>
+                    </div>
+
+                    <!-- Table Footer / Pagination -->
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
+                                <select class="page-size-select" id="page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="total-count">
+                                Toplam: <strong>0</strong> Organizasyon
+                            </span>
+                        </div>
+                        <div class="pagination" id="pagination">
+                            <!-- JS tarafından doldurulacak -->
+                        </div>
+                    </div>
+                </div>

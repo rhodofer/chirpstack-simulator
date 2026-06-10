@@ -30,17 +30,6 @@ import (
 // Start starts the simulator.
 func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 	for i, c := range c.Simulator {
-		log.WithFields(log.Fields{
-			"i": i,
-		}).Info("simulator: starting simulation")
-
-		wg.Add(1)
-
-		pl, err := hex.DecodeString(c.Device.Payload)
-		if err != nil {
-			return errors.Wrap(err, "decode payload error")
-		}
-
 		// AppName ve DeviceNamePrefix belirtilmemişse varsayılan üret.
 		appName := c.AppName
 		if appName == "" {
@@ -49,6 +38,17 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 		deviceNamePrefix := c.DeviceNamePrefix
 		if deviceNamePrefix == "" {
 			deviceNamePrefix = "device"
+		}
+
+		log.WithFields(log.Fields{
+			"i": i,
+		}).Info(fmt.Sprintf("[%s] simulator: starting simulation", appName))
+
+		wg.Add(1)
+
+		pl, err := hex.DecodeString(c.Device.Payload)
+		if err != nil {
+			return errors.Wrap(err, "decode payload error")
 		}
 
 		sim := simulation{
@@ -68,6 +68,7 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			gatewayMaxCount:      c.Gateway.MaxCount,
 			appName:              appName,
 			deviceNamePrefix:     deviceNamePrefix,
+			deviceIntervals:      c.DeviceIntervals,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
@@ -99,6 +100,7 @@ type simulation struct {
 	spreadingFactor  int
 	appName          string
 	deviceNamePrefix string
+	deviceIntervals  map[string]time.Duration
 
 	tenant               *api.Tenant
 	deviceProfileID      uuid.UUID
@@ -114,26 +116,26 @@ type simulation struct {
 
 func (s *simulation) start() {
 	if err := s.init(); err != nil {
-		log.WithError(err).Error("simulator: init simulation error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: init simulation error", s.appName))
 	}
 
 	if err := s.runSimulation(); err != nil {
-		log.WithError(err).Error("simulator: simulation error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: simulation error", s.appName))
 	}
 
-	log.Info("simulator: simulation completed")
+	log.Info(fmt.Sprintf("[%s] simulator: simulation completed", s.appName))
 
 	if err := s.tearDown(); err != nil {
-		log.WithError(err).Error("simulator: tear-down simulation error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: tear-down simulation error", s.appName))
 	}
 
 	s.wg.Done()
 
-	log.Info("simulation: tear-down completed")
+	log.Info(fmt.Sprintf("[%s] simulation: tear-down completed", s.appName))
 }
 
 func (s *simulation) init() error {
-	log.Info("simulation: setting up")
+	log.Info(fmt.Sprintf("[%s] simulation: setting up", s.appName))
 
 	if err := s.setupTenant(); err != nil {
 		return err
@@ -163,7 +165,7 @@ func (s *simulation) init() error {
 }
 
 func (s *simulation) tearDown() error {
-	log.Info("simulation: cleaning up")
+	log.Info(fmt.Sprintf("[%s] simulation: cleaning up", s.appName))
 
 	if err := s.tearDownApplicationIntegration(); err != nil {
 		return err
@@ -227,12 +229,19 @@ func (s *simulation) runSimulation() error {
 			gws = append(gws, devGateways[k])
 		}
 
+		devInterval := s.uplinkInterval
+		if s.deviceIntervals != nil {
+			if customInterval, ok := s.deviceIntervals[devEUI.String()]; ok {
+				devInterval = customInterval
+			}
+		}
+
 		d, err := simulator.NewDevice(ctx, &wg,
 			simulator.WithDevEUI(devEUI),
 			simulator.WithAppName(s.appName),
 			simulator.WithDeviceName(s.deviceNames[devEUI]),
 			simulator.WithAppKey(appKey),
-			simulator.WithUplinkInterval(s.uplinkInterval),
+			simulator.WithUplinkInterval(devInterval),
 			simulator.WithOTAADelay(time.Duration(mrand.Int63n(int64(s.activationTime)))),
 			simulator.WithUplinkPayload(false, s.fPort, s.payload),
 			simulator.WithGateways(gws),
@@ -262,7 +271,7 @@ func (s *simulation) runSimulation() error {
 
 		select {
 		case sig := <-sigChan:
-			log.WithField("signal", sig).Info("signal received, stopping simulators")
+			log.WithField("signal", sig).Info(fmt.Sprintf("[%s] signal received, stopping simulators", s.appName))
 			cancel()
 		case <-ctx.Done():
 		}
@@ -276,7 +285,7 @@ func (s *simulation) runSimulation() error {
 func (s *simulation) setupTenant() error {
 	log.WithFields(log.Fields{
 		"tenant_id": s.tenantID,
-	}).Info("simulator: retrieving tenant")
+	}).Info(fmt.Sprintf("[%s] simulator: retrieving tenant", s.appName))
 	t, err := as.Tenant().Get(context.Background(), &api.GetTenantRequest{
 		Id: s.tenantID,
 	})
@@ -289,7 +298,7 @@ func (s *simulation) setupTenant() error {
 }
 
 func (s *simulation) setupGateways() error {
-	log.Info("simulator: creating gateways")
+	log.Info(fmt.Sprintf("[%s] simulator: creating gateways", s.appName))
 
 	for i := 0; i < s.gatewayMaxCount; i++ {
 		var gatewayID lorawan.EUI64
@@ -317,7 +326,7 @@ func (s *simulation) setupGateways() error {
 }
 
 func (s *simulation) tearDownGateways() error {
-	log.Info("simulator: tear-down gateways")
+	log.Info(fmt.Sprintf("[%s] simulator: tear-down gateways", s.appName))
 
 	for _, gatewayID := range s.gatewayIDs {
 		_, err := as.Gateway().Delete(context.Background(), &api.DeleteGatewayRequest{
@@ -332,13 +341,38 @@ func (s *simulation) tearDownGateways() error {
 }
 
 func (s *simulation) setupDeviceProfile() error {
-	log.Info("simulator: creating device-profile")
+	log.Info(fmt.Sprintf("[%s] simulator: init device-profile (upsert)", s.appName))
 
-	dpName, _ := uuid.NewV4()
+	dpName := fmt.Sprintf("%s-profile", s.appName)
 
+	// List device profiles to check if it already exists
+	listResp, err := as.DeviceProfile().List(context.Background(), &api.ListDeviceProfilesRequest{
+		Limit:    100,
+		TenantId: s.tenant.GetId(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "list device-profiles error")
+	}
+
+	for _, item := range listResp.GetResult() {
+		if item.GetName() == dpName {
+			dpID, err := uuid.FromString(item.GetId())
+			if err != nil {
+				return err
+			}
+			s.deviceProfileID = dpID
+			log.WithFields(log.Fields{
+				"name": dpName,
+				"id":   s.deviceProfileID.String(),
+			}).Info(fmt.Sprintf("[%s] simulator: mevcut device-profile bulundu, yeniden kullanılıyor", s.appName))
+			return nil
+		}
+	}
+
+	// Create new one if it doesn't exist
 	resp, err := as.DeviceProfile().Create(context.Background(), &api.CreateDeviceProfileRequest{
 		DeviceProfile: &api.DeviceProfile{
-			Name:              dpName.String(),
+			Name:              dpName,
 			TenantId:          s.tenant.GetId(),
 			MacVersion:        common.MacVersion_LORAWAN_1_0_3,
 			RegParamsRevision: common.RegParamsRevision_B,
@@ -357,24 +391,23 @@ func (s *simulation) setupDeviceProfile() error {
 	}
 	s.deviceProfileID = dpID
 
+	log.WithFields(log.Fields{
+		"name": dpName,
+		"id":   s.deviceProfileID.String(),
+	}).Info(fmt.Sprintf("[%s] simulator: yeni device-profile oluşturuldu", s.appName))
+
 	return nil
 }
 
 func (s *simulation) tearDownDeviceProfile() error {
-	log.Info("simulator: tear-down device-profile")
-
-	_, err := as.DeviceProfile().Delete(context.Background(), &api.DeleteDeviceProfileRequest{
-		Id: s.deviceProfileID.String(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "delete device-profile error")
-	}
-
+	// Cihaz profili kalıcıdır: yeniden başlatmada aynı profil kullanılır.
+	// Silme işlemi yapılmıyor.
+	log.WithField("app_name", s.appName).Info(fmt.Sprintf("[%s] simulator: device-profile korunuyor (silinmiyor)", s.appName))
 	return nil
 }
 
 func (s *simulation) setupApplication() error {
-	log.WithField("app_name", s.appName).Info("simulator: init application (upsert)")
+	log.WithField("app_name", s.appName).Info(fmt.Sprintf("[%s] simulator: init application (upsert)", s.appName))
 
 	// Mevcut uygulamayı isimle ara.
 	listResp, err := as.Application().List(context.Background(), &api.ListApplicationsRequest{
@@ -392,7 +425,7 @@ func (s *simulation) setupApplication() error {
 			log.WithFields(log.Fields{
 				"app_name": s.appName,
 				"app_id":   s.applicationID,
-			}).Info("simulator: mevcut uygulama bulundu, yeniden kullanılıyor")
+			}).Info(fmt.Sprintf("[%s] simulator: mevcut uygulama bulundu, yeniden kullanılıyor", s.appName))
 			return nil
 		}
 	}
@@ -413,19 +446,19 @@ func (s *simulation) setupApplication() error {
 	log.WithFields(log.Fields{
 		"app_name": s.appName,
 		"app_id":   s.applicationID,
-	}).Info("simulator: yeni uygulama oluşturuldu")
+	}).Info(fmt.Sprintf("[%s] simulator: yeni uygulama oluşturuldu", s.appName))
 	return nil
 }
 
 func (s *simulation) tearDownApplication() error {
 	// Uygulama ve device'lar kalıcıdır: yeniden başlatmada aynı ID kullanılır.
 	// Silme işlemi yapılmıyor.
-	log.WithField("app_name", s.appName).Info("simulator: uygulama korunuyor (silinmiyor)")
+	log.WithField("app_name", s.appName).Info(fmt.Sprintf("[%s] simulator: uygulama korunuyor (silinmiyor)", s.appName))
 	return nil
 }
 
 func (s *simulation) setupDevices() error {
-	log.Info("simulator: init devices (deterministik isimler, upsert)")
+	log.Info(fmt.Sprintf("[%s] simulator: init devices (deterministik isimler, upsert)", s.appName))
 
 	// Uygulamaya kayıtlı mevcut device'ları çek.
 	listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
@@ -475,7 +508,7 @@ func (s *simulation) setupDevices() error {
 			log.WithFields(log.Fields{
 				"name":    devName,
 				"dev_eui": devEUI.String(),
-			}).Info("simulator: mevcut device bulundu, yeniden kullanılıyor")
+			}).Info(fmt.Sprintf("[%s] simulator: mevcut device bulundu, yeniden kullanılıyor", s.appName))
 			continue
 		}
 
@@ -488,10 +521,10 @@ func (s *simulation) setupDevices() error {
 			var appKey lorawan.AES128Key
 
 			if _, err := rand.Read(devEUI[:]); err != nil {
-				log.WithError(err).Fatal("read random dev EUI error")
+				log.WithError(err).Fatal(fmt.Sprintf("[%s] read random dev EUI error", s.appName))
 			}
 			if _, err := rand.Read(appKey[:]); err != nil {
-				log.WithError(err).Fatal("read random app key error")
+				log.WithError(err).Fatal(fmt.Sprintf("[%s] read random app key error", s.appName))
 			}
 
 			_, err := as.Device().Create(context.Background(), &api.CreateDeviceRequest{
@@ -504,7 +537,7 @@ func (s *simulation) setupDevices() error {
 				},
 			})
 			if err != nil {
-				log.WithError(err).Fatalf("create device %s error", devName)
+				log.WithError(err).Fatalf("[%s] create device %s error", s.appName, devName)
 			}
 
 			_, err = as.Device().CreateKeys(context.Background(), &api.CreateDeviceKeysRequest{
@@ -515,7 +548,7 @@ func (s *simulation) setupDevices() error {
 				},
 			})
 			if err != nil {
-				log.WithError(err).Fatalf("create device keys %s error", devName)
+				log.WithError(err).Fatalf("[%s] create device keys %s error", s.appName, devName)
 			}
 
 			s.deviceAppKeysMutex.Lock()
@@ -527,7 +560,7 @@ func (s *simulation) setupDevices() error {
 			log.WithFields(log.Fields{
 				"name":    devName,
 				"dev_eui": devEUI.String(),
-			}).Info("simulator: yeni device oluşturuldu")
+			}).Info(fmt.Sprintf("[%s] simulator: yeni device oluşturuldu", s.appName))
 		}(devName)
 	}
 
@@ -538,12 +571,12 @@ func (s *simulation) setupDevices() error {
 func (s *simulation) tearDownDevices() error {
 	// Device'lar kalıcıdır: yeniden başlatmada aynı EUI ve anahtarlar kullanılır.
 	// Silme işlemi yapılmıyor.
-	log.Info("simulator: device'lar korunuyor (silinmiyor)")
+	log.Info(fmt.Sprintf("[%s] simulator: device'lar korunuyor (silinmiyor)", s.appName))
 	return nil
 }
 
 func (s *simulation) setupApplicationIntegration() error {
-	log.Info("simulator: setting up application integration")
+	log.Info(fmt.Sprintf("[%s] simulator: setting up application integration", s.appName))
 
 	token := as.MQTTClient().Subscribe(fmt.Sprintf("application/%s/device/+/event/up", s.applicationID), 0, func(client mqtt.Client, msg mqtt.Message) {
 		applicationUplinkCounter().Inc()
@@ -557,7 +590,7 @@ func (s *simulation) setupApplicationIntegration() error {
 }
 
 func (s *simulation) tearDownApplicationIntegration() error {
-	log.Info("simulator: tear-down application integration")
+	log.Info(fmt.Sprintf("[%s] simulator: tear-down application integration", s.appName))
 
 	token := as.MQTTClient().Unsubscribe(fmt.Sprintf("application/%s/device/+/event/up", s.applicationID))
 	token.Wait()

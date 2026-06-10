@@ -267,24 +267,38 @@ Simülatör web arayüzü varsayılan olarak **`9002`** portundan yayın yapar (
 - Web UI: `http://localhost:9002`
 
 ### 3. Local Development vs Docker Environment
-Arayüz statik dosyaları (`index.html`, `style.css`, `app.js` dosyaları `internal/api/frontend/` klasörü altındadır) derleme (build) sırasında binary içerisine gömüldüğü (`go:embed` yöntemiyle) için, arayüz değişikliklerinin yansıması için **yeniden derleme (build) yapılması zorunludur.**
-- **Docker Compose (Önerilen/Varsayılan):** Simülatörü docker-compose üzerinden çalıştırıyorsanız, yerelde yaptığınız arayüz değişikliklerinin docker imajında aktif olması için docker konteynerini yeniden başlatmanız yeterlidir (konteyner başlarken otomatik derleme yapar):
+  Arayüz statik dosyaları (`index.html`, `style.css`, `app.js` dosyaları `internal/api/frontend/` klasörü altındadır) derleme (build) sırasında binary içerisine gömüldüğü (`go:embed` yöntemiyle) için, arayüz değişikliklerinin yansıması için **yeniden derleme (build) yapılması zorunludur.**
+
+  **Önemli Not (Modüler HTML Bileşenleri):** Eğer `internal/api/frontend/src/` dizini altındaki modüler HTML şablonlarında (örn: `sidebar.html`, `tabs/settings.html` vb.) değişiklik yaptıysanız, projeyi derlemeden veya konteyneri yeniden başlatmadan önce bu değişiklikleri `index.html` dosyasına derlemek için yerel makinenizde **Python 3** kullanarak şu komutu çalıştırmalısınız:
   ```powershell
-  docker-compose restart
+  python internal/api/frontend/build.py
   ```
-- **Local Windows Binary (Yerel Çalıştırma):** Simülatörü yerel Windows terminalinizden çalıştırmak istiyorsanız:
-  ```powershell
-  # Windows exe derleme
-  go build -ldflags "-s -w -X main.version=1.0.0" -o build/chirpstack-simulator.exe cmd/chirpstack-simulator/main.go
-  
-  # Çalıştırma
-  .\build\chirpstack-simulator.exe --config simulator.toml
-  ```
+
+  - **Docker Compose (Önerilen/Varsayılan):** Simülatörü docker-compose üzerinden çalıştırıyorsanız, yerelde yaptığınız arayüz değişikliklerinin docker imajında aktif olması için docker konteynerini yeniden başlatmanız yeterlidir (konteyner başlarken otomatik derleme yapar):
+    ```powershell
+    docker-compose restart
+    ```
+  - **Local Windows Binary (Yerel Çalıştırma):** Simülatörü yerel Windows terminalinizden çalıştırmak istiyorsanız:
+    ```powershell
+    # Windows exe derleme
+    go build -ldflags "-s -w -X main.version=1.0.0" -o build/chirpstack-simulator.exe cmd/chirpstack-simulator/main.go
+    
+    # Çalıştırma
+    .\build\chirpstack-simulator.exe --config simulator.toml
+    ```
 
 ### 4. Tenant-Scoped Filtering (Tenant Bazlı Filtreleme)
 Simülatör API'si global filtreleme ve tenant-scoped veri erişimini destekler:
 - **API Davranışı:** `handleListApplications`, `handleListDevices` ve `handleListDeviceProfiles` handler'ları, `tenant_id` parametresi boş (`""`) gönderildiğinde tüm tenant'lar/organizasyonlar arasında arama yaparak birleştirilmiş liste döner.
 - **Frontend Sync:** Arayüzde `net-tenant-select` ve `dp-tenant-select` gibi tenant filtreleme seçimleri yapıldığında ilgili API istekleri bu tenant parametresi ile yenilenir.
+
+### 5. Frontend ve Simülatör İyileştirmeleri (Yeni Özellikler)
+Geliştirilen modern arayüz ve simülatör altyapısında aşağıdaki özellikler eklenmiştir:
+- **Organizasyon Bazlı Konfigürasyon Kalıcılığı:** Her organizasyonun çekmecesindeki simülasyon ayarları (Cihaz Sayısı, Gateway Sayısı, Cihaz Öneki ve tüm çalışma ayarları) tarayıcı yerine sunucudaki **SQLite** veritabanında (`simulator.db`) kalıcı olarak saklanır ve organizasyon seçildiğinde API üzerinden otomatik çekilir.
+- **Ayarları Kaydetme ve Doğrulama:** Çekmecede yapılan değişikliklerin geçerli olması için explicit bir **"✓ Ayarları Kaydet"** butonu bulunur. Cihaz/Gateway sayılarının sıfırdan büyük olması ve uygulama adının boş bırakılmaması gibi temel doğrulama adımları barındırır.
+- **Simülasyon Esnasında Arayüz Kilitleme (Input Lock):** Simülasyon aktifken (`running` veya `starting` durumunda) hatalı çalışma yapılandırmasını önlemek adına hem çekmecedeki ayarlar hem de genel ayarlar sayfasındaki tüm giriş alanları kilitlenir.
+- **Genişletilebilir Canlı Log Konsolu:** Alt panelde yer alan log terminali sürükle-bırak ile dikey olarak yeniden boyutlandırılabilir, daraltılıp genişletilebilir.
+- **Detaylı Cihaz ve Uygulama Logları:** Canlı log akışında hangi cihazın (`device_name` ve `dev_eui`) hangi uygulamaya (`app_name`) veri veya OTAA isteği gönderdiği JSON parametreleriyle açıkça listelenir.
 
 
 ## License

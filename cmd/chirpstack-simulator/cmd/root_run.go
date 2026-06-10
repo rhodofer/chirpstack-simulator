@@ -39,7 +39,6 @@ func run(cnd *cobra.Command, args []string) error {
 		{name: "setupASAPIClient", fn: setupASAPIClient, fatal: false},
 		{name: "setupASIntegration", fn: setupASIntegration, fatal: false},
 		{name: "setupNSIntegration", fn: setupNSIntegration, fatal: false},
-		{name: "startSimulator", fn: startSimulator, fatal: false},
 	}
 
 	var wg sync.WaitGroup

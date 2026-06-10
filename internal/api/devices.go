@@ -18,6 +18,7 @@ type Device struct {
 	DeviceProfileID string `json:"device_profile_id"`
 	Description     string `json:"description,omitempty"`
 	IsDisabled      bool   `json:"is_disabled"`
+	TenantID        string `json:"tenant_id"`
 }
 
 // CreateDeviceRequest is the HTTP request body for creating a device.
@@ -37,16 +38,28 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API bağlantısı kurulmadı"})
+		return
+	}
+
 	applicationID := r.URL.Query().Get("application_id")
 	tenantID := r.URL.Query().Get("tenant_id")
 	var apps []string
+	appTenantMap := make(map[string]string)
+
 	if applicationID != "" {
 		apps = append(apps, applicationID)
+		respApp, err := as.Application().Get(context.Background(), &api.GetApplicationRequest{Id: applicationID})
+		if err == nil {
+			appTenantMap[applicationID] = respApp.GetApplication().GetTenantId()
+		}
 	} else if tenantID != "" {
 		respApps, err := as.Application().List(context.Background(), &api.ListApplicationsRequest{Limit: 100, TenantId: tenantID})
 		if err == nil {
 			for _, a := range respApps.GetResult() {
 				apps = append(apps, a.GetId())
+				appTenantMap[a.GetId()] = tenantID
 			}
 		} else {
 			log.WithError(err).Warnf("devices: list apps error for tenant %s", tenantID)
@@ -68,6 +81,7 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 			}
 			for _, a := range respApps.GetResult() {
 				apps = append(apps, a.GetId())
+				appTenantMap[a.GetId()] = t.GetId()
 			}
 		}
 	}
@@ -87,6 +101,7 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 				ApplicationID:   appID,
 				DeviceProfileID: d.GetDeviceProfileId(),
 				Description:     d.GetDescription(),
+				TenantID:        appTenantMap[appID],
 			})
 		}
 	}
@@ -104,30 +119,35 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	var req CreateDeviceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.DevEUI == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 		return
 	}
 	if len(req.DevEUI) != 16 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui 16 hex karakter olmalıdır (8 byte)"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui must be 16 hex characters (8 bytes)"})
 		return
 	}
 	if req.Name == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "cihaz adı zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device name is required"})
 		return
 	}
 	if req.ApplicationID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application_id zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application_id is required"})
 		return
 	}
 	if req.DeviceProfileID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device_profile_id zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device_profile_id is required"})
 		return
 	}
 
@@ -144,7 +164,7 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).WithField("dev_eui", req.DevEUI).Error("devices: create error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}
@@ -171,11 +191,16 @@ func handleDeleteDevice(w http.ResponseWriter, r *http.Request, devEUI string) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	_, err := as.Device().Delete(context.Background(), &api.DeleteDeviceRequest{DevEui: devEUI})
 	if err != nil {
 		log.WithError(err).WithField("dev_eui", devEUI).Error("devices: delete error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}

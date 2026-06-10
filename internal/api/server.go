@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brocaar/chirpstack-simulator/internal/as"
 	"github.com/brocaar/chirpstack-simulator/internal/config"
 	"github.com/brocaar/chirpstack-simulator/internal/simulator"
+	"github.com/chirpstack/chirpstack/api/go/v4/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,22 +23,40 @@ type Server struct {
 // New creates a new HTTP API server instance.
 func New(bind string) *Server {
 	InitLogHook()
+	if err := SetupDB(); err != nil {
+		log.WithError(err).Fatal("api: failed to initialize sqlite database")
+	}
 	mux := http.NewServeMux()
 	state := GetState()
 
+	// Auth endpoints
+	mux.HandleFunc("/api/auth/login", handleLogin)
+	mux.HandleFunc("/api/auth/logout", handleLogout)
+	mux.HandleFunc("/api/auth/status", handleAuthStatus)
+
 	// API endpoints
-	mux.HandleFunc("/api/logs/stream", handleLogStream)
-	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/logs/stream", requireAuth(handleLogStream))
+	mux.HandleFunc("/api/bootstrap", requireAuth(handleBootstrap))
+	mux.HandleFunc("/api/config", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleGetSystemConfig(w, r)
+		} else if r.Method == http.MethodPost {
+			handleSaveSystemConfig(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	}))
+	mux.HandleFunc("/api/status", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStatus(w, r, state)
-	})
-	mux.HandleFunc("/api/start", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/api/start", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStart(w, r, state)
-	})
-	mux.HandleFunc("/api/stop", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/api/stop", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStop(w, r, state)
-	})
+	}))
 	mux.HandleFunc("/api/health", handleHealth)
-	mux.HandleFunc("/api/organizations", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListOrganizations(w, r)
 		} else if r.Method == http.MethodPost {
@@ -44,19 +64,35 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
 	// DELETE /api/organizations/{id}
-	mux.HandleFunc("/api/organizations/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/organizations/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
 			return
 		}
 		handleDeleteOrganization(w, r, id)
-	})
+	}))
 
-	mux.HandleFunc("/api/device-profiles", func(w http.ResponseWriter, r *http.Request) {
+	// GET/POST /api/org-configs/{orgID}
+	mux.HandleFunc("/api/org-configs/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		orgID := r.URL.Path[len("/api/org-configs/"):]
+		if orgID == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetOrgConfig(w, r, orgID)
+		} else if r.Method == http.MethodPost {
+			handleSaveOrgConfig(w, r, orgID)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	}))
+
+	mux.HandleFunc("/api/device-profiles", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDeviceProfiles(w, r)
 		} else if r.Method == http.MethodPost {
@@ -64,9 +100,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/device-profiles/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/device-profiles/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/device-profiles/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device profile id is required"})
@@ -79,9 +115,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/applications", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListApplications(w, r)
 		} else if r.Method == http.MethodPost {
@@ -89,18 +125,18 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/applications/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/applications/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application id is required"})
 			return
 		}
 		handleDeleteApplication(w, r, id)
-	})
+	}))
 
-	mux.HandleFunc("/api/devices", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/devices", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDevices(w, r)
 		} else if r.Method == http.MethodPost {
@@ -108,16 +144,47 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	})
+	}))
 
-	mux.HandleFunc("/api/devices/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/devices/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		devEUI := r.URL.Path[len("/api/devices/"):]
 		if devEUI == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 			return
 		}
 		handleDeleteDevice(w, r, devEUI)
-	})
+	}))
+
+	mux.HandleFunc("/api/device-intervals", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			intervals, err := GetDeviceIntervals()
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]interface{}{"intervals": intervals})
+		} else if r.Method == http.MethodPost {
+			var req struct {
+				DevEUI   string `json:"dev_eui"`
+				Interval string `json:"interval"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+				return
+			}
+			if req.DevEUI == "" || req.Interval == "" {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui ve interval zorunludur"})
+				return
+			}
+			if err := SaveDeviceInterval(req.DevEUI, req.Interval); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	}))
 
 	// UI — serves embedded frontend files at root path
 	mux.Handle("/", uiHandler())
@@ -178,6 +245,107 @@ func handleStatus(w http.ResponseWriter, r *http.Request, state *SimState) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// syncMissingOrgConfigs ensures all tenants in ChirpStack have a simulation config in SQLite.
+func syncMissingOrgConfigs() {
+	if !as.IsConnected() {
+		log.Warn("syncMissingOrgConfigs: ChirpStack API not connected, skipping sync")
+		return
+	}
+
+	ctx := context.Background()
+	respTenants, err := as.Tenant().List(ctx, &api.ListTenantsRequest{Limit: 100})
+	if err != nil {
+		log.WithError(err).Error("syncMissingOrgConfigs: failed to list tenants")
+		return
+	}
+
+	for _, t := range respTenants.GetResult() {
+		tenantID := t.GetId()
+		cfg, err := GetOrgConfig(tenantID)
+		if err != nil {
+			log.WithError(err).Warnf("syncMissingOrgConfigs: failed to get config for tenant %s", tenantID)
+			continue
+		}
+		if cfg != nil {
+			// Already has config, skip
+			continue
+		}
+
+		// Config does not exist, let's create a default config
+		deviceCount := 5 // default
+		appName := t.GetName()
+		devicePrefix := "sim-dev"
+
+		respApps, err := as.Application().List(ctx, &api.ListApplicationsRequest{Limit: 100, TenantId: tenantID})
+		if err == nil {
+			if len(respApps.GetResult()) > 0 {
+				// Use the first application name
+				appName = respApps.GetResult()[0].GetName()
+				
+				// Count devices across all applications for this tenant
+				totalDevs := 0
+				for _, app := range respApps.GetResult() {
+					respDevs, err := as.Device().List(ctx, &api.ListDevicesRequest{Limit: 100, ApplicationId: app.GetId()})
+					if err == nil {
+						totalDevs += len(respDevs.GetResult())
+						if len(respDevs.GetResult()) > 0 {
+							// If devices exist, we want to match the device name prefix.
+							firstName := respDevs.GetResult()[0].GetName()
+							// Find the last dash index followed by digits
+							lastDash := -1
+							for idx, char := range firstName {
+								if char == '-' {
+									lastDash = idx
+								}
+							}
+							if lastDash != -1 && lastDash < len(firstName)-1 {
+								// Check if suffix is a number
+								isNum := true
+								for _, char := range firstName[lastDash+1:] {
+									if char < '0' || char > '9' {
+										isNum = false
+										break
+									}
+								}
+								if isNum {
+									devicePrefix = firstName[:lastDash]
+								}
+							}
+						}
+					}
+				}
+				if totalDevs > 0 {
+					deviceCount = totalDevs
+				}
+			}
+		}
+
+		defaultCfg := StartRequest{
+			TenantID:             tenantID,
+			DeviceCount:          deviceCount,
+			GatewayCount:         1,
+			Duration:             "0s",
+			ActivationTime:       "30s",
+			UplinkInterval:       "2m",
+			AppName:              appName,
+			DevicePrefix:         devicePrefix,
+			FPort:                10,
+			Payload:              "001903F521", // 5-byte payload triggers dynamic telemetry logging
+			Frequency:            868100000,
+			Bandwidth:            125000,
+			SpreadingFactor:      7,
+			EventTopicTemplate:   "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
+			CommandTopicTemplate: "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
+		}
+		
+		if err := SaveOrgConfig(tenantID, &defaultCfg); err != nil {
+			log.WithError(err).Warnf("syncMissingOrgConfigs: failed to save default simulation config for org %s", t.GetName())
+		} else {
+			log.Infof("syncMissingOrgConfigs: synchronized default simulation config for org %s", t.GetName())
+		}
+	}
+}
+
 // handleStart launches a new simulation.
 func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	if r.Method != http.MethodPost {
@@ -189,7 +357,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	if state.Status != StatusIdle && state.Status != StatusError {
 		state.mu.Unlock()
 		writeJSON(w, http.StatusConflict, map[string]interface{}{
-			"error":  "simülasyon zaten çalışıyor",
+			"error":  "simulation already running",
 			"status": string(state.Status),
 		})
 		return
@@ -198,7 +366,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	var req StartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		state.mu.Unlock()
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
@@ -216,7 +384,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		req.ActivationTime = "1m"
 	}
 	if req.UplinkInterval == "" {
-		req.UplinkInterval = "30s"
+		req.UplinkInterval = "2m"
 	}
 	if req.AppName == "" {
 		req.AppName = "simulasyon"
@@ -246,7 +414,29 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		req.CommandTopicTemplate = "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
 	}
 
-	cfg := buildConfig(req)
+	// Sync all missing organization configs from ChirpStack first.
+	syncMissingOrgConfigs()
+
+	// Load all saved configurations from SQLite.
+	reqs, err := GetActiveOrgConfigs()
+	if err != nil {
+		log.WithError(err).Error("HTTP API: failed to get active org configs, using request config only")
+	}
+
+	// Merge active request config (potentially unsaved changes from drawer)
+	found := false
+	for i, r := range reqs {
+		if r.TenantID == req.TenantID {
+			reqs[i] = req
+			found = true
+			break
+		}
+	}
+	if !found {
+		reqs = append(reqs, req)
+	}
+
+	cfg := buildConfigFromList(reqs)
 	state.Config = &req
 	state.Status = StatusStarting
 	state.StartedAt = time.Now().UnixMilli()
@@ -281,12 +471,12 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		state.Config = nil
 		state.mu.Unlock()
 
-		log.Info("HTTP API: simülasyon tamamlandı")
+		log.Info("HTTP API: simulation completed")
 	}()
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "starting",
-		"message": "Simülasyon başlatılıyor...",
+		"message": "Simulation is starting...",
 	})
 }
 
@@ -302,7 +492,7 @@ func handleStop(w http.ResponseWriter, r *http.Request, state *SimState) {
 
 	if state.Status != StatusRunning && state.Status != StatusStarting {
 		writeJSON(w, http.StatusConflict, map[string]interface{}{
-			"error":  "simülasyon zaten durmuş",
+			"error":  "simulation already stopped",
 			"status": string(state.Status),
 		})
 		return
@@ -315,60 +505,99 @@ func handleStop(w http.ResponseWriter, r *http.Request, state *SimState) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "stopping",
-		"message": "Simülasyon durduruluyor...",
+		"message": "Simulation is stopping...",
 	})
 }
 
-// buildConfig converts an HTTP API StartRequest into a simulator config.Config.
-func buildConfig(req StartRequest) config.Config {
-	duration, _ := time.ParseDuration(req.Duration)
-	activationTime, _ := time.ParseDuration(req.ActivationTime)
-	uplinkInterval, _ := time.ParseDuration(req.UplinkInterval)
-
+// buildConfigFromList converts a slice of StartRequests into a simulator config.Config.
+func buildConfigFromList(reqs []StartRequest) config.Config {
 	// Start from the global config (preserves ChirpStack, Prometheus settings).
 	cfg := config.C
+	cfg.Simulator = nil
 
-	// Override simulator with single entry from HTTP request.
-	cfg.Simulator = []struct {
-		TenantID         string        `mapstructure:"tenant_id"`
-		Duration         time.Duration `mapstructure:"duration"`
-		ActivationTime   time.Duration `mapstructure:"activation_time"`
-		AppName          string        `mapstructure:"app_name"`
-		DeviceNamePrefix string        `mapstructure:"device_name_prefix"`
-		Device           struct {
-			Count           int           `mapstructure:"count"`
-			UplinkInterval  time.Duration `mapstructure:"uplink_interval"`
-			FPort           uint8         `mapstructure:"f_port"`
-			Payload         string        `mapstructure:"payload"`
-			Frequency       int           `mapstructure:"frequency"`
-			Bandwidth       int           `mapstructure:"bandwidth"`
-			SpreadingFactor int           `mapstructure:"spreading_factor"`
-		} `mapstructure:"device"`
-		Gateway struct {
-			MinCount             int    `mapstructure:"min_count"`
-			MaxCount             int    `mapstructure:"max_count"`
-			EventTopicTemplate   string `mapstructure:"event_topic_template"`
-			CommandTopicTemplate string `mapstructure:"command_topic_template"`
-		} `mapstructure:"gateway"`
-	}{{
-		TenantID:         req.TenantID,
-		Duration:         duration,
-		ActivationTime:   activationTime,
-		AppName:          req.AppName,
-		DeviceNamePrefix: req.DevicePrefix,
-	}}
+	for _, req := range reqs {
+		// Apply defaults.
+		if req.DeviceCount == 0 {
+			req.DeviceCount = 10
+		}
+		if req.GatewayCount == 0 {
+			req.GatewayCount = 3
+		}
+		if req.Duration == "" {
+			req.Duration = "0s"
+		}
+		if req.ActivationTime == "" {
+			req.ActivationTime = "1m"
+		}
+		if req.UplinkInterval == "" {
+			req.UplinkInterval = "2m"
+		}
+		if req.AppName == "" {
+			req.AppName = "simulasyon"
+		}
+		if req.DevicePrefix == "" {
+			req.DevicePrefix = "sim-dev"
+		}
+		if req.FPort == 0 {
+			req.FPort = 10
+		}
+		if req.Payload == "" {
+			req.Payload = "0102030405"
+		}
+		if req.Frequency == 0 {
+			req.Frequency = 868100000
+		}
+		if req.Bandwidth == 0 {
+			req.Bandwidth = 125000
+		}
+		if req.SpreadingFactor == 0 {
+			req.SpreadingFactor = 7
+		}
+		if req.EventTopicTemplate == "" {
+			req.EventTopicTemplate = "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}"
+		}
+		if req.CommandTopicTemplate == "" {
+			req.CommandTopicTemplate = "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
+		}
 
-	cfg.Simulator[0].Device.Count = req.DeviceCount
-	cfg.Simulator[0].Device.UplinkInterval = uplinkInterval
-	cfg.Simulator[0].Device.FPort = req.FPort
-	cfg.Simulator[0].Device.Payload = req.Payload
-	cfg.Simulator[0].Device.Frequency = req.Frequency
-	cfg.Simulator[0].Device.Bandwidth = req.Bandwidth
-	cfg.Simulator[0].Device.SpreadingFactor = req.SpreadingFactor
-	cfg.Simulator[0].Gateway.MinCount = req.GatewayCount
-	cfg.Simulator[0].Gateway.MaxCount = req.GatewayCount
-	cfg.Simulator[0].Gateway.EventTopicTemplate = req.EventTopicTemplate
-	cfg.Simulator[0].Gateway.CommandTopicTemplate = req.CommandTopicTemplate
+		duration, _ := time.ParseDuration(req.Duration)
+		activationTime, _ := time.ParseDuration(req.ActivationTime)
+		uplinkInterval, _ := time.ParseDuration(req.UplinkInterval)
+
+		simCfg := config.SimulatorConfig{
+			TenantID:         req.TenantID,
+			Duration:         duration,
+			ActivationTime:   activationTime,
+			AppName:          req.AppName,
+			DeviceNamePrefix: req.DevicePrefix,
+		}
+
+		simCfg.Device.Count = req.DeviceCount
+		simCfg.Device.UplinkInterval = uplinkInterval
+		simCfg.Device.FPort = req.FPort
+		simCfg.Device.Payload = req.Payload
+		simCfg.Device.Frequency = req.Frequency
+		simCfg.Device.Bandwidth = req.Bandwidth
+		simCfg.Device.SpreadingFactor = req.SpreadingFactor
+		simCfg.Gateway.MinCount = req.GatewayCount
+		simCfg.Gateway.MaxCount = req.GatewayCount
+		simCfg.Gateway.EventTopicTemplate = req.EventTopicTemplate
+		simCfg.Gateway.CommandTopicTemplate = req.CommandTopicTemplate
+
+		// Load custom intervals for this simulation
+		devIntervals, err := GetDeviceIntervals()
+		if err == nil {
+			simCfg.DeviceIntervals = make(map[string]time.Duration)
+			for devEUI, intStr := range devIntervals {
+				dur, err := time.ParseDuration(intStr)
+				if err == nil {
+					simCfg.DeviceIntervals[devEUI] = dur
+				}
+			}
+		}
+
+		cfg.Simulator = append(cfg.Simulator, simCfg)
+	}
 
 	return cfg
 }

@@ -65,6 +65,11 @@ func handleListDeviceProfiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	tenantID := r.URL.Query().Get("tenant_id")
 	var tenants []string
 	if tenantID != "" {
@@ -74,7 +79,7 @@ func handleListDeviceProfiles(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.WithError(err).Error("device-profiles: list tenants error")
 			writeJSON(w, http.StatusBadGateway, map[string]string{
-				"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+				"error": "Failed to connect to ChirpStack API: " + err.Error(),
 			})
 			return
 		}
@@ -114,11 +119,16 @@ func handleGetDeviceProfile(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	resp, err := as.DeviceProfile().Get(context.Background(), &api.GetDeviceProfileRequest{Id: id})
 	if err != nil {
 		log.WithError(err).WithField("id", id).Error("device-profiles: get error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}
@@ -132,18 +142,23 @@ func handleCreateDeviceProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	var req CreateDeviceProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Name == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "profil adı zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "profile name is required"})
 		return
 	}
 	if req.TenantID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "tenant_id zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "tenant_id is required"})
 		return
 	}
 
@@ -185,7 +200,7 @@ func handleCreateDeviceProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).WithField("name", req.Name).Error("device-profiles: create error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}
@@ -217,7 +232,7 @@ func handleDeleteDeviceProfile(w http.ResponseWriter, r *http.Request, id string
 	if err != nil {
 		log.WithError(err).WithField("id", id).Error("device-profiles: delete error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}

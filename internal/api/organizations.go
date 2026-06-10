@@ -30,13 +30,21 @@ func handleListOrganizations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
+	// Sync missing organization configs before returning the list
+	syncMissingOrgConfigs()
+
 	resp, err := as.Tenant().List(context.Background(), &api.ListTenantsRequest{
 		Limit: 100,
 	})
 	if err != nil {
 		log.WithError(err).Error("organizations: list tenants error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}
@@ -63,14 +71,19 @@ func handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	var req CreateOrganizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Name == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organizasyon adı zorunludur"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization name is required"})
 		return
 	}
 
@@ -88,7 +101,7 @@ func handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).WithField("name", req.Name).Error("organizations: create tenant error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}
@@ -112,13 +125,18 @@ func handleDeleteOrganization(w http.ResponseWriter, r *http.Request, id string)
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
 	_, err := as.Tenant().Delete(context.Background(), &api.DeleteTenantRequest{
 		Id: id,
 	})
 	if err != nil {
 		log.WithError(err).WithField("id", id).Error("organizations: delete tenant error")
 		writeJSON(w, http.StatusBadGateway, map[string]string{
-			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
 		})
 		return
 	}

@@ -1,0 +1,81 @@
+        <!-- ═══ SECONDARY SIDEBAR (256px, alt menü + liste) ══════════════ -->
+        <aside class="secondary-sidebar" id="secondary-sidebar">
+            <div class="secondary-sidebar-header">
+                <div class="secondary-sidebar-brand">
+                    <div class="secondary-brand-icon">⚡</div>
+                    <span class="secondary-brand-text">iofeSaaS</span>
+                </div>
+                <button class="sidebar-close-btn" id="sidebar-close-btn" title="Menüyü Kapat">✕</button>
+            </div>
+
+            <nav class="secondary-nav">
+
+                <!-- Yönetim (açılır menü) -->
+                <div class="secondary-nav-group open">
+                    <div class="secondary-nav-group-header" data-group="yonetim">
+                        <span class="secondary-nav-group-label">
+                            <span class="group-icon">🏢</span>
+                            <span data-i18n="nav_grp_mgmt">Yönetim</span>
+                        </span>
+                        <span class="secondary-nav-group-chevron">▶</span>
+                    </div>
+                    <div class="secondary-nav-group-items">
+                        <div class="secondary-nav-link active" data-tab="overview">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_organizations">Organizasyonlar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uygulamalar (açılır menü) -->
+                <div class="secondary-nav-group open">
+                    <div class="secondary-nav-group-header" data-group="uygulamalar">
+                        <span class="secondary-nav-group-label">
+                            <span class="group-icon">⚙</span>
+                            <span data-i18n="nav_grp_apps">Uygulamalar</span>
+                        </span>
+                        <span class="secondary-nav-group-chevron">▶</span>
+                    </div>
+                    <div class="secondary-nav-group-items">
+                        <div class="secondary-nav-link" data-tab="networks">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_networks">Ağ Uygulamaları</span>
+                        </div>
+                        <div class="secondary-nav-link" data-tab="devices">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_device_profiles">Device Profilleri</span>
+                        </div>
+                        <div class="secondary-nav-link" data-tab="device-list">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_devices">Cihazlar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sistem (açılır menü) -->
+                <div class="secondary-nav-group open">
+                    <div class="secondary-nav-group-header" data-group="sistem">
+                        <span class="secondary-nav-group-label">
+                            <span class="group-icon">🖥</span>
+                            <span data-i18n="nav_grp_system">Sistem</span>
+                        </span>
+                        <span class="secondary-nav-group-chevron">▶</span>
+                    </div>
+                    <div class="secondary-nav-group-items">
+                        <div class="secondary-nav-link" data-tab="settings">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_settings">Ayarlar</span>
+                        </div>
+                        <div class="secondary-nav-link" data-tab="console">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_console">Konsol</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="secondary-sidebar-footer">
+                <span class="version-info">v<span id="version-text">—</span></span>
+                <button class="logout-btn" id="logout-btn" title="Çıkış Yap">🚪 Çıkış</button>
+            </div>
+        </aside>

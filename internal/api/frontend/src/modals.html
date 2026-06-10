@@ -1,0 +1,311 @@
+    <!-- ═══ MODAL (Yeni Organizasyon) ═══════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-overlay" style="display:none;">
+         <div class="modal">
+             <div class="modal-header">
+                 <h3 data-i18n="modal_add_org_title">Yeni Organizasyon Ekle</h3>
+                 <button class="modal-close-btn" id="modal-close">✕</button>
+             </div>
+             <div class="modal-body">
+                 <div class="form-group">
+                     <label for="modal-org-name" data-i18n="modal_add_org_name">Organizasyon Adı *</label>
+                     <input type="text" id="modal-org-name" data-i18n-placeholder="modal_add_org_name_placeholder" placeholder="Örn: Test Organizasyonu" autofocus>
+                 </div>
+                 <div class="form-group">
+                     <label for="modal-org-id" data-i18n="modal_add_org_ref">Referans ID (opsiyonel)</label>
+                     <div class="input-with-button">
+                         <input type="text" id="modal-org-id" data-i18n-placeholder="modal_add_org_ref_placeholder" placeholder="Boş bırakılırsa ChirpStack otomatik oluşturur">
+                         <button type="button" class="btn-random" id="btn-random-id" title="Rastgele ID Üret">🎲</button>
+                     </div>
+                     <span class="form-hint" data-i18n="modal_add_org_ref_hint">Sadece referans amaçlıdır. ChirpStack kendi ID'sini üretir.</span>
+                 </div>
+                 <div class="form-group">
+                     <label for="modal-org-desc" data-i18n="modal_add_org_desc">Açıklama (isteğe bağlı)</label>
+                     <input type="text" id="modal-org-desc" data-i18n-placeholder="modal_add_org_desc_placeholder" placeholder="Örn: Test amaçlı organizasyon">
+                 </div>
+             </div>
+             <div class="modal-footer">
+                 <button class="btn btn-secondary btn-sm" id="modal-cancel" data-i18n="btn_cancel">İptal</button>
+                 <button class="btn btn-primary btn-sm" id="modal-save" data-i18n="btn_save">Kaydet</button>
+             </div>
+         </div>
+     </div>
+
+    <!-- ═══ MODAL (Yeni Device Profile) ═══════════════════════════════ -->
+    <div class="modal-overlay" id="dp-modal-overlay" style="display:none;">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3 data-i18n="modal_add_dp_title">Yeni Device Profile</h3>
+                <button class="modal-close-btn" id="dp-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dp-name" data-i18n="table_dp_name">Profil Adı *</label>
+                    <input type="text" id="dp-name" data-i18n-placeholder="modal_add_dp_name_placeholder" placeholder="Örn: EU868 OTAA Profile" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="dp-tenant" data-i18n="modal_add_dp_tenant">Tenant *</label>
+                    <select id="dp-tenant"></select>
+                </div>
+                <div class="form-group">
+                    <label for="dp-description" data-i18n="modal_add_dp_desc">Açıklama (opsiyonel)</label>
+                    <input type="text" id="dp-description" data-i18n-placeholder="modal_add_dp_desc_placeholder" placeholder="Profil açıklaması">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dp-region" data-i18n="table_dp_region">Bölge *</label>
+                        <select id="dp-region">
+                            <option value="EU868" selected>EU868</option>
+                            <option value="US915">US915</option>
+                            <option value="AS923">AS923</option>
+                            <option value="AU915">AU915</option>
+                            <option value="IN865">IN865</option>
+                            <option value="KR920">KR920</option>
+                            <option value="RU864">RU864</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dp-mac-version" data-i18n="table_dp_mac">MAC Versiyon *</label>
+                        <select id="dp-mac-version">
+                            <option value="LORAWAN_1_0_0">1.0.0</option>
+                            <option value="LORAWAN_1_0_1">1.0.1</option>
+                            <option value="LORAWAN_1_0_2">1.0.2</option>
+                            <option value="LORAWAN_1_0_3" selected>1.0.3</option>
+                            <option value="LORAWAN_1_0_4">1.0.4</option>
+                            <option value="LORAWAN_1_1_0">1.1.0</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dp-reg-params" data-i18n="modal_add_dp_reg_params">Regional Parameters *</label>
+                        <select id="dp-reg-params">
+                            <option value="A">A</option>
+                            <option value="B" selected>B</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dp-adr-alg" data-i18n="modal_add_dp_adr">ADR Algoritması</label>
+                        <input type="text" id="dp-adr-alg" placeholder="default" value="default">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dp-supports-otaa" checked>
+                        <span data-i18n="modal_add_dp_otaa_check">OTAA (Over-The-Air Activation) destekler</span>
+                    </label>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="dp-supports-class-b">
+                            <span data-i18n="modal_add_dp_class_b_check">Class B destekler</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="dp-supports-class-c">
+                            <span data-i18n="modal_add_dp_class_c_check">Class C destekler</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="dp-modal-cancel" data-i18n="btn_cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="dp-modal-save" data-i18n="btn_save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST ═══════════════════════════════════════════════════════ -->
+    <!-- ═══ MODAL (Yeni Uygulama / Application) ════════════════════════ -->
+    <div class="modal-overlay" id="net-modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 data-i18n="modal_add_net_title">Yeni Uygulama Ekle</h3>
+                <button class="modal-close-btn" id="net-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="net-name" data-i18n="table_net_name">Uygulama Adı *</label>
+                    <input type="text" id="net-name" data-i18n-placeholder="modal_add_net_name_placeholder" placeholder="Örn: Sensor Ağı" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="net-tenant" data-i18n="modal_add_net_tenant">Tenant (Organizasyon) *</label>
+                    <select id="net-tenant"></select>
+                </div>
+                <div class="form-group">
+                    <label for="net-description" data-i18n="modal_add_net_desc">Açıklama (opsiyonel)</label>
+                    <input type="text" id="net-description" data-i18n-placeholder="modal_add_net_desc_placeholder" placeholder="Uygulama açıklaması">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="net-modal-cancel" data-i18n="btn_cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="net-modal-save" data-i18n="btn_save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL (Yeni Cihaz / Device) ════════════════════════════════ -->
+    <div class="modal-overlay" id="dev-modal-overlay" style="display:none;">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3 data-i18n="modal_add_dev_title">Yeni Cihaz Ekle</h3>
+                <button class="modal-close-btn" id="dev-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dev-eui" data-i18n="modal_add_dev_eui_label">DevEUI * <span style="font-weight:400; font-size:0.8em;">(16 hex karakter)</span></label>
+                    <div class="input-with-button">
+                        <input type="text" id="dev-eui" placeholder="0102030405060708" maxlength="16">
+                        <button type="button" class="btn-random" id="btn-random-dev-eui" title="Rastgele DevEUI Üret">🎲</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dev-name" data-i18n="table_dev_name">Cihaz Adı *</label>
+                    <input type="text" id="dev-name" data-i18n-placeholder="modal_add_dev_name_placeholder" placeholder="Örn: Sensor-001">
+                </div>
+                <div class="form-group">
+                    <label for="dev-app" data-i18n="modal_add_dev_app">Uygulama *</label>
+                    <select id="dev-app"></select>
+                </div>
+                <div class="form-group">
+                    <label for="dev-profile" data-i18n="table_dev_profile">Device Profile *</label>
+                    <select id="dev-profile">
+                        <option value="" data-i18n="modal_add_dev_select_app_first">Önce uygulama seçin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dev-description" data-i18n="modal_add_dev_desc">Açıklama (opsiyonel)</label>
+                    <input type="text" id="dev-description" data-i18n-placeholder="modal_add_dev_desc_placeholder" placeholder="Cihaz açıklaması">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="dev-modal-cancel" data-i18n="btn_cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="dev-modal-save" data-i18n="btn_save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL (Yeni Organizasyon & Cihazlar Hızlı Oluşturucu) ════════ -->
+    <div class="modal-overlay" id="bootstrap-modal-overlay" style="display:none;">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 data-i18n="top_bootstrap_title">Hızlı Kurulum Sihirbazı</h3>
+                <button class="modal-close-btn" id="bootstrap-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Step Indicator -->
+                <div class="wizard-steps" style="display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                    <span class="wiz-step active" id="wiz-step-1" style="color: var(--accent);" data-i18n="wiz_step_1">1. Organizasyon</span>
+                    <span class="wiz-step" id="wiz-step-2" data-i18n="wiz_step_2">2. Ağ</span>
+                    <span class="wiz-step" id="wiz-step-3" data-i18n="wiz_step_3">3. Profil</span>
+                    <span class="wiz-step" id="wiz-step-4" data-i18n="wiz_step_4">4. Cihaz</span>
+                    <span class="wiz-step" id="wiz-step-5" data-i18n="wiz_step_5">5. Özet</span>
+                </div>
+
+                <!-- Wizard Steps Content -->
+                <!-- Step 1: Organization -->
+                <div class="wizard-pane" id="wiz-pane-1">
+                    <div class="form-group">
+                        <label for="wiz-org-name" data-i18n="modal_add_org_name">Organizasyon Adı *</label>
+                        <input type="text" id="wiz-org-name" data-i18n-placeholder="modal_add_org_name_placeholder_wiz" placeholder="Örn: Kullanici-X" autofocus>
+                        <span class="form-hint" data-i18n="wiz_org_hint">Oluşturulacak yeni tenant/organizasyon adı.</span>
+                    </div>
+                </div>
+
+                <!-- Step 2: Networks -->
+                <div class="wizard-pane" id="wiz-pane-2" style="display:none;">
+                    <div class="form-group">
+                        <label for="wiz-app-prefix" data-i18n="wiz_app_prefix">Ağ Uygulaması Prefix *</label>
+                        <input type="text" id="wiz-app-prefix" placeholder="Örn: ag" value="ag">
+                    </div>
+                    <div class="form-group">
+                        <label for="wiz-app-count" data-i18n="wiz_app_count">Oluşturulacak Ağ Sayısı *</label>
+                        <input type="number" id="wiz-app-count" value="5" min="1" max="50">
+                        <span class="form-hint" data-i18n="wiz_app_count_hint">Örn: Kullanici-X-ag-1, Kullanici-X-ag-2...</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Device Profiles -->
+                <div class="wizard-pane" id="wiz-pane-3" style="display:none;">
+                    <div class="form-group">
+                        <label for="wiz-dp-prefix" data-i18n="wiz_dp_prefix">Cihaz Profili Prefix *</label>
+                        <input type="text" id="wiz-dp-prefix" placeholder="Örn: profile" value="profile">
+                    </div>
+                    <div class="form-group">
+                        <label for="wiz-dp-count" data-i18n="wiz_dp_count">Oluşturulacak Profil Sayısı *</label>
+                        <input type="number" id="wiz-dp-count" value="5" min="1" max="50">
+                        <span class="form-hint" data-i18n="wiz_dp_count_hint">Örn: Kullanici-X-profile-1, Kullanici-X-profile-2...</span>
+                    </div>
+                </div>
+
+                <!-- Step 4: Devices -->
+                <div class="wizard-pane" id="wiz-pane-4" style="display:none;">
+                    <div class="form-group">
+                        <label for="wiz-dev-prefix" data-i18n="wiz_dev_prefix">Cihaz Prefix *</label>
+                        <input type="text" id="wiz-dev-prefix" placeholder="Örn: device" value="device">
+                    </div>
+                    <div class="form-group">
+                        <label for="wiz-dev-count" data-i18n="wiz_dev_count">Her Ağdaki Cihaz Sayısı *</label>
+                        <input type="number" id="wiz-dev-count" value="5" min="1" max="100">
+                        <span class="form-hint" data-i18n="wiz_dev_count_hint">Her bir ağ uygulamasında oluşturulacak cihaz adedi.</span>
+                    </div>
+                </div>
+
+                <!-- Step 5: Creation Summary / Approval -->
+                <div class="wizard-pane" id="wiz-pane-5" style="display:none;">
+                    <div style="margin-bottom: 12px;">
+                        <h4 style="margin: 0 0 4px 0; font-size: 14px; color: var(--accent);" data-i18n="wiz_summary_title">Oluşturulacak Yapılandırma Özeti</h4>
+                        <p style="font-size: 11px; opacity: 0.8; margin: 0;" data-i18n="wiz_summary_subtitle">Lütfen oluşturulacak cihazlar için veri sıklığı (Interval) ve profil (Profile) atamalarını özelleştirip onaylayın.</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 12px; font-size: 12px; line-height: 1.4; margin-bottom: 12px; display: flex; gap: 16px;">
+                        <span>🏢 <strong data-i18n="wiz_summary_org_lbl">Org:</strong> <span id="wiz-summary-org"></span></span>
+                        <span>📡 <strong data-i18n="wiz_summary_net_lbl">Ağ:</strong> <span id="wiz-summary-apps"></span> <span data-i18n="wiz_summary_unit">adet</span></span>
+                        <span>📋 <strong data-i18n="wiz_summary_dp_lbl">Profil:</strong> <span id="wiz-summary-profiles"></span> <span data-i18n="wiz_summary_unit">adet</span></span>
+                    </div>
+
+                    <div style="max-height: 220px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(0,0,0,0.15); margin-bottom: 12px;">
+                        <table class="data-table" style="font-size: 11px; margin: 0; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 6px 8px;" data-i18n="wiz_table_dev_template">Cihaz Şablonu</th>
+                                    <th style="padding: 6px 8px; width: 180px;" data-i18n="table_dev_profile">Device Profile</th>
+                                    <th style="padding: 6px 8px; width: 120px;" data-i18n="table_dev_interval">Sıklık</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wiz-summary-slots-body">
+                                <!-- Dinamik olarak doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="font-size: 12px; color: var(--accent); font-weight: 600; margin: 8px 0 0 0; text-align: center;" data-i18n="wiz_summary_confirm_text">Bu kurulumu onaylıyor musunuz?</p>
+                </div>
+
+                <!-- Step 6: Success Summary -->
+                <div class="wizard-pane" id="wiz-pane-6" style="display:none;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="font-size: 44px; color: var(--green); display: block; margin-bottom: 8px;">✓</span>
+                        <h4 style="margin: 0 0 4px 0; color: var(--green); font-size: 16px;" data-i18n="wiz_success_title">Kurulum Başarıyla Tamamlandı</h4>
+                        <span style="font-size: 12px; opacity: 0.7;" data-i18n="wiz_success_subtitle">ChirpStack üzerinden oluşturma teyit raporu</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 12px; font-size: 13px; max-height: 200px; overflow-y: auto;">
+                        <p style="margin: 0 0 6px 0;"><strong data-i18n="wiz_success_org_lbl">Organizasyon:</strong> <span id="wiz-success-org"></span> <br><span id="wiz-success-org-id" class="id-cell" style="font-size:11px; opacity:0.6;"></span></p>
+                        <p style="margin: 0 0 6px 0;"><strong data-i18n="wiz_success_total_dev_lbl">Toplam Cihaz:</strong> <span id="wiz-success-dev-count"></span> <span data-i18n="wiz_success_dev_created_unit">adet cihaz oluşturuldu.</span></p>
+                        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0;">
+                        <p style="margin: 0 0 4px 0; font-weight:600;" data-i18n="wiz_success_net_created_lbl">Oluşturulan Ağ Uygulamaları:</p>
+                        <ul id="wiz-success-apps-list" style="margin: 0 0 10px 0; padding-left: 16px; list-style-type: square; opacity: 0.9; font-size: 12px; line-height: 1.4;"></ul>
+                        <p style="margin: 0 0 4px 0; font-weight:600;" data-i18n="wiz_success_dp_created_lbl">Oluşturulan Cihaz Profilleri:</p>
+                        <ul id="wiz-success-profiles-list" style="margin: 0; padding-left: 16px; list-style-type: square; opacity: 0.9; font-size: 12px; line-height: 1.4;"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="wiz-btn-prev" style="display:none;" data-i18n="btn_prev">Geri</button>
+                <div style="flex-grow: 1;"></div>
+                <button class="btn btn-secondary btn-sm" id="wiz-btn-cancel" style="margin-right: 8px;" data-i18n="btn_cancel">İptal</button>
+                <button class="btn btn-primary btn-sm" id="wiz-btn-next" data-i18n="btn_next">İleri</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" style="display:none;"></div>
