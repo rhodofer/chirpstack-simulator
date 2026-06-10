@@ -30,6 +30,7 @@ type BootstrapRequest struct {
 	DevPrefix     string                  `json:"dev_prefix"`
 	DevCount      int                     `json:"dev_count"`
 	DevicesConfig []BootstrapDeviceConfig `json:"devices_config"`
+	Scenario      string                  `json:"scenario"`
 }
 
 // handleBootstrap batch creates organization, network applications, device profiles, and devices.
@@ -104,6 +105,56 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		EventTopicTemplate:   "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
 		CommandTopicTemplate: "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
 	}
+
+	if req.Scenario == "batman_oil" {
+		defaultCfg.PayloadScript = `// Batman Raman Petrol Sahasi - Kuyu Telemetri Sensor Simulasyonu
+// 5 Sensor: Pompa Durumu, Kuyu Basi Basinci, Anlik Akis Hizi, Depolama Tank Seviyesi, Motor Sicakligi
+
+// 1. Pompa Durumu (Pump Status): %95 oraninda Aktif (1), %5 ariza/bakim (0)
+var pumpActive = (fCnt % 40 === 0) ? 0 : 1; 
+
+// 2. Kuyu Basi Basinci (Pressure): Pompa aktifse 45-65 psi arasi, kapaliysa 10 psi'a duser
+var pressure = pumpActive ? (55 + Math.sin(fCnt * 0.1) * 8 + (Math.random() - 0.5) * 2) : 10.0;
+
+// 3. Anlik Akis Hizi (Flow Rate): Pompa aktifse basinca bagli olarak 120-180 varil/gun arasi, kapaliysa 0
+var flowRate = pumpActive ? (pressure * 2.8 + (Math.random() - 0.5) * 5) : 0.0;
+
+// 4. Depolama Tank Seviyesi (Tank Level): Her aktif adimda tank dolulugu %0.4 artar. %100'e ulastiginda tankerle tahliye edilip %0'a duser.
+var tankFillRate = 0.4;
+var currentTankVal = (fCnt * tankFillRate) % 100.0;
+
+// 5. Motor Sicakligi (Motor Temp): Pompa aktifken 60-80 C arasi dalgalanir, kapaliysa 25 C (ortam sicakligi)
+var motorTemp = pumpActive ? (70 + Math.cos(fCnt * 0.08) * 8 + (Math.random() - 0.5) * 1) : 25.0;
+
+// Byte Donusumleri (Big Endian)
+// - Pompa Durumu: 1 byte (0 veya 1)
+var bStatus = pumpActive;
+
+// - Basinc: 10 ile carpilarak 16-bit integer (2 byte)
+var bPress = Math.round(pressure * 10);
+var bPress1 = (bPress >> 8) & 0xFF;
+var bPress0 = bPress & 0xFF;
+
+// - Akis Hizi: 10 ile carpilarak 16-bit integer (2 byte)
+var bFlow = Math.round(flowRate * 10);
+var bFlow1 = (bFlow >> 8) & 0xFF;
+var bFlow0 = bFlow & 0xFF;
+
+// - Tank Seviyesi: 10 ile carpilarak 16-bit integer (2 byte)
+var bTank = Math.round(currentTankVal * 10);
+var bTank1 = (bTank >> 8) & 0xFF;
+var bTank0 = bTank & 0xFF;
+
+// - Motor Sicakligi: 10 ile carpilarak 16-bit integer (2 byte)
+var bTemp = Math.round(motorTemp * 10);
+var bTemp1 = (bTemp >> 8) & 0xFF;
+var bTemp0 = bTemp & 0xFF;
+
+// Toplam 9 byte veri dizisi dondurur
+return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp0];`
+		defaultCfg.Payload = "" // Clear static hex since we use payload script
+	}
+
 	if err := SaveOrgConfig(tenantID, &defaultCfg); err != nil {
 		log.WithError(err).Warnf("bootstrap: failed to save default simulation config for org %s", req.OrgName)
 	}

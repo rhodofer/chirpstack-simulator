@@ -90,7 +90,12 @@ func printStartMessage(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 func setupASAPIClient(ctx context.Context, wg *sync.WaitGroup) error {
-	return as.Setup(config.C)
+	if err := as.Setup(config.C); err != nil {
+		return err
+	}
+	// Start gRPC-based poller to surface ChirpStack events in the console.
+	as.StartPoller(ctx)
+	return nil
 }
 
 func setupASIntegration(ctx context.Context, wg *sync.WaitGroup) error {

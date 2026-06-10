@@ -33,6 +33,7 @@
     var btnRefresh        = $("#btn-refresh");
     var pageSizeSelect    = $("#page-size-select");
     var paginationEl      = $("#pagination");
+    var mapOrgSelect      = $("#map-org-select");
 
     // Buttons
     var btnAddOrg         = $("#btn-add-org");
@@ -41,6 +42,7 @@
     var btnTopStart       = $("#btn-top-start");
     var btnTopStop        = $("#btn-top-stop");
     var btnSaveOrgConfig  = $("#btn-save-org-config");
+    var btnSaveGeneralSettings = $("#btn-save-general-settings");
 
     // Bottom Console
     var bottomConsole     = $("#bottom-console");
@@ -48,6 +50,7 @@
     var btnConsoleToggle  = $("#btn-console-toggle");
     var consoleLogContainer = $("#console-log-container");
     var consoleLogFilter  = $("#console-log-filter");
+    var consoleSourceSelect = $("#console-source-select");
     var consoleResizeHandle = $("#console-resize-handle");
 
     // Drawer
@@ -227,6 +230,21 @@
     };
 
     var pollTimer = null;
+
+    // Map & Chart Global State
+    var map = null;
+    var mapMarkers = [];
+    var mapLines = [];
+
+    var metricsChart = null;
+    var chartDataHistory = {
+        labels: [],
+        uplinks: [],
+        joinRequests: [],
+        joinAccepts: []
+    };
+    var maxHistoryPoints = 20;
+    var prevMetrics = null;
 
     // ─── Global Theme State & Helpers ──────────────────────────────────
     var presets = {
@@ -442,6 +460,7 @@
             });
         });
         applyGlobalTheme(themeObj);
+        updateMapTileUrl();
     }
 
     function updateInputs(themeObj) {
@@ -507,6 +526,7 @@
             state.applications = data.applications || [];
             logEntry("Applications list loaded: " + state.applications.length + " items", "success");
             applyAppFiltersAndRender();
+            applyFiltersAndRender();
             return true;
         } else {
             const err = (r.data && r.data.error) || "Bilinmeyen hata";
@@ -603,6 +623,331 @@
         return h + "h " + m + "m";
     }
 
+    // ─── Map & Chart Helper Functions ──────────────────────────────────
+    function getDeterministicHash(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
+    }
+
+    function getDeterministicCoords(seed, offsetScale) {
+        var hash = getDeterministicHash(seed);
+        // Base center point around Istanbul
+        var latCenter = 41.0082;
+        var lngCenter = 28.9784;
+        
+        var activeOrg = state.organizations.find(function (o) { return o.id === state.activeOrgId; });
+        if (activeOrg && (activeOrg.name.toLowerCase().includes("raman") || activeOrg.name.toLowerCase().includes("batman"))) {
+            latCenter = 37.8812;
+            lngCenter = 41.1351;
+        }
+        
+        var latOffset = ((hash & 0xFFFF) / 65535 - 0.5) * (offsetScale || 0.05);
+        var lngOffset = (((hash >> 16) & 0xFFFF) / 65535 - 0.5) * (offsetScale || 0.05);
+        
+        return [latCenter + latOffset, lngCenter + lngOffset];
+    }
+
+    var mapTileLayer = null;
+    function initMap() {
+        var mapContainer = document.getElementById("simulation-map");
+        if (!mapContainer || map) return;
+
+        var latCenter = 41.0082;
+        var lngCenter = 28.9784;
+        
+        var activeOrg = state.organizations.find(function (o) { return o.id === state.activeOrgId; });
+        if (activeOrg && (activeOrg.name.toLowerCase().includes("raman") || activeOrg.name.toLowerCase().includes("batman"))) {
+            latCenter = 37.8812;
+            lngCenter = 41.1351;
+        }
+
+        // Initialize map centered on active center
+        map = L.map('simulation-map').setView([latCenter, lngCenter], 12);
+
+        var isLight = isLightColor(activeTheme.bg);
+        var tileUrl = isLight 
+            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+            
+        var attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+        
+        mapTileLayer = L.tileLayer(tileUrl, {
+            attribution: attribution,
+            maxZoom: 20
+        }).addTo(map);
+    }
+
+    function updateMapTileUrl() {
+        if (!map || !mapTileLayer) return;
+        var isLight = isLightColor(activeTheme.bg);
+        var tileUrl = isLight 
+            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+        mapTileLayer.setUrl(tileUrl);
+    }
+
+    function pulseDeviceMarkerAndLine(devEUI) {
+        if (!map) return;
+        
+        var marker = mapMarkers.find(function (m) { return m.devEUI === devEUI; });
+        if (marker) {
+            marker.setStyle({
+                radius: 10,
+                fillColor: '#f59e0b',
+                fillOpacity: 1,
+                color: '#f59e0b',
+                weight: 2
+            });
+            setTimeout(function () {
+                marker.setStyle({
+                    radius: 5,
+                    fillColor: '#10b981',
+                    fillOpacity: 0.9,
+                    color: '#ffffff',
+                    weight: 1.5
+                });
+            }, 800);
+        }
+        
+        var line = mapLines.find(function (l) { return l.devEUI === devEUI; });
+        if (line) {
+            line.setStyle({
+                color: '#f59e0b',
+                weight: 3,
+                opacity: 0.9,
+                dashArray: null
+            });
+            setTimeout(function () {
+                line.setStyle({
+                    color: '#94a3b8',
+                    weight: 1,
+                    opacity: 0.5,
+                    dashArray: '3, 5'
+                });
+            }, 800);
+        }
+    }
+
+    function updateMap() {
+        if (!map) {
+            initMap();
+        }
+        if (!map) return;
+
+        // Clear existing markers and lines
+        mapMarkers.forEach(function (m) { map.removeLayer(m); });
+        mapLines.forEach(function (l) { map.removeLayer(l); });
+        mapMarkers = [];
+        mapLines = [];
+
+        var latCenter = 41.0082;
+        var lngCenter = 28.9784;
+        var activeOrg = state.organizations.find(function (o) { return o.id === state.activeOrgId; });
+        if (activeOrg && (activeOrg.name.toLowerCase().includes("raman") || activeOrg.name.toLowerCase().includes("batman"))) {
+            latCenter = 37.8812;
+            lngCenter = 41.1351;
+        }
+
+        // Get applications of the active organization (tenant)
+        var orgApps = (state.applications || []).filter(function (app) {
+            return app.tenant_id === state.activeOrgId;
+        });
+
+        // The number of hubs (blue dots) equals the number of applications in this organization.
+        // If there are no applications, we fallback to gwCount.
+        var gwCount = 2;
+        var activeConfig = state.activeOrgConfig;
+        if (activeConfig && activeConfig.gateway_count !== undefined) {
+            gwCount = activeConfig.gateway_count;
+        }
+        var hubCount = orgApps.length > 0 ? orgApps.length : gwCount;
+
+        // Generate Hub / Gateway Coordinates deterministically
+        var gatewayCoordsList = [];
+        for (var i = 0; i < hubCount; i++) {
+            var gwName = "";
+            var seed = "";
+            if (orgApps.length > 0) {
+                gwName = orgApps[i].name;
+                seed = "app-gateway-" + orgApps[i].id;
+            } else {
+                gwName = "Gateway-" + (i + 1);
+                seed = "gateway-" + state.activeOrgId + "-" + i;
+            }
+            var coords = getDeterministicCoords(seed, 0.04);
+            gatewayCoordsList.push({
+                coords: coords,
+                name: gwName,
+                appId: orgApps[i] ? orgApps[i].id : null
+            });
+
+            // Add gateway/hub marker (large blue circle)
+            var gwMarker = L.circleMarker(coords, {
+                radius: 10,
+                fillColor: '#3b82f6', // blue
+                fillOpacity: 0.8,
+                color: '#ffffff',
+                weight: 2
+            }).addTo(map)
+              .bindPopup("<b>" + (orgApps.length > 0 ? "Ağ Hub: " : "Gateway: ") + escapeHtml(gwName) + "</b><br>Coordinates: " + coords[0].toFixed(5) + ", " + coords[1].toFixed(5));
+            mapMarkers.push(gwMarker);
+        }
+
+        // Filter devices belonging to the active organization / tenant
+        var orgDevices = (state.devList || []).filter(function (d) {
+            return !state.activeOrgId || d.tenant_id === state.activeOrgId;
+        });
+        if (orgDevices.length > 0) {
+            orgDevices.forEach(function (d) {
+                // Determine hub index for this device based on its application
+                var gwIdx = -1;
+                if (orgApps.length > 0) {
+                    gwIdx = orgApps.findIndex(function (app) { return app.id === d.application_id; });
+                }
+                if (gwIdx === -1) {
+                    gwIdx = getDeterministicHash(d.dev_eui) % hubCount;
+                }
+                var gw = gatewayCoordsList[gwIdx];
+                if (!gw) return;
+
+                // Generate device coordinates centered around its gateway
+                var devSeed = "device-" + d.dev_eui;
+                var devOffset = getDeterministicCoords(devSeed, 0.008);
+                var devCoords = [
+                    gw.coords[0] + (devOffset[0] - latCenter),
+                    gw.coords[1] + (devOffset[1] - lngCenter)
+                ];
+
+                // Add device marker (smaller emerald circle)
+                var devMarker = L.circleMarker(devCoords, {
+                    radius: 5,
+                    fillColor: '#10b981', // emerald green
+                    fillOpacity: 0.9,
+                    color: '#ffffff',
+                    weight: 1.5
+                }).addTo(map)
+                  .bindPopup("<b>" + (d.name || "Unnamed Device") + "</b><br>EUI: " + d.dev_eui + "<br>Connected to: " + escapeHtml(gw.name));
+                devMarker.devEUI = d.dev_eui;
+                mapMarkers.push(devMarker);
+
+                // Draw communication path line (dashed line)
+                var pathLine = L.polyline([devCoords, gw.coords], {
+                    color: '#94a3b8', // slate/gray
+                    weight: 1,
+                    dashArray: '3, 5',
+                    opacity: 0.5
+                }).addTo(map);
+                pathLine.devEUI = d.dev_eui;
+                mapLines.push(pathLine);
+            });
+
+            // Adjust map view to fit all markers
+            var group = new L.featureGroup(mapMarkers);
+            if (mapMarkers.length > 0) {
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        } else {
+            // Default center if no devices
+            map.setView([latCenter, lngCenter], 12);
+        }
+    }
+
+    function initChart() {
+        var canvas = document.getElementById("metrics-chart");
+        if (!canvas || metricsChart) return;
+
+        // Initialize history arrays with 0s for a rolling look
+        var now = new Date();
+        chartDataHistory.labels = [];
+        chartDataHistory.uplinks = [];
+        chartDataHistory.joinRequests = [];
+        chartDataHistory.joinAccepts = [];
+        
+        for (var i = maxHistoryPoints - 1; i >= 0; i--) {
+            var t = new Date(now.getTime() - i * 2000);
+            chartDataHistory.labels.push(t.toLocaleTimeString());
+            chartDataHistory.uplinks.push(0);
+            chartDataHistory.joinRequests.push(0);
+            chartDataHistory.joinAccepts.push(0);
+        }
+
+        var ctx = canvas.getContext('2d');
+        metricsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartDataHistory.labels,
+                datasets: [
+                    {
+                        label: 'Uplink',
+                        data: chartDataHistory.uplinks,
+                        borderColor: '#10b981', // green
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Join Request',
+                        data: chartDataHistory.joinRequests,
+                        borderColor: '#f59e0b', // amber
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Join Accept',
+                        data: chartDataHistory.joinAccepts,
+                        borderColor: '#3b82f6', // blue
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: 'var(--text-dim)',
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: 'var(--text-dim)',
+                            font: { size: 9 },
+                            maxTicksLimit: 5
+                        },
+                        grid: {
+                            color: 'var(--border-soft)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: 'var(--text-dim)',
+                            font: { size: 9 },
+                            precision: 0
+                        },
+                        grid: {
+                            color: 'var(--border-soft)'
+                        },
+                        suggestedMax: 5
+                    }
+                }
+            }
+        });
+    }
+
     // ─── Health Check ──────────────────────────────────────────────────
     async function checkHealth() {
         var r = await api("GET", "/api/health");
@@ -644,6 +989,42 @@
         if (data.status === "error") {
             logEntry("Simulation error occurred!", "error");
         }
+
+        // Live Performance Chart Update
+        if (data.metrics) {
+            if (!metricsChart) {
+                initChart();
+            }
+
+            if (metricsChart) {
+                var currentMetrics = data.metrics;
+                var uplinkDelta = 0;
+                var joinReqDelta = 0;
+                var joinAccDelta = 0;
+
+                if (prevMetrics) {
+                    uplinkDelta = Math.max(0, currentMetrics.device_uplink_count - prevMetrics.device_uplink_count);
+                    joinReqDelta = Math.max(0, currentMetrics.device_join_request_count - prevMetrics.device_join_request_count);
+                    joinAccDelta = Math.max(0, currentMetrics.device_join_accept_count - prevMetrics.device_join_accept_count);
+                }
+                prevMetrics = currentMetrics;
+
+                var timeStr = new Date().toLocaleTimeString();
+                chartDataHistory.labels.push(timeStr);
+                chartDataHistory.uplinks.push(uplinkDelta);
+                chartDataHistory.joinRequests.push(joinReqDelta);
+                chartDataHistory.joinAccepts.push(joinAccDelta);
+
+                if (chartDataHistory.labels.length > maxHistoryPoints) {
+                    chartDataHistory.labels.shift();
+                    chartDataHistory.uplinks.shift();
+                    chartDataHistory.joinRequests.shift();
+                    chartDataHistory.joinAccepts.shift();
+                }
+
+                metricsChart.update();
+            }
+        }
     }
 
     function startPolling() {
@@ -679,6 +1060,11 @@
         var eventEl = document.getElementById("event_topic_template");
         var cmdEl = document.getElementById("command_topic_template");
 
+        // dynamic settings & network degradation
+        var packetLossEl = document.getElementById("packet_loss");
+        var latencyMsEl = document.getElementById("latency_ms");
+        var payloadScriptEl = document.getElementById("payload_script");
+
         var data = {
             tenant_id: tenantEl ? tenantEl.value.trim() : orgId,
             app_name: appNameEl ? appNameEl.value.trim() : "",
@@ -694,7 +1080,10 @@
             bandwidth: parseInt(bwEl ? bwEl.value : "125000", 10),
             spreading_factor: parseInt(sfEl ? sfEl.value : "7", 10),
             event_topic_template: eventEl ? eventEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
-            command_topic_template: cmdEl ? cmdEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
+            command_topic_template: cmdEl ? cmdEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
+            packet_loss: parseFloat(packetLossEl ? packetLossEl.value : "0.0") || 0.0,
+            latency_ms: parseInt(latencyMsEl ? latencyMsEl.value : "0", 10) || 0,
+            payload_script: payloadScriptEl ? payloadScriptEl.value : ""
         };
 
         var btnSave = document.getElementById("btn-save-org-config");
@@ -713,6 +1102,8 @@
         if (r.ok) {
             logEntry("Settings saved successfully to server database (SQLite).", "success");
             showToast("Ayarlar başarıyla kaydedildi.", "success");
+            state.activeOrgConfig = data;
+            updateMap();
             closeDrawer();
         } else {
             var errMsg = (r.data && r.data.error) || "Kaydetme hatası";
@@ -742,9 +1133,15 @@
         var eventField = document.getElementById("event_topic_template");
         var cmdField = document.getElementById("command_topic_template");
 
+        // dynamic & network degradation
+        var packetLossField = document.getElementById("packet_loss");
+        var latencyMsField = document.getElementById("latency_ms");
+        var payloadScriptField = document.getElementById("payload_script");
+
         var r = await api("GET", "/api/org-configs/" + orgId);
         if (r.ok && r.data && r.data.tenant_id) {
             var data = r.data;
+            state.activeOrgConfig = data;
             if (tenantField) tenantField.value = data.tenant_id || orgId;
             if (appNameField) appNameField.value = data.app_name || orgName || "";
             if (devPrefixField) devPrefixField.value = data.device_prefix || "sim-dev";
@@ -762,6 +1159,12 @@
             if (sfField) sfField.value = data.spreading_factor || "7";
             if (eventField) eventField.value = data.event_topic_template || "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}";
             if (cmdField) cmdField.value = data.command_topic_template || "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}";
+            
+            if (packetLossField) packetLossField.value = data.packet_loss !== undefined ? data.packet_loss : "0.0";
+            if (latencyMsField) latencyMsField.value = data.latency_ms !== undefined ? data.latency_ms : "0";
+            if (payloadScriptField) payloadScriptField.value = data.payload_script || "";
+            
+            updateMap();
             return;
         }
 
@@ -772,14 +1175,46 @@
         if (devCountField) devCountField.value = "5";
         if (gwCountField) gwCountField.value = "2";
 
-        var generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"];
+        var fallbackData = {
+            tenant_id: orgId,
+            app_name: orgName || "",
+            device_prefix: "sim-dev",
+            device_count: 5,
+            gateway_count: 2,
+            duration: "5m",
+            activation_time: "1m",
+            uplink_interval: "5m",
+            f_port: 10,
+            payload: "010203",
+            frequency: 868100000,
+            bandwidth: 125000,
+            spreading_factor: 7,
+            event_topic_template: "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
+            command_topic_template: "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
+            packet_loss: 0.0,
+            latency_ms: 0,
+            payload_script: ""
+        };
+        state.activeOrgConfig = fallbackData;
+
+        var generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "latency_ms", "payload_script"];
         generalFields.forEach(function (id) {
             var el = document.getElementById(id);
             if (el) {
                 var localVal = localStorage.getItem("setting-" + id);
                 el.value = localVal !== null ? localVal : el.defaultValue || "";
+                
+                var val = el.value.trim();
+                if (id === "f_port" || id === "frequency" || id === "bandwidth" || id === "spreading_factor" || id === "latency_ms") {
+                    state.activeOrgConfig[id] = parseInt(val, 10) || 0;
+                } else if (id === "packet_loss") {
+                    state.activeOrgConfig[id] = parseFloat(val) || 0.0;
+                } else {
+                    state.activeOrgConfig[id] = val;
+                }
             }
         });
+        updateMap();
     }
 
     function updateFormInputsState() {
@@ -797,7 +1232,8 @@
         // Global settings form inputs
         var settingsInputs = [
             "duration", "activation_time", "frequency", "bandwidth", "spreading_factor",
-            "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"
+            "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload",
+            "packet_loss", "latency_ms", "payload_script"
         ];
         settingsInputs.forEach(function (id) {
             var el = document.getElementById(id);
@@ -806,15 +1242,42 @@
 
         // Save buttons
         if (btnSaveOrgConfig) btnSaveOrgConfig.disabled = isSimRunning;
+        if (btnSaveGeneralSettings) btnSaveGeneralSettings.disabled = isSimRunning;
     }
 
     async function selectDefaultOrgIfNone() {
         if (state.organizations.length > 0 && !state.activeOrgId) {
             var org = state.organizations[0];
             state.activeOrgId = org.id;
+            if (mapOrgSelect) mapOrgSelect.value = org.id;
             await loadOrgConfig(org.id, org.name);
             updateFormInputsState();
             if (btnTopStart) btnTopStart.disabled = (state.currentStatus === "running" || state.currentStatus === "starting");
+        }
+    }
+
+    function populateMapOrgSelect() {
+        if (!mapOrgSelect) return;
+        var currentActiveId = state.activeOrgId;
+        mapOrgSelect.innerHTML = "";
+        
+        if (state.organizations.length === 0) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Organizasyon Yok";
+            mapOrgSelect.appendChild(opt);
+            return;
+        }
+
+        state.organizations.forEach(function (org) {
+            var opt = document.createElement("option");
+            opt.value = org.id;
+            opt.textContent = org.name;
+            mapOrgSelect.appendChild(opt);
+        });
+
+        if (currentActiveId) {
+            mapOrgSelect.value = currentActiveId;
         }
     }
 
@@ -823,6 +1286,7 @@
         var r = await api("GET", "/api/organizations");
         if (r.ok && r.data.organizations) {
             state.organizations = r.data.organizations;
+            populateMapOrgSelect();
         } else {
             state.organizations = [];
             var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
@@ -893,6 +1357,7 @@
             logEntry("Failed to load device profiles: " + errMsg, "error");
         }
         applyDpFiltersAndRender();
+        applyFiltersAndRender();
     }
 
     async function createDeviceProfile(data) {
@@ -1405,6 +1870,7 @@
         if (!org) return;
 
         state.activeOrgId = orgId;
+        if (mapOrgSelect) mapOrgSelect.value = orgId;
         state.drawerOpen = true;
 
         drawerTitle.textContent = org.name || "Organizasyon";
@@ -1456,6 +1922,18 @@
         // Aktif tab'a göre verileri çek
         if (name === "overview") {
             fetchOrganizations();
+        } else if (name === "live-map") {
+            fetchOrganizations();
+            fetchDevices("").then(function() {
+                if (map) {
+                    setTimeout(function () {
+                        map.invalidateSize();
+                    }, 100);
+                }
+            });
+            if (!metricsChart) {
+                initChart();
+            }
         } else if (name === "devices") {
             fetchDeviceProfiles(state.dpTenantFilter);
         } else if (name === "networks") {
@@ -1471,6 +1949,7 @@
     function updatePageTitle() {
         var titles = {
             overview: t("nav_organizations"),
+            "live-map": t("nav_live_map"),
             devices: t("nav_device_profiles"),
             networks: t("nav_networks"),
             "device-list": t("nav_devices"),
@@ -1598,7 +2077,10 @@
         { id: "bandwidth",              key: "bandwidth",              type: "int" },
         { id: "spreading_factor",       key: "spreading_factor",       type: "int" },
         { id: "event_topic_template",   key: "event_topic_template",   type: "string" },
-        { id: "command_topic_template", key: "command_topic_template", type: "string" }
+        { id: "command_topic_template", key: "command_topic_template", type: "string" },
+        { id: "packet_loss",            key: "packet_loss",            type: "float" },
+        { id: "latency_ms",             key: "latency_ms",             type: "int" },
+        { id: "payload_script",         key: "payload_script",         type: "string" }
     ];
 
     function loadConfigIntoForm(cfg) {
@@ -1613,7 +2095,7 @@
             if (val !== undefined && val !== null && val !== "") {
                 el.value = val;
             } else {
-                var isGeneral = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"].indexOf(f.id) !== -1;
+                var isGeneral = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "latency_ms", "payload_script"].indexOf(f.id) !== -1;
                 if (isGeneral && !isSimRunning) {
                     var localVal = localStorage.getItem("setting-" + f.id);
                     if (localVal !== null) {
@@ -1636,6 +2118,8 @@
             if (val === "") continue;
             if (f.type === "int") {
                 cfg[f.key] = parseInt(val, 10);
+            } else if (f.type === "float") {
+                cfg[f.key] = parseFloat(val);
             } else {
                 cfg[f.key] = val;
             }
@@ -1711,6 +2195,16 @@
         if (r.ok) {
             logEntry("Start request sent.", "success");
             showToast("Simülasyon başlatılıyor...", "success");
+            
+            // Reset metrics history to prevent spikes
+            prevMetrics = null;
+            if (metricsChart) {
+                chartDataHistory.uplinks.fill(0);
+                chartDataHistory.joinRequests.fill(0);
+                chartDataHistory.joinAccepts.fill(0);
+                metricsChart.update();
+            }
+
             connectLogStream();
             startPolling();
         } else {
@@ -1782,6 +2276,19 @@
         fetchOrganizations();
     });
 
+    // Map Org Select Change
+    if (mapOrgSelect) {
+        mapOrgSelect.addEventListener("change", async function () {
+            var orgId = this.value;
+            if (!orgId) return;
+            state.activeOrgId = orgId;
+            renderTable();
+            var org = findOrg(orgId);
+            await loadOrgConfig(orgId, org ? org.name : "");
+            updateFormInputsState();
+        });
+    }
+
     // Add org
     btnAddOrg.addEventListener("click", function () {
         showAddModal();
@@ -1838,6 +2345,17 @@
                 return;
             }
             
+            await saveOrgConfig(state.activeOrgId);
+        });
+    }
+
+    if (btnSaveGeneralSettings) {
+        btnSaveGeneralSettings.addEventListener("click", async function (e) {
+            e.preventDefault();
+            if (!state.activeOrgId) {
+                showToast("Lütfen önce bir organizasyon seçin!", "error");
+                return;
+            }
             await saveOrgConfig(state.activeOrgId);
         });
     }
@@ -2093,6 +2611,8 @@
             logEntry("Failed to load devices: " + errMsg, "error");
         }
         applyDevFiltersAndRender();
+        updateMap();
+        applyFiltersAndRender();
     }
 
     async function createDevice(data) {
@@ -2423,12 +2943,13 @@
     }
 
     function renderDevIntTable() {
+        if (!devIntTableBody) return;
         devIntTableBody.innerHTML = "";
         if (state.devIntFiltered.length === 0) {
-            devIntEmptyState.style.display = "block";
+            if (devIntEmptyState) devIntEmptyState.style.display = "block";
             return;
         }
-        devIntEmptyState.style.display = "none";
+        if (devIntEmptyState) devIntEmptyState.style.display = "none";
         var start = (state.devIntPage - 1) * state.devIntPageSize;
         var end = Math.min(start + state.devIntPageSize, state.devIntFiltered.length);
         var pageItems = state.devIntFiltered.slice(start, end);
@@ -2473,6 +2994,7 @@
     }
 
     function renderDevIntPagination() {
+        if (!devIntPaginationEl) return;
         devIntPaginationEl.innerHTML = "";
         var total = state.devIntFiltered.length;
         var totalPages = Math.max(1, Math.ceil(total / state.devIntPageSize));
@@ -2504,6 +3026,7 @@
     }
 
     function renderDevIntTotalCount() {
+        if (!devIntTotalCountEl) return;
         devIntTotalCountEl.innerHTML = t("footer_total_dev").replace("{count}", state.devIntFiltered.length);
     }
 
@@ -2600,6 +3123,9 @@
         wizDpCount.value = "5";
         wizDevPrefix.value = "device";
         wizDevCount.value = "5";
+        
+        var scenarioSelect = document.getElementById("wiz-scenario-preset");
+        if (scenarioSelect) scenarioSelect.value = "default";
         
         wizBtnNext.disabled = false;
         wizBtnNext.textContent = t("btn_next");
@@ -2787,6 +3313,7 @@
     }
 
     async function submitBootstrap() {
+        var scenarioSelect = document.getElementById("wiz-scenario-preset");
         var payload = {
             org_name: wizOrgName.value.trim(),
             app_prefix: wizAppPrefix.value.trim(),
@@ -2794,7 +3321,8 @@
             dp_prefix: wizDpPrefix.value.trim(),
             dp_count: parseInt(wizDpCount.value, 10),
             dev_prefix: wizDevPrefix.value.trim(),
-            dev_count: parseInt(wizDevCount.value, 10)
+            dev_count: parseInt(wizDevCount.value, 10),
+            scenario: scenarioSelect ? scenarioSelect.value : "default"
         };
 
         var devicesConfig = [];
@@ -2865,15 +3393,24 @@
                 wizardCurrentStep = 6;
                 renderBootstrapStep();
                 
-                // Refresh list of organizations and intervals
-                fetchOrganizations();
-                fetchDeviceIntervals();
+                // Set the newly created organization as active
+                state.activeOrgId = data.tenant_id;
+                
+                // Refresh list of organizations, device profiles, applications, devices and intervals
+                await fetchOrganizations();
+                await fetchDeviceProfiles("");
+                await fetchApplications("");
+                await fetchDevices("");
+                await fetchDeviceIntervals();
+                await loadOrgConfig(data.tenant_id, data.tenant_name);
             } else {
                 showToast(data.error || "Kurulum başarısız oldu!", "error");
                 wizBtnNext.disabled = false;
                 wizBtnNext.textContent = t("wiz_btn_confirm");
             }
         } catch (err) {
+            console.error(err);
+            logEntry("Error in submitBootstrap: " + (err.stack || err.toString()), "error");
             showToast("Bağlantı hatası oluştu: " + err.toString(), "error");
             wizBtnNext.disabled = false;
             wizBtnNext.textContent = t("wiz_btn_confirm");
@@ -3001,6 +3538,22 @@
         if (btnTopBootstrap) {
             btnTopBootstrap.addEventListener("click", showBootstrapWizard);
         }
+        var scenarioSelect = document.getElementById("wiz-scenario-preset");
+        if (scenarioSelect) {
+            scenarioSelect.addEventListener("change", function () {
+                if (this.value === "batman_oil") {
+                    wizOrgName.value = "Raman-Petrol";
+                    wizAppPrefix.value = "kuyu";
+                    wizDpPrefix.value = "rtu";
+                    wizDevPrefix.value = "kuyu";
+                } else {
+                    wizOrgName.value = "";
+                    wizAppPrefix.value = "ag";
+                    wizDpPrefix.value = "profile";
+                    wizDevPrefix.value = "device";
+                }
+            });
+        }
         if (bootModalClose) {
             bootModalClose.addEventListener("click", hideBootstrapWizard);
         }
@@ -3096,10 +3649,17 @@
         el.className = "console-log-line";
 
         var lowerLine = line.toLowerCase();
-        if (lowerLine.includes(" level=error") || lowerLine.includes("error:") || lowerLine.includes(" level=fatal")) {
+        var isRemote = lowerLine.includes("as/integration") || lowerLine.includes("[chirpstack integration]") || lowerLine.includes("as/debug");
+        el.dataset.source = isRemote ? "remote" : "local";
+
+        if (isRemote) {
+            el.style.color = "#22d3ee"; // cyan for ChirpStack integration logs
+        } else if (lowerLine.includes(" level=error") || lowerLine.includes("error:") || lowerLine.includes(" level=fatal")) {
             el.style.color = "var(--red)";
         } else if (lowerLine.includes(" level=warn") || lowerLine.includes("warn:")) {
             el.style.color = "var(--yellow)";
+        } else if (lowerLine.includes("received downlink") || lowerLine.includes("downlink frame") || lowerLine.includes("received downlink data") || lowerLine.includes("otaa activated") || lowerLine.includes("join accept")) {
+            el.style.color = "var(--blue)";
         } else if (lowerLine.includes("send uplink") || lowerLine.includes("uplink frame sent") || lowerLine.includes("send otaa")) {
             el.style.color = "var(--accent)";
         }
@@ -3107,8 +3667,15 @@
         el.textContent = line;
 
         // Apply console filter if active
+        var sourceVal = consoleSourceSelect ? consoleSourceSelect.value : "all";
         var filterVal = consoleLogFilter ? consoleLogFilter.value.trim().toLowerCase() : "";
-        if (filterVal && !line.toLowerCase().includes(filterVal)) {
+        
+        var matchesSource = (sourceVal === "all") || (el.dataset.source === sourceVal);
+        var matchesText = !filterVal || line.toLowerCase().includes(filterVal);
+
+        if (matchesSource && matchesText) {
+            el.style.display = "";
+        } else {
             el.style.display = "none";
         }
 
@@ -3116,6 +3683,21 @@
 
         while (consoleLogContainer.children.length > 300) {
             consoleLogContainer.removeChild(consoleLogContainer.firstChild);
+        }
+
+        // Map live telemetry pulsing
+        if (map && (lowerLine.includes("uplink") || lowerLine.includes("otaa activated") || lowerLine.includes("payload"))) {
+            var jsonMatch = line.match(/\{"app_name".*\}$/);
+            if (jsonMatch) {
+                try {
+                    var meta = JSON.parse(jsonMatch[0]);
+                    if (meta && meta.dev_eui) {
+                        pulseDeviceMarkerAndLine(meta.dev_eui);
+                    }
+                } catch (e) {
+                    // Ignore JSON parsing errors
+                }
+            }
         }
 
         consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
@@ -3146,22 +3728,33 @@
         };
     }
 
+    function applyConsoleFilters() {
+        if (!consoleLogContainer) return;
+        var sourceVal = consoleSourceSelect ? consoleSourceSelect.value : "all";
+        var filterVal = consoleLogFilter ? consoleLogFilter.value.trim().toLowerCase() : "";
+        var lines = consoleLogContainer.querySelectorAll(".console-log-line");
+        
+        for (var i = 0; i < lines.length; i++) {
+            var el = lines[i];
+            var matchesSource = (sourceVal === "all") || (el.dataset.source === sourceVal);
+            var matchesText = !filterVal || el.textContent.toLowerCase().includes(filterVal);
+            
+            if (matchesSource && matchesText) {
+                el.style.display = "";
+            } else {
+                el.style.display = "none";
+            }
+        }
+        consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
+    }
+
     function bindConsoleEvents() {
 
         if (consoleLogFilter && consoleLogContainer) {
-            consoleLogFilter.addEventListener("input", function () {
-                var filterVal = this.value.trim().toLowerCase();
-                var lines = consoleLogContainer.querySelectorAll(".console-log-line");
-                for (var i = 0; i < lines.length; i++) {
-                    var el = lines[i];
-                    if (!filterVal || el.textContent.toLowerCase().includes(filterVal)) {
-                        el.style.display = "";
-                    } else {
-                        el.style.display = "none";
-                    }
-                }
-                consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
-            });
+            consoleLogFilter.addEventListener("input", applyConsoleFilters);
+        }
+        if (consoleSourceSelect && consoleLogContainer) {
+            consoleSourceSelect.addEventListener("change", applyConsoleFilters);
         }
 
         if (btnConsoleClear && consoleLogContainer) {
@@ -3193,7 +3786,7 @@
     }
 
     function bindSettingsEvents() {
-        var generalFieldIds = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload"];
+        var generalFieldIds = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "latency_ms", "payload_script"];
         generalFieldIds.forEach(function (id) {
             var el = document.getElementById(id);
             if (el) {
@@ -3508,6 +4101,48 @@
                 });
             });
         });
+
+        // Setup copy buttons for scripts tab
+        var copyButtons = $$(".btn-copy-script");
+        copyButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var targetId = this.getAttribute("data-target");
+                var codeEl = document.getElementById(targetId);
+                if (codeEl) {
+                    var codeText = codeEl.textContent || codeEl.innerText;
+                    var self = this;
+                    navigator.clipboard.writeText(codeText).then(function () {
+                        var iconEl = self.querySelector("i");
+                        var spanEl = self.querySelector("span");
+                        
+                        var originalIconClass = iconEl ? iconEl.className : "far fa-copy";
+                        var isTr = state.language === "tr";
+                        var copiedText = isTr ? "Kopyalandı!" : "Copied!";
+                        
+                        if (iconEl) iconEl.className = "fas fa-check";
+                        if (spanEl) {
+                            spanEl.removeAttribute("data-i18n");
+                            spanEl.textContent = copiedText;
+                        }
+                        
+                        self.style.borderColor = "#28a745";
+                        self.style.color = "#28a745";
+                        
+                        setTimeout(function () {
+                            if (iconEl) iconEl.className = originalIconClass;
+                            if (spanEl) {
+                                spanEl.setAttribute("data-i18n", "btn_copy");
+                                spanEl.textContent = isTr ? "Kopyala" : "Copy";
+                            }
+                            self.style.borderColor = "";
+                            self.style.color = "";
+                        }, 1500);
+                    }).catch(function (err) {
+                        console.error("Clipboard copy failed:", err);
+                    });
+                }
+            });
+        });
     }
 
     // ─── i18n Translations ──────────────────────────────────────────────
@@ -3516,6 +4151,12 @@
             app_title: "ChirpStack Simülatörü",
             nav_grp_mgmt: "Yönetim",
             nav_organizations: "Organizasyonlar",
+            nav_live_map: "Canlı İzleme",
+            title_live_map: "Canlı İzleme",
+            subtitle_live_map: "Cihazların canlı konumlarını ve ağ paket aktivitelerini takip edin.",
+            console_src_all: "Tüm Günlükler",
+            console_src_local: "Sadece Yerel Simülatör",
+            console_src_remote: "Sadece Uzak Bağlantı (ChirpStack)",
             nav_grp_apps: "Uygulamalar",
             nav_networks: "Ağ Uygulamaları",
             nav_device_profiles: "Cihaz Profilleri",
@@ -3526,6 +4167,10 @@
             nav_info: "Bilgi Notları",
             top_bootstrap: "Yeni Oluştur",
             top_bootstrap_title: "Hızlı Kurulum Sihirbazı",
+            wiz_scenario_preset: "Simülasyon Şablonu (Scenario Preset)",
+            wiz_preset_default: "Standart Simülasyon (Rastgele Konum & Sabit Payload)",
+            wiz_preset_batman_oil: "Batman Raman Petrol Sahası (Kuyu Telemetrisi)",
+            wiz_preset_hint: "Kurulum sonrasında cihazların konumu ve veri üretim betikleri şablona göre otomatik ayarlanır.",
             top_start: "▶ Başlat",
             top_start_title: "Simülasyonu Başlat",
             top_stop: "■ Durdur",
@@ -3615,6 +4260,18 @@
             settings_tab_theme: "Konsol Teması",
             settings_tab_logs: "Sistem Logları",
             settings_tab_guide: "Simülasyon Rehberi",
+            settings_tab_scripts: "Örnek Betikler (JS)",
+            scripts_title: "Doğrudan Kullanılabilir Test Betikleri",
+            scripts_subtitle: "ChirpStack simülatörü dinamik JS motoru ile uyumlu, veri dönüşümlerini açıklayan pratik örnekler.",
+            scripts_temp_title: "1. Sıcaklık Dalgalanması (Byte Array)",
+            scripts_temp_desc: "Cihazın ısınmasını ve soğumasını sinüs dalgası ve gürültü ekleyerek gerçekçi simüle eder. Sıcaklık 10 ile çarpılarak LSB/MSB formatında 2 byte olarak döndürülür.",
+            scripts_gps_title: "2. GPS Rota Simülasyonu (Hex String)",
+            scripts_gps_desc: "Başlangıç noktasından (örn. İstanbul) itibaren deterministik olarak kuzeydoğu yönünde ilerleyen bir rotayı simüle eder. Koordinatları 100.000 ile çarparak 4'er byte işaretli tamsayıya çevirir ve Hex dizesi olarak döndürür.",
+            scripts_meter_title: "3. Akıllı Sayaç & Pil Seviyesi (Byte Array)",
+            scripts_meter_desc: "Zamanla artan enerji tüketim endeksini (32-bit) ve her adımda yavaşça azalan pil seviyesini (%100'den geriye) byte dizisi olarak döndürür.",
+            scripts_multi_title: "4. Çoklu Sensör Telemetrisi (Hex String)",
+            scripts_multi_desc: "Sıcaklık (1 byte), bağıl nem (1 byte) ve fan çalışma durumunu (1 byte, boolean) birleştirip 3 byte Hex formatında döndürür.",
+            btn_copy: "Kopyala",
             settings_title_general: "Genel Simülasyon Ayarları",
             settings_sec_rf: "RF Parametreleri",
             settings_lbl_freq: "Frekans (Hz)",
@@ -3727,6 +4384,12 @@
             app_title: "ChirpStack Simulator",
             nav_grp_mgmt: "Management",
             nav_organizations: "Organizations",
+            nav_live_map: "Live Monitoring",
+            title_live_map: "Live Monitoring",
+            subtitle_live_map: "Track live device locations and network packet activity.",
+            console_src_all: "All Logs",
+            console_src_local: "Local Simulator Only",
+            console_src_remote: "Remote Connection Only (ChirpStack)",
             nav_grp_apps: "Applications",
             nav_networks: "Network Applications",
             nav_device_profiles: "Device Profiles",
@@ -3737,6 +4400,10 @@
             nav_info: "Info Notes",
             top_bootstrap: "Create New",
             top_bootstrap_title: "Quick Setup Wizard",
+            wiz_scenario_preset: "Simulation Scenario Preset",
+            wiz_preset_default: "Standard Simulation (Random Location & Static Payload)",
+            wiz_preset_batman_oil: "Batman Raman Oil Field (Well Telemetry)",
+            wiz_preset_hint: "Device locations and data generation scripts will be configured automatically based on the template.",
             top_start: "▶ Start",
             top_start_title: "Start Simulation",
             top_stop: "■ Stop",
@@ -3826,6 +4493,18 @@
             settings_tab_theme: "Console Theme",
             settings_tab_logs: "System Logs",
             settings_tab_guide: "Simulation Guide",
+            settings_tab_scripts: "Example Scripts (JS)",
+            scripts_title: "Ready-to-Use Test Scripts",
+            scripts_subtitle: "Practical examples compatible with the ChirpStack simulator dynamic JS engine, with byte conversions explained.",
+            scripts_temp_title: "1. Temperature Fluctuation (Byte Array)",
+            scripts_temp_desc: "Simulates heating/cooling using a sine wave plus random noise. The temperature is scaled by 10 and returned as 2 LSB/MSB bytes.",
+            scripts_gps_title: "2. GPS Route Simulation (Hex String)",
+            scripts_gps_desc: "Simulates a GPS tracker moving northeast from a starting point (e.g., Istanbul). Multiplies coordinates by 100,000 into 32-bit signed integers and returns a Hex string.",
+            scripts_meter_title: "3. Smart Meter & Battery (Byte Array)",
+            scripts_meter_desc: "Returns an accumulating energy consumption index (32-bit) and a slowly decreasing battery percentage (100% down) as a byte array.",
+            scripts_multi_title: "4. Multi-Sensor Telemetry (Hex String)",
+            scripts_multi_desc: "Combines temperature (1 byte), relative humidity (1 byte), and a fan status flag (1 byte) into a 3-byte Hex string.",
+            btn_copy: "Copy",
             settings_title_general: "General Simulation Settings",
             settings_sec_rf: "RF Parameters",
             settings_lbl_freq: "Frequency (Hz)",

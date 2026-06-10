@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	mrand "math/rand"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/brocaar/lorawan"
 	"github.com/chirpstack/chirpstack/api/go/v4/gw"
+	goja "github.com/dop251/goja"
 )
 
 // DeviceOption is the interface for a device option.
@@ -109,6 +111,15 @@ type Device struct {
 
 	// OTAA delay.
 	otaaDelay time.Duration
+
+	// Payload JS Script.
+	payloadScript string
+
+	// Packet loss percentage.
+	packetLoss float64
+
+	// Transmission delay.
+	latencyMs int
 }
 
 // WithAppKey sets the AppKey.
@@ -220,6 +231,30 @@ func WithUplinkTXInfo(txInfo gw.UplinkTxInfo) DeviceOption {
 func WithDownlinkHandlerFunc(f func(confirmed, ack bool, fCntDown uint32, fPort uint8, data []byte) error) DeviceOption {
 	return func(d *Device) error {
 		d.downlinkHandlerFunc = f
+		return nil
+	}
+}
+
+// WithPayloadScript sets the custom payload script.
+func WithPayloadScript(script string) DeviceOption {
+	return func(d *Device) error {
+		d.payloadScript = script
+		return nil
+	}
+}
+
+// WithPacketLoss sets the packet loss percentage.
+func WithPacketLoss(loss float64) DeviceOption {
+	return func(d *Device) error {
+		d.packetLoss = loss
+		return nil
+	}
+}
+
+// WithLatencyMs sets the transmission delay.
+func WithLatencyMs(ms int) DeviceOption {
+	return func(d *Device) error {
+		d.latencyMs = ms
 		return nil
 	}
 }
@@ -363,13 +398,78 @@ func (d *Device) joinRequest() {
 
 	d.sendUplink(phy)
 
-	deviceJoinRequestCounter().Inc()
+	DeviceJoinRequestCounter().Inc()
 }
 
 // dataUp sends an data uplink.
 func (d *Device) dataUp() {
-	// Dynamic payload generator for 5-byte Falt-IoT telemetries (temperature, pressure, voltage)
-	if len(d.payload) == 5 {
+	// Dynamic JS payload script evaluation
+	if d.payloadScript != "" {
+		err := func() error {
+			vm := goja.New()
+			vm.Set("fPort", d.fPort)
+			vm.Set("fCnt", d.fCntUp)
+			vm.Set("devEUI", d.devEUI.String())
+			vm.Set("deviceName", d.deviceName)
+
+			// Set up execution timeout interrupt (2s limit)
+			timeLimit := 2 * time.Second
+			timer := time.AfterFunc(timeLimit, func() {
+				vm.Interrupt("timeout")
+			})
+			defer timer.Stop()
+
+			wrappedScript := fmt.Sprintf("(function(){\n%s\n})()", d.payloadScript)
+			res, err := vm.RunString(wrappedScript)
+			if err != nil {
+				return err
+			}
+
+			if res != nil {
+				val := res.Export()
+				switch v := val.(type) {
+				case []interface{}:
+					pl := make([]byte, len(v))
+					for i, x := range v {
+						if n, ok := x.(int64); ok {
+							pl[i] = byte(n)
+						} else if f, ok := x.(float64); ok {
+							pl[i] = byte(f)
+						} else if in, ok := x.(int); ok {
+							pl[i] = byte(in)
+						} else {
+							return fmt.Errorf("invalid byte type at index %d: %T", i, x)
+						}
+					}
+					d.payload = pl
+					log.WithFields(log.Fields{
+						"dev_eui":     d.devEUI,
+						"app_name":    d.appName,
+						"device_name": d.deviceName,
+						"payload":     hex.EncodeToString(d.payload),
+					}).Info(fmt.Sprintf("[%s] simulator: evaluated JS dynamic payload", d.appName))
+				case string:
+					b, err := hex.DecodeString(v)
+					if err != nil {
+						return err
+					}
+					d.payload = b
+					log.WithFields(log.Fields{
+						"dev_eui":     d.devEUI,
+						"app_name":    d.appName,
+						"device_name": d.deviceName,
+						"payload":     hex.EncodeToString(d.payload),
+					}).Info(fmt.Sprintf("[%s] simulator: evaluated JS hex payload", d.appName))
+				default:
+					return fmt.Errorf("unexpected script return type: %T", val)
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			log.WithError(err).Error(fmt.Sprintf("[%s] simulator: dynamic payload script error, using default", d.appName))
+		}
+	} else if len(d.payload) == 5 {
 		nowNs := time.Now().UnixNano()
 		tempVal := int16(15 + (nowNs % 21)) // 15 to 35
 		pressVal := uint16(980 + ((nowNs >> 4) % 46)) // 980 to 1025
@@ -440,7 +540,7 @@ func (d *Device) dataUp() {
 
 	d.sendUplink(phy)
 
-	deviceUplinkCounter().Inc()
+	DeviceUplinkCounter().Inc()
 }
 
 // joinAccept validates and handles the join-accept downlink.
@@ -489,7 +589,7 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 	}).Info(fmt.Sprintf("[%s] simulator: device OTAA activated", d.appName))
 
 	d.setState(deviceStateActivated)
-	deviceJoinAcceptCounter().Inc()
+	DeviceJoinAcceptCounter().Inc()
 
 	return nil
 }
@@ -572,10 +672,30 @@ func (d *Device) sendUplink(phy lorawan.PHYPayload) error {
 	}
 
 	for i := range d.gateways {
-		if err := d.gateways[i].SendUplinkFrame(pl); err != nil {
-			log.WithError(err).WithFields(log.Fields{
+		// Packet Loss Simulation
+		if d.packetLoss > 0 && mrand.Float64()*100 < d.packetLoss {
+			log.WithFields(log.Fields{
 				"dev_eui": d.devEUI,
-			}).Error(fmt.Sprintf("[%s] simulator: send uplink frame error", d.appName))
+				"gateway": d.gateways[i].gatewayID,
+				"loss_pct": d.packetLoss,
+			}).Warn(fmt.Sprintf("[%s] simulator: simulated packet loss, dropping frame", d.appName))
+			continue
+		}
+
+		gwItem := d.gateways[i]
+		sendFn := func() {
+			if err := gwItem.SendUplinkFrame(pl); err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"dev_eui": d.devEUI,
+				}).Error(fmt.Sprintf("[%s] simulator: send uplink frame error", d.appName))
+			}
+		}
+
+		// Latency Simulation
+		if d.latencyMs > 0 {
+			time.AfterFunc(time.Duration(d.latencyMs)*time.Millisecond, sendFn)
+		} else {
+			sendFn()
 		}
 	}
 

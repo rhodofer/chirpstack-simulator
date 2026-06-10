@@ -69,6 +69,9 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			appName:              appName,
 			deviceNamePrefix:     deviceNamePrefix,
 			deviceIntervals:      c.DeviceIntervals,
+			payloadScript:        c.PayloadScript,
+			packetLoss:           c.PacketLoss,
+			latencyMs:            c.LatencyMs,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
@@ -101,6 +104,9 @@ type simulation struct {
 	appName          string
 	deviceNamePrefix string
 	deviceIntervals  map[string]time.Duration
+	payloadScript    string
+	packetLoss       float64
+	latencyMs        int
 
 	tenant               *api.Tenant
 	deviceProfileID      uuid.UUID
@@ -244,6 +250,9 @@ func (s *simulation) runSimulation() error {
 			simulator.WithUplinkInterval(devInterval),
 			simulator.WithOTAADelay(time.Duration(mrand.Int63n(int64(s.activationTime)))),
 			simulator.WithUplinkPayload(false, s.fPort, s.payload),
+			simulator.WithPayloadScript(s.payloadScript),
+			simulator.WithPacketLoss(s.packetLoss),
+			simulator.WithLatencyMs(s.latencyMs),
 			simulator.WithGateways(gws),
 			simulator.WithUplinkTXInfo(gw.UplinkTxInfo{
 				Frequency: uint32(s.frequency),

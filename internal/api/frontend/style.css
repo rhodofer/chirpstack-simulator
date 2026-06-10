@@ -821,6 +821,11 @@ body {
     cursor: pointer;
 }
 
+.page-size-select option {
+    background: var(--bg-card);
+    color: var(--text);
+}
+
 .page-size-select:focus {
     outline: none;
     border-color: var(--accent);

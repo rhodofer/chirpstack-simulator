@@ -7,6 +7,11 @@
                         </div>
                         <div class="page-header-actions" style="display: flex; gap: 12px; align-items: center;">
                             <input type="text" id="console-log-filter" data-i18n-placeholder="console_filter_placeholder" placeholder="🔍 Cihaz veya log ara (örn: sim-dev-1)..." style="font-size: 12px; padding: 6px 12px; background: rgba(0, 255, 135, 0.05); color: var(--green); border: 1px solid rgba(0, 255, 135, 0.2); border-radius: var(--radius-xs); outline: none; width: 240px; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='rgba(0, 255, 135, 0.2)'" />
+                            <select id="console-source-select" class="page-size-select" style="max-width: 200px; padding: 6px 12px; font-size: 12px; margin: 0; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); height: auto;">
+                                <option value="all" data-i18n="console_src_all">Tüm Günlükler</option>
+                                <option value="local" data-i18n="console_src_local">Sadece Yerel Simülatör</option>
+                                <option value="remote" data-i18n="console_src_remote">Sadece Uzak Bağlantı (ChirpStack)</option>
+                            </select>
                             <button class="btn btn-outline" id="btn-console-clear" data-i18n="console_clear">🧹 Ekranı Temizle</button>
                         </div>
                     </div>
