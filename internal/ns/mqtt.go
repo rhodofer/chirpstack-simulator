@@ -1,6 +1,9 @@
 package ns
 
 import (
+	"fmt"
+	"time"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -16,8 +19,13 @@ func Setup(c config.Config) error {
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(conf.Server)
-	opts.SetUsername(conf.Username)
-	opts.SetPassword(conf.Password)
+	opts.SetClientID(fmt.Sprintf("chirpstack-simulator-ns-%d", time.Now().UnixNano()))
+	if conf.Username != "" {
+		opts.SetUsername(conf.Username)
+	}
+	if conf.Password != "" {
+		opts.SetPassword(conf.Password)
+	}
 	opts.SetCleanSession(true)
 	opts.SetAutoReconnect(true)
 

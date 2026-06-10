@@ -32,22 +32,22 @@ var (
 	})
 )
 
-func deviceUplinkCounter() prometheus.Counter {
+func DeviceUplinkCounter() prometheus.Counter {
 	return duc
 }
 
-func deviceJoinRequestCounter() prometheus.Counter {
+func DeviceJoinRequestCounter() prometheus.Counter {
 	return djrc
 }
 
-func deviceJoinAcceptCounter() prometheus.Counter {
+func DeviceJoinAcceptCounter() prometheus.Counter {
 	return djac
 }
 
-func gatewayUplinkCounter() prometheus.Counter {
+func GatewayUplinkCounter() prometheus.Counter {
 	return guc
 }
 
-func gatewayDownlinkCounter() prometheus.Counter {
+func GatewayDownlinkCounter() prometheus.Counter {
 	return gdc
 }

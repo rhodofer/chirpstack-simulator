@@ -238,7 +238,7 @@ func (g *Gateway) SendUplinkFrame(pl gw.UplinkFrame) error {
 		return errors.Wrap(err, "simulator: publish uplink frame error")
 	}
 
-	gatewayUplinkCounter().Inc()
+	GatewayUplinkCounter().Inc()
 
 	return nil
 }
@@ -318,7 +318,7 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 		"topic":      msg.Topic(),
 	}).Debug("simulator: downlink command received")
 
-	gatewayDownlinkCounter().Inc()
+	GatewayDownlinkCounter().Inc()
 
 	var pl gw.DownlinkFrame
 	if err := proto.Unmarshal(msg.Payload(), &pl); err != nil {

@@ -62,6 +62,9 @@ type SimulatorConfig struct {
 	ActivationTime   time.Duration          `mapstructure:"activation_time" toml:"activation_time"`
 	AppName          string                 `mapstructure:"app_name" toml:"app_name"`
 	DeviceNamePrefix string                 `mapstructure:"device_name_prefix" toml:"device_name_prefix"`
+	PayloadScript    string                 `mapstructure:"payload_script" toml:"payload_script"`
+	PacketLoss       float64                `mapstructure:"packet_loss" toml:"packet_loss"`
+	LatencyMs        int                    `mapstructure:"latency_ms" toml:"latency_ms"`
 	Device           SimulatorDeviceConfig  `mapstructure:"device" toml:"device"`
 	Gateway          SimulatorGatewayConfig `mapstructure:"gateway" toml:"gateway"`
 	DeviceIntervals  map[string]time.Duration `mapstructure:"device_intervals" toml:"device_intervals"`

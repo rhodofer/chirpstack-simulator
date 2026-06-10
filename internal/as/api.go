@@ -3,6 +3,9 @@ package as
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -66,10 +69,31 @@ func Setup(c config.Config) error {
 	// connect MQTT
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(conf.Integration.MQTT.Server)
-	opts.SetUsername(conf.Integration.MQTT.Username)
-	opts.SetPassword(conf.Integration.MQTT.Password)
+	opts.SetClientID(fmt.Sprintf("chirpstack-simulator-as-%d", time.Now().UnixNano()))
+	if conf.Integration.MQTT.Username != "" {
+		opts.SetUsername(conf.Integration.MQTT.Username)
+	}
+	if conf.Integration.MQTT.Password != "" {
+		opts.SetPassword(conf.Integration.MQTT.Password)
+	}
 	opts.SetCleanSession(true)
 	opts.SetAutoReconnect(true)
+
+	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
+		log.WithError(err).Error("as: ChirpStack MQTT connection lost")
+	})
+
+	opts.SetOnConnectHandler(func(client mqtt.Client) {
+		log.Info("as: ChirpStack MQTT connection established / re-established")
+		
+		// Subscribe to ChirpStack integration events via wildcard application/#
+		subToken := client.Subscribe("application/#", 0, handleIntegrationMessage)
+		if subToken.Wait() && subToken.Error() != nil {
+			log.WithError(subToken.Error()).Error("as: failed to subscribe to ChirpStack integration events topic")
+		} else {
+			log.Info("as: successfully subscribed to ChirpStack integration events topic (application/#)")
+		}
+	})
 
 	log.WithFields(log.Fields{
 		"server": conf.Integration.MQTT.Server,
@@ -81,6 +105,60 @@ func Setup(c config.Config) error {
 	}
 
 	return nil
+}
+
+func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
+	topic := msg.Topic()
+	payload := msg.Payload()
+
+	log.Infof("as/debug: RECEIVED MQTT message on topic: %s", topic)
+
+	// Parse topic structure: application/{{application_id}}/device/{{dev_eui}}/event/{{event}}
+	parts := strings.Split(topic, "/")
+	if len(parts) < 6 || parts[0] != "application" || parts[2] != "device" || parts[4] != "event" {
+		// Ignore topics that are not integration events
+		return
+	}
+
+	eventType := parts[5]
+
+	type DeviceInfo struct {
+		DeviceName string `json:"deviceName"`
+		DevEUI     string `json:"devEui"`
+	}
+
+	type CommonFields struct {
+		DeviceInfo DeviceInfo `json:"deviceInfo"`
+	}
+
+	var common CommonFields
+	if err := json.Unmarshal(payload, &common); err != nil {
+		log.WithFields(log.Fields{
+			"topic": topic,
+		}).Infof("as/integration: [ChirpStack Integration] Event raw error: %v, payload: %s", err, string(payload))
+		return
+	}
+
+	devName := common.DeviceInfo.DeviceName
+	devEUI := common.DeviceInfo.DevEUI
+
+	if eventType == "up" {
+		type UplinkFields struct {
+			FPort int    `json:"fPort"`
+			FCnt  int    `json:"fCnt"`
+			Data  string `json:"data"`
+		}
+		var up UplinkFields
+		_ = json.Unmarshal(payload, &up)
+		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a veri gönderdi. FPort: %d, FCnt: %d, Base64 Data: %s",
+			devName, devEUI, up.FPort, up.FCnt, up.Data)
+	} else if eventType == "join" {
+		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a başarıyla katıldı (OTAA Join Accept)",
+			devName, devEUI)
+	} else {
+		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) olay bildirdi: %s",
+			devName, devEUI, eventType)
+	}
 }
 
 // IsConnected reports whether the gRPC client connection is established.

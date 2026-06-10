@@ -10,7 +10,10 @@ import (
 	"github.com/brocaar/chirpstack-simulator/internal/as"
 	"github.com/brocaar/chirpstack-simulator/internal/config"
 	"github.com/brocaar/chirpstack-simulator/internal/simulator"
+	sim_pkg "github.com/brocaar/chirpstack-simulator/simulator"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -224,6 +227,14 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func getCounterValue(c prometheus.Counter) float64 {
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		return 0
+	}
+	return m.GetCounter().GetValue()
+}
+
 // handleStatus returns the current simulation state and metrics.
 func handleStatus(w http.ResponseWriter, r *http.Request, state *SimState) {
 	state.mu.Lock()
@@ -240,6 +251,15 @@ func handleStatus(w http.ResponseWriter, r *http.Request, state *SimState) {
 
 	if state.Config != nil {
 		resp["config"] = state.Config
+	}
+
+	// Fetch metrics
+	resp["metrics"] = map[string]float64{
+		"device_uplink_count":       getCounterValue(sim_pkg.DeviceUplinkCounter()),
+		"device_join_request_count": getCounterValue(sim_pkg.DeviceJoinRequestCounter()),
+		"device_join_accept_count":  getCounterValue(sim_pkg.DeviceJoinAcceptCounter()),
+		"gateway_uplink_count":      getCounterValue(sim_pkg.GatewayUplinkCounter()),
+		"gateway_downlink_count":    getCounterValue(sim_pkg.GatewayDownlinkCounter()),
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -414,6 +434,18 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		req.CommandTopicTemplate = "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
 	}
 
+	// Sanitize network degradation values
+	if req.PacketLoss < 0 {
+		req.PacketLoss = 0
+	} else if req.PacketLoss > 100 {
+		req.PacketLoss = 100
+	}
+	if req.LatencyMs < 0 {
+		req.LatencyMs = 0
+	} else if req.LatencyMs > 5000 {
+		req.LatencyMs = 5000
+	}
+
 	// Sync all missing organization configs from ChirpStack first.
 	syncMissingOrgConfigs()
 
@@ -570,6 +602,9 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 			ActivationTime:   activationTime,
 			AppName:          req.AppName,
 			DeviceNamePrefix: req.DevicePrefix,
+			PayloadScript:    req.PayloadScript,
+			PacketLoss:       req.PacketLoss,
+			LatencyMs:        req.LatencyMs,
 		}
 
 		simCfg.Device.Count = req.DeviceCount

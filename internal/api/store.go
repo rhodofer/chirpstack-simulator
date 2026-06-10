@@ -28,6 +28,9 @@ type StartRequest struct {
 	DevicePrefix        string `json:"device_prefix"`
 	FPort               uint8  `json:"f_port"`
 	Payload             string `json:"payload"`
+	PayloadScript       string `json:"payload_script"`
+	PacketLoss          float64 `json:"packet_loss"`
+	LatencyMs           int    `json:"latency_ms"`
 	Frequency           int    `json:"frequency"`
 	Bandwidth           int    `json:"bandwidth"`
 	SpreadingFactor     int    `json:"spreading_factor"`

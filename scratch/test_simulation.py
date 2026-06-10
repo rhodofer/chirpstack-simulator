@@ -18,14 +18,27 @@ except Exception as e:
     print("Login failed:", e)
     exit(1)
 
-# 2. Stop any running simulation first
+# 2. Stop any running simulation and wait for it to become idle
 try:
     r = session.post("http://localhost:9002/api/stop")
     print("Stop Status:", r.status_code)
-    # Wait for it to become idle
-    time.sleep(2)
 except Exception as e:
     pass
+
+# Poll status until it is idle
+for _ in range(30):
+    try:
+        r = session.get("http://localhost:9002/api/status")
+        status_data = r.json()
+        print("Current Status:", status_data.get("status"))
+        if status_data.get("status") in ("idle", "error"):
+            break
+    except Exception as e:
+        pass
+    time.sleep(1)
+else:
+    print("Error: Simulator did not become idle.")
+    exit(1)
 
 # 3. Start Simulation with 5-byte payload to trigger Info telemetry logs
 start_url = "http://localhost:9002/api/start"

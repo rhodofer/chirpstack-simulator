@@ -21,11 +21,11 @@ except Exception as e:
 start_url = "http://localhost:9002/api/start"
 start_payload = {
     "tenant_id": "d49ba144-014c-43a1-85a4-cfa3ecbac0bc",
-    "device_count": 5,
+    "device_count": 2,
     "gateway_count": 1,
     "duration": "10m",
     "activation_time": "5s",
-    "uplink_interval": "10s",
+    "uplink_interval": "5s",
     "app_name": "Kullanici-4",
     "device_prefix": "sim-dev",
     "f_port": 10,

@@ -211,6 +211,14 @@
                         <input type="text" id="wiz-org-name" data-i18n-placeholder="modal_add_org_name_placeholder_wiz" placeholder="Örn: Kullanici-X" autofocus>
                         <span class="form-hint" data-i18n="wiz_org_hint">Oluşturulacak yeni tenant/organizasyon adı.</span>
                     </div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label for="wiz-scenario-preset" data-i18n="wiz_scenario_preset">Simülasyon Şablonu (Scenario Preset)</label>
+                        <select id="wiz-scenario-preset" style="width: 100%;">
+                            <option value="default" selected data-i18n="wiz_preset_default">Standart Simülasyon (Rastgele Konum & Sabit Payload)</option>
+                            <option value="batman_oil" data-i18n="wiz_preset_batman_oil">Batman Raman Petrol Sahası (Kuyu Telemetrisi)</option>
+                        </select>
+                        <span class="form-hint" data-i18n="wiz_preset_hint">Kurulum sonrasında cihazların konumu ve veri üretim betikleri şablona göre otomatik ayarlanır.</span>
+                    </div>
                 </div>
 
                 <!-- Step 2: Networks -->

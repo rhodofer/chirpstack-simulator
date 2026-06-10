@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChirpStack Simulator</title>
     <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app">
@@ -34,6 +37,10 @@
                         <div class="secondary-nav-link active" data-tab="overview">
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_organizations">Organizasyonlar</span>
+                        </div>
+                        <div class="secondary-nav-link" data-tab="live-map">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_live_map">Canlı İzleme</span>
                         </div>
                     </div>
                 </div>
@@ -134,6 +141,8 @@
                         </div>
                     </div>
 
+
+
                     <!-- Toolbar -->
                     <div class="toolbar">
                         <div class="search-box">
@@ -200,6 +209,41 @@
                         </div>
                     </div>
                 </div>
+
+
+<!-- ═══ TAB: CANLI İZLEME (Harita & Grafik) ═══════════════════ -->
+<div class="tab-content" id="content-live-map">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title" data-i18n="title_live_map">Canlı İzleme</h1>
+            <p class="page-subtitle" data-i18n="subtitle_live_map">Cihazların canlı konumlarını ve ağ paket aktivitelerini takip edin.</p>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid: Map & Live Metrics Chart -->
+    <div id="overview-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px;">
+        <!-- Map Card -->
+        <div class="table-wrapper" style="padding: 16px; min-height: 480px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <h3 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
+                    🗺️ <span>Canlı Cihaz & Gateway Haritası</span>
+                </h3>
+                <select id="map-org-select" class="page-size-select" style="max-width: 200px; padding: 4px 8px; font-size: 0.75rem; margin: 0; height: auto;"></select>
+            </div>
+            <div id="simulation-map" style="flex: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); z-index: 10; min-height: 400px; background: var(--bg-deepest);"></div>
+        </div>
+
+        <!-- Live Metrics Chart Card -->
+        <div class="table-wrapper" style="padding: 16px; min-height: 480px; display: flex; flex-direction: column;">
+            <h3 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
+                📈 <span>Canlı Ağ Paket Aktivitesi</span>
+            </h3>
+            <div style="flex: 1; min-height: 400px; position: relative;">
+                <canvas id="metrics-chart" style="width: 100%; height: 100%; max-height: 400px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
 
                 <div class="tab-content" id="content-devices">
@@ -445,6 +489,9 @@
                                     <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="guide">
                                         <i class="fas fa-info-circle" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_guide">Simülasyon Rehberi</span>
                                     </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="scripts">
+                                        <i class="fas fa-code" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_scripts">Örnek Betikler (JS)</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -509,6 +556,27 @@
                                             </div>
                                         </div>
 
+                                        <!-- Dinamik Simülasyon & Bozulma Ayarları -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;">Dinamik Simülasyon & Şebeke Bozulmaları</h3>
+                                            <div style="display:flex; flex-direction:column; gap:16px;">
+                                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                    <div class="form-group" style="margin-bottom:0;">
+                                                        <label for="packet_loss">Paket Kaybı (Packet Loss %)</label>
+                                                        <input type="number" id="packet_loss" name="packet_loss" min="0" max="100" step="0.1" placeholder="0.0" value="0.0">
+                                                    </div>
+                                                    <div class="form-group" style="margin-bottom:0;">
+                                                        <label for="latency_ms">Gecikme (Latency ms)</label>
+                                                        <input type="number" id="latency_ms" name="latency_ms" min="0" placeholder="0" value="0">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label for="payload_script">Dinamik Payload Betiği (JavaScript Payload Script) - <em>Boş bırakılırsa yukarıdaki Payload kullanılır</em></label>
+                                                    <textarea id="payload_script" name="payload_script" rows="6" placeholder="// Örn: var temp = 20 + Math.sin(fCnt * 0.1) * 5; return [Math.round(temp)];" style="width:100%; font-family:monospace; padding:10px 14px; font-size:12px; background:var(--bg-deepest); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); resize:vertical; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- MQTT Topic Şablonları -->
                                         <div>
                                             <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="settings_sec_mqtt">MQTT Topic Şablonları</h3>
@@ -536,6 +604,13 @@
                                                     </select>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <!-- Action buttons -->
+                                        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
+                                            <button type="button" class="btn btn-primary" id="btn-save-general-settings" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                                                ✓ Ayarları Kaydet
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -697,6 +772,153 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Sub Tab: Örnek Betikler -->
+                            <div class="settings-sub-content" id="settings-sub-scripts">
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border-soft); padding-bottom: 16px;">
+                                        <h2 style="font-size:1.1rem; font-weight:600; margin:0 0 6px 0;" data-i18n="scripts_title">Doğrudan Kullanılabilir Test Betikleri</h2>
+                                        <p style="font-size:0.85rem; color:var(--text-dim); margin:0;" data-i18n="scripts_subtitle">ChirpStack simülatörü dinamik JS motoru ile uyumlu, veri dönüşümlerini açıklayan pratik örnekler.</p>
+                                    </div>
+                                    
+                                    <div style="display:flex; flex-direction:column; gap:24px;">
+                                        <!-- Card 1: Sıcaklık -->
+                                        <div class="script-card" style="background:var(--bg-card, rgba(255,255,255,0.02)); border:1px solid var(--border-soft); border-radius:var(--radius-md, 8px); padding:18px; display:flex; flex-direction:column; gap:12px; transition: border-color 0.2s, transform 0.2s;">
+                                            <div>
+                                                <h3 style="font-size:0.95rem; font-weight:600; margin:0 0 4px 0;" data-i18n="scripts_temp_title">1. Sıcaklık Dalgalanması (Byte Array)</h3>
+                                                <p style="font-size:0.85rem; color:var(--text-dim); margin:0; line-height:1.4;" data-i18n="scripts_temp_desc">Cihazın ısınmasını ve soğumasını sinüs dalgası ve gürültü ekleyerek gerçekçi simüle eder. Sıcaklık 10 ile çarpılarak LSB/MSB formatında 2 byte olarak döndürülür.</p>
+                                            </div>
+                                            <div style="position:relative;">
+                                                <pre style="margin:0; background:var(--bg-deepest); border:1px solid var(--border-soft); border-radius:var(--radius-sm, 4px); padding:12px; overflow-x:auto;"><code id="code-temp" style="font-family:Consolas, Monaco, monospace; font-size:12px; color:var(--text); line-height:1.5;">// Global degiskenler: fPort, fCnt, devEUI, deviceName
+// 20.0 + sin dalgasi ile sicaklik dalgalanmasi (-5 to +5) ve gurultu
+var baseTemp = 20.0;
+var wave = Math.sin(fCnt * 0.05) * 5.0;
+var noise = (Math.random() - 0.5) * 0.5;
+var currentTemp = baseTemp + wave + noise;
+
+// LSB/MSB formatinda 16-bit isaretli tamsayi (int16 * 10)
+var scaledTemp = Math.round(currentTemp * 10);
+
+// Negatif degerleri guvenli bir sekilde donusturmek icin bit maskeleme
+var tempByte1 = scaledTemp & 0xFF;        // LSB
+var tempByte2 = (scaledTemp >> 8) & 0xFF; // MSB
+
+// Goja motoru icin byte dizisi dondurur
+return [tempByte1, tempByte2];</code></pre>
+                                                <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-temp" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
+                                                    <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 2: GPS -->
+                                        <div class="script-card" style="background:var(--bg-card, rgba(255,255,255,0.02)); border:1px solid var(--border-soft); border-radius:var(--radius-md, 8px); padding:18px; display:flex; flex-direction:column; gap:12px; transition: border-color 0.2s, transform 0.2s;">
+                                            <div>
+                                                <h3 style="font-size:0.95rem; font-weight:600; margin:0 0 4px 0;" data-i18n="scripts_gps_title">2. GPS Rota Simülasyonu (Hex String)</h3>
+                                                <p style="font-size:0.85rem; color:var(--text-dim); margin:0; line-height:1.4;" data-i18n="scripts_gps_desc">Başlangıç noktasından (örn. İstanbul) itibaren deterministik olarak kuzeydoğu yönünde ilerleyen bir rotayı simüle eder. Koordinatları 100.000 ile çarparak 4'er byte işaretli tamsayıya çevirir ve Hex dizesi olarak döndürür.</p>
+                                            </div>
+                                            <div style="position:relative;">
+                                                <pre style="margin:0; background:var(--bg-deepest); border:1px solid var(--border-soft); border-radius:var(--radius-sm, 4px); padding:12px; overflow-x:auto;"><code id="code-gps" style="font-family:Consolas, Monaco, monospace; font-size:12px; color:var(--text); line-height:1.5;">// Istanbul koordinatlari merkezli baslangic
+var startLat = 41.0082;
+var startLng = 28.9784;
+
+// Her adimda (fCnt) hafif kuzeydoguya hareket simülasyonu
+var currentLat = startLat + (fCnt * 0.0001);
+var currentLng = startLng + (fCnt * 0.00015);
+
+// 100,000 ile carpilarak 32-bit integer donusumu
+var latVal = Math.round(currentLat * 100000);
+var lngVal = Math.round(currentLng * 100000);
+
+// 32-bit sayiyi hex formatina donusturen yardimci fonksiyon (big endian)
+function toHexInt32(val) {
+    if (val < 0) {
+        val = 0xFFFFFFFF + val + 1; // 2's complement
+    }
+    var hex = val.toString(16);
+    while (hex.length < 8) {
+        hex = "0" + hex;
+    }
+    return hex;
+}
+
+// 8-byte hex string (4 byte Lat + 4 byte Lng)
+var payloadHex = toHexInt32(latVal) + toHexInt32(lngVal);
+
+// Goja motoru icin hex string dondurur
+return payloadHex;</code></pre>
+                                                <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-gps" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
+                                                    <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 3: Akıllı Sayaç -->
+                                        <div class="script-card" style="background:var(--bg-card, rgba(255,255,255,0.02)); border:1px solid var(--border-soft); border-radius:var(--radius-md, 8px); padding:18px; display:flex; flex-direction:column; gap:12px; transition: border-color 0.2s, transform 0.2s;">
+                                            <div>
+                                                <h3 style="font-size:0.95rem; font-weight:600; margin:0 0 4px 0;" data-i18n="scripts_meter_title">3. Akıllı Sayaç & Pil Seviyesi (Byte Array)</h3>
+                                                <p style="font-size:0.85rem; color:var(--text-dim); margin:0; line-height:1.4;" data-i18n="scripts_meter_desc">Zamanla artan enerji tüketim endeksini (32-bit) ve her adımda yavaşça azalan pil seviyesini (%100'den geriye) byte dizisi olarak döndürür.</p>
+                                            </div>
+                                            <div style="position:relative;">
+                                                <pre style="margin:0; background:var(--bg-deepest); border:1px solid var(--border-soft); border-radius:var(--radius-sm, 4px); padding:12px; overflow-x:auto;"><code id="code-meter" style="font-family:Consolas, Monaco, monospace; font-size:12px; color:var(--text); line-height:1.5;">// Baslangic endeksi (10,000 Wh) + adim basina ~5 Wh artis
+var baseEnergy = 10000;
+var currentEnergy = baseEnergy + (fCnt * 5);
+
+// Pil seviyesi: baslangicta %100, her 100 adimda %1 azalma (en az %1)
+var batteryLevel = 100 - Math.floor(fCnt / 100);
+if (batteryLevel < 1) {
+    batteryLevel = 1;
+}
+
+// 32-bit unsigned integer donusumu (4 byte - Big Endian)
+var energyB3 = (currentEnergy >> 24) & 0xFF;
+var energyB2 = (currentEnergy >> 16) & 0xFF;
+var energyB1 = (currentEnergy >> 8) & 0xFF;
+var energyB0 = currentEnergy & 0xFF;
+
+// Goja motoru icin 5 byte'lik dizi dondurur
+return [energyB3, energyB2, energyB1, energyB0, batteryLevel];</code></pre>
+                                                <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-meter" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
+                                                    <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 4: Çoklu Sensör -->
+                                        <div class="script-card" style="background:var(--bg-card, rgba(255,255,255,0.02)); border:1px solid var(--border-soft); border-radius:var(--radius-md, 8px); padding:18px; display:flex; flex-direction:column; gap:12px; transition: border-color 0.2s, transform 0.2s;">
+                                            <div>
+                                                <h3 style="font-size:0.95rem; font-weight:600; margin:0 0 4px 0;" data-i18n="scripts_multi_title">4. Çoklu Sensör Telemetrisi (Hex String)</h3>
+                                                <p style="font-size:0.85rem; color:var(--text-dim); margin:0; line-height:1.4;" data-i18n="scripts_multi_desc">Sıcaklık (1 byte), bağıl nem (1 byte) ve fan çalışma durumunu (1 byte, boolean) birleştirip 3 byte Hex formatında döndürür.</p>
+                                            </div>
+                                            <div style="position:relative;">
+                                                <pre style="margin:0; background:var(--bg-deepest); border:1px solid var(--border-soft); border-radius:var(--radius-sm, 4px); padding:12px; overflow-x:auto;"><code id="code-multi" style="font-family:Consolas, Monaco, monospace; font-size:12px; color:var(--text); line-height:1.5;">// Sicaklik simülasyonu (0 - 50 araligi)
+var temp = 22 + Math.floor(Math.sin(fCnt * 0.1) * 8);
+
+// Nem simülasyonu (40% - 80% araligi)
+var humidity = 60 + Math.floor(Math.cos(fCnt * 0.08) * 15);
+
+// Sicaklik 28 derecenin uzerindeyse fan aktif (true/1) aksi halde pasif (false/0)
+var fanStatus = (temp > 28) ? 1 : 0;
+
+// Byte degerlerini tek basamakli olmamasi icin hex string formatina donusturen yardimci fonksiyon
+function toHexByte(val) {
+    var hex = (val & 0xFF).toString(16);
+    return hex.length === 1 ? "0" + hex : hex;
+}
+
+// 3 byte hex string
+var payloadHex = toHexByte(temp) + toHexByte(humidity) + toHexByte(fanStatus);
+
+// Goja motoru icin hex dondurur
+return payloadHex;</code></pre>
+                                                <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-multi" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
+                                                    <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div> <!-- /.settings-main-content -->
                     </div> <!-- /.settings-layout -->
                 </div>
@@ -711,6 +933,11 @@
                         </div>
                         <div class="page-header-actions" style="display: flex; gap: 12px; align-items: center;">
                             <input type="text" id="console-log-filter" data-i18n-placeholder="console_filter_placeholder" placeholder="🔍 Cihaz veya log ara (örn: sim-dev-1)..." style="font-size: 12px; padding: 6px 12px; background: rgba(0, 255, 135, 0.05); color: var(--green); border: 1px solid rgba(0, 255, 135, 0.2); border-radius: var(--radius-xs); outline: none; width: 240px; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='rgba(0, 255, 135, 0.2)'" />
+                            <select id="console-source-select" class="page-size-select" style="max-width: 200px; padding: 6px 12px; font-size: 12px; margin: 0; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); height: auto;">
+                                <option value="all" data-i18n="console_src_all">Tüm Günlükler</option>
+                                <option value="local" data-i18n="console_src_local">Sadece Yerel Simülatör</option>
+                                <option value="remote" data-i18n="console_src_remote">Sadece Uzak Bağlantı (ChirpStack)</option>
+                            </select>
                             <button class="btn btn-outline" id="btn-console-clear" data-i18n="console_clear">🧹 Ekranı Temizle</button>
                         </div>
                     </div>
@@ -993,6 +1220,14 @@
                         <label for="wiz-org-name" data-i18n="modal_add_org_name">Organizasyon Adı *</label>
                         <input type="text" id="wiz-org-name" data-i18n-placeholder="modal_add_org_name_placeholder_wiz" placeholder="Örn: Kullanici-X" autofocus>
                         <span class="form-hint" data-i18n="wiz_org_hint">Oluşturulacak yeni tenant/organizasyon adı.</span>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label for="wiz-scenario-preset" data-i18n="wiz_scenario_preset">Simülasyon Şablonu (Scenario Preset)</label>
+                        <select id="wiz-scenario-preset" style="width: 100%;">
+                            <option value="default" selected data-i18n="wiz_preset_default">Standart Simülasyon (Rastgele Konum & Sabit Payload)</option>
+                            <option value="batman_oil" data-i18n="wiz_preset_batman_oil">Batman Raman Petrol Sahası (Kuyu Telemetrisi)</option>
+                        </select>
+                        <span class="form-hint" data-i18n="wiz_preset_hint">Kurulum sonrasında cihazların konumu ve veri üretim betikleri şablona göre otomatik ayarlanır.</span>
                     </div>
                 </div>
 
