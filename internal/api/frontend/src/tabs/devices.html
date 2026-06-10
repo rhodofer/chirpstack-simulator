@@ -1,14 +1,14 @@
                 <div class="tab-content" id="content-devices">
                     <div class="page-header">
                         <div class="page-header-left">
-                            <h1 class="page-title">Device Profilleri</h1>
-                            <p class="page-subtitle">ChirpStack tenant'larına ait LoRaWAN device profillerini yönetin.</p>
+                            <h1 class="page-title" data-i18n="title_dp">Device Profilleri</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_dp">ChirpStack tenant'larına ait LoRaWAN device profillerini yönetin.</p>
                         </div>
                         <div class="page-header-right">
                             <select class="page-size-select" id="dp-tenant-select" style="max-width: 240px;">
-                                <option value="">Tüm Tenant'lar</option>
+                                <option value="" data-i18n="select_all_tenants">Tüm Tenant'lar</option>
                             </select>
-                            <button class="btn btn-primary btn-sm" id="btn-add-dp">
+                            <button class="btn btn-primary btn-sm" id="btn-add-dp" style="display:none;" data-i18n="btn_add_dp">
                                 <span class="btn-icon">+</span> Yeni Device Profile
                             </button>
                         </div>
@@ -17,7 +17,7 @@
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="dp-search-input" placeholder="Device profile ara...">
+                            <input type="text" id="dp-search-input" data-i18n-placeholder="placeholder_search_dp" placeholder="Device profile ara...">
                         </div>
                         <button class="btn-refresh" id="btn-dp-refresh" title="Yenile">🔄</button>
                     </div>
@@ -27,16 +27,19 @@
                             <thead>
                                 <tr>
                                     <th class="sortable" data-sort="name">
-                                        Profil Adı <span class="sort-icon" id="dp-sort-icon-name">▲</span>
+                                        <span data-i18n="table_dp_name">Profil Adı</span> <span class="sort-icon" id="dp-sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="tenant_id">
+                                        <span data-i18n="table_dp_org">Organizasyon</span> <span class="sort-icon" id="dp-sort-icon-tenant_id">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="region">
-                                        Bölge <span class="sort-icon" id="dp-sort-icon-region">▲</span>
+                                        <span data-i18n="table_dp_region">Bölge</span> <span class="sort-icon" id="dp-sort-icon-region">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="mac_version">
-                                        MAC Versiyon <span class="sort-icon" id="dp-sort-icon-mac_version">▲</span>
+                                        <span data-i18n="table_dp_mac">MAC Versiyon</span> <span class="sort-icon" id="dp-sort-icon-mac_version">▲</span>
                                     </th>
-                                    <th>OTAA</th>
-                                    <th style="text-align:right;">İşlemler</th>
+                                    <th><span data-i18n="table_dp_otaa">OTAA</span></th>
+                                    <th style="text-align:right;" data-i18n="table_actions">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody id="dp-table-body">
@@ -45,15 +48,15 @@
 
                         <div class="empty-state" id="dp-empty-state" style="display:none;">
                             <div class="empty-state-icon">📡</div>
-                            <div class="empty-state-title">Henüz device profile yok</div>
-                            <div class="empty-state-text">"Yeni Device Profile" butonuyla başlayın.</div>
+                            <div class="empty-state-title" data-i18n="empty_state_dp_title">Henüz device profile yok</div>
+                            <div class="empty-state-text" data-i18n="empty_state_dp_text">Üst bardaki "Yeni Oluştur" butonuyla hızlı kurulum yapabilirsiniz.</div>
                         </div>
                     </div>
 
                     <div class="table-footer">
                         <div class="table-footer-left">
                             <div class="page-size-group">
-                                <span class="page-size-label">Sayfa Başına:</span>
+                                <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
                                 <select class="page-size-select" id="dp-page-size-select">
                                     <option value="5" selected>5</option>
                                     <option value="10">10</option>

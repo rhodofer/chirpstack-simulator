@@ -247,7 +247,7 @@ func NewDevice(ctx context.Context, wg *sync.WaitGroup, opts ...DeviceOption) (*
 		"dev_eui":     d.devEUI,
 		"app_name":    d.appName,
 		"device_name": d.deviceName,
-	}).Info("simulator: new otaa device")
+	}).Info(fmt.Sprintf("[%s] simulator: new otaa device", d.appName))
 
 	wg.Add(2)
 
@@ -327,7 +327,7 @@ func (d *Device) downlinkLoop() {
 				}()
 
 				if err != nil {
-					log.WithError(err).Error("simulator: handle downlink frame error")
+					log.WithError(err).Error(fmt.Sprintf("[%s] simulator: handle downlink frame error", d.appName))
 				}
 
 				break
@@ -342,7 +342,7 @@ func (d *Device) joinRequest() {
 		"dev_eui":     d.devEUI,
 		"app_name":    d.appName,
 		"device_name": d.deviceName,
-	}).Debug("simulator: send OTAA request")
+	}).Debug(fmt.Sprintf("[%s] simulator: send OTAA request", d.appName))
 
 	phy := lorawan.PHYPayload{
 		MHDR: lorawan.MHDR{
@@ -357,7 +357,7 @@ func (d *Device) joinRequest() {
 	}
 
 	if err := phy.SetUplinkJoinMIC(d.appKey); err != nil {
-		log.WithError(err).Error("simulator: set uplink join mic error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: set uplink join mic error", d.appName))
 		return
 	}
 
@@ -388,7 +388,7 @@ func (d *Device) dataUp() {
 			"temperature": tempVal,
 			"pressure":    pressVal,
 			"voltage":     float64(voltVal) / 10.0,
-		}).Info("simulator: generated dynamic telemetry payload")
+		}).Info(fmt.Sprintf("[%s] simulator: generated dynamic telemetry payload", d.appName))
 	}
 
 	log.WithFields(log.Fields{
@@ -397,7 +397,7 @@ func (d *Device) dataUp() {
 		"app_name":    d.appName,
 		"device_name": d.deviceName,
 		"confirmed":   d.confirmed,
-	}).Debug("simulator: send uplink data")
+	}).Debug(fmt.Sprintf("[%s] simulator: send uplink data", d.appName))
 
 	mType := lorawan.UnconfirmedDataUp
 	if d.confirmed {
@@ -427,12 +427,12 @@ func (d *Device) dataUp() {
 	}
 
 	if err := phy.EncryptFRMPayload(d.appSKey); err != nil {
-		log.WithError(err).Error("simulator: encrypt FRMPayload error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: encrypt FRMPayload error", d.appName))
 		return
 	}
 
 	if err := phy.SetUplinkDataMIC(lorawan.LoRaWAN1_0, 0, 0, 0, d.nwkSKey, d.nwkSKey); err != nil {
-		log.WithError(err).Error("simulator: set uplink data mic error")
+		log.WithError(err).Error(fmt.Sprintf("[%s] simulator: set uplink data mic error", d.appName))
 		return
 	}
 
@@ -486,7 +486,7 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 		"dev_addr":    d.devAddr,
 		"app_name":    d.appName,
 		"device_name": d.deviceName,
-	}).Info("simulator: device OTAA activated")
+	}).Info(fmt.Sprintf("[%s] simulator: device OTAA activated", d.appName))
 
 	d.setState(deviceStateActivated)
 	deviceJoinAcceptCounter().Inc()
@@ -550,7 +550,7 @@ func (d *Device) downlinkData(phy lorawan.PHYPayload) error {
 		"device_name": d.deviceName,
 		"f_port":      fPort,
 		"data":        hex.EncodeToString(data),
-	}).Info("simulator: device received downlink data")
+	}).Info(fmt.Sprintf("[%s] simulator: device received downlink data", d.appName))
 
 	if d.downlinkHandlerFunc == nil {
 		return nil
@@ -575,7 +575,7 @@ func (d *Device) sendUplink(phy lorawan.PHYPayload) error {
 		if err := d.gateways[i].SendUplinkFrame(pl); err != nil {
 			log.WithError(err).WithFields(log.Fields{
 				"dev_eui": d.devEUI,
-			}).Error("simulator: send uplink frame error")
+			}).Error(fmt.Sprintf("[%s] simulator: send uplink frame error", d.appName))
 		}
 	}
 

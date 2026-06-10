@@ -12,7 +12,7 @@ func handleGetOrgConfig(w http.ResponseWriter, r *http.Request, orgID string) {
 	cfg, err := GetOrgConfig(orgID)
 	if err != nil {
 		log.WithError(err).WithField("org_id", orgID).Error("org_configs: get config error")
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Veritabanı hatası: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Database error: " + err.Error()})
 		return
 	}
 
@@ -30,14 +30,14 @@ func handleGetOrgConfig(w http.ResponseWriter, r *http.Request, orgID string) {
 func handleSaveOrgConfig(w http.ResponseWriter, r *http.Request, orgID string) {
 	var req StartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	err := SaveOrgConfig(orgID, &req)
 	if err != nil {
 		log.WithError(err).WithField("org_id", orgID).Error("org_configs: save config error")
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Veritabanı kaydetme hatası: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to save configuration to database: " + err.Error()})
 		return
 	}
 

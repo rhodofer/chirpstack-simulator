@@ -45,6 +45,16 @@ func SetupDB() error {
 		return fmt.Errorf("create table error: %w", err)
 	}
 
+	queryIntervals := `
+	CREATE TABLE IF NOT EXISTS device_intervals (
+		dev_eui TEXT PRIMARY KEY,
+		interval TEXT NOT NULL,
+		updated_at DATETIME
+	);`
+	if _, err := db.Exec(queryIntervals); err != nil {
+		return fmt.Errorf("create device_intervals table error: %w", err)
+	}
+
 	log.Info("sqlite: database initialized successfully")
 	return nil
 }
@@ -123,3 +133,83 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 	)
 	return err
 }
+
+// GetActiveOrgConfigs retrieves all saved simulation configs from the database.
+func GetActiveOrgConfigs() ([]StartRequest, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	query := `
+	SELECT 
+		tenant_id, device_count, gateway_count, duration, activation_time, 
+		uplink_interval, app_name, device_prefix, f_port, payload, 
+		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template
+	FROM org_configs;`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var configs []StartRequest
+	for rows.Next() {
+		var cfg StartRequest
+		var fPort int
+		err := rows.Scan(
+			&cfg.TenantID, &cfg.DeviceCount, &cfg.GatewayCount, &cfg.Duration, &cfg.ActivationTime,
+			&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload,
+			&cfg.Frequency, &cfg.Bandwidth, &cfg.SpreadingFactor, &cfg.EventTopicTemplate, &cfg.CommandTopicTemplate,
+		)
+		if err != nil {
+			return nil, err
+		}
+		cfg.FPort = uint8(fPort)
+		configs = append(configs, cfg)
+	}
+
+	return configs, nil
+}
+
+// GetDeviceIntervals retrieves all custom device intervals.
+func GetDeviceIntervals() (map[string]string, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	query := `SELECT dev_eui, interval FROM device_intervals;`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	intervals := make(map[string]string)
+	for rows.Next() {
+		var devEUI, interval string
+		if err := rows.Scan(&devEUI, &interval); err != nil {
+			return nil, err
+		}
+		intervals[devEUI] = interval
+	}
+	return intervals, nil
+}
+
+// SaveDeviceInterval saves or updates the custom interval for a device.
+func SaveDeviceInterval(devEUI string, interval string) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	query := `
+	INSERT INTO device_intervals (dev_eui, interval, updated_at)
+	VALUES (?, ?, ?)
+	ON CONFLICT(dev_eui) DO UPDATE SET
+		interval = excluded.interval,
+		updated_at = excluded.updated_at;`
+
+	_, err := db.Exec(query, devEUI, interval, time.Now())
+	return err
+}
+

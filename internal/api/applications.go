@@ -32,6 +32,11 @@ func handleListApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API bağlantısı kurulmadı"})
+		return
+	}
+
 	tenantID := r.URL.Query().Get("tenant_id")
 	var tenants []string
 	if tenantID != "" {
@@ -81,6 +86,11 @@ func handleCreateApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API bağlantısı kurulmadı"})
+		return
+	}
+
 	var req CreateApplicationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
@@ -125,6 +135,11 @@ func handleCreateApplication(w http.ResponseWriter, r *http.Request) {
 func handleDeleteApplication(w http.ResponseWriter, r *http.Request, id string) {
 	if r.Method != http.MethodDelete {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API bağlantısı kurulmadı"})
 		return
 	}
 

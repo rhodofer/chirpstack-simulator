@@ -47,6 +47,7 @@
     var btnConsoleClear   = $("#btn-console-clear");
     var btnConsoleToggle  = $("#btn-console-toggle");
     var consoleLogContainer = $("#console-log-container");
+    var consoleLogFilter  = $("#console-log-filter");
     var consoleResizeHandle = $("#console-resize-handle");
 
     // Drawer
@@ -132,6 +133,15 @@
     var devTotalCountEl     = $("#dev-total-count");
     var devPaginationEl     = $("#dev-pagination");
     var devModalOverlay     = $("#dev-modal-overlay");
+
+    // Device Intervals DOM refs
+    var devIntTableBody      = $("#dev-int-table-body");
+    var devIntEmptyState     = $("#dev-int-empty-state");
+    var devIntPageSizeSelect = $("#dev-int-page-size-select");
+    var devIntTotalCountEl   = $("#dev-int-total-count");
+    var devIntPaginationEl   = $("#dev-int-pagination");
+    var devIntSearchInput    = $("#dev-int-search-input");
+    var btnDevIntRefresh     = $("#btn-dev-int-refresh");
     var devEui              = $("#dev-eui");
     var btnRandomDevEui     = $("#btn-random-dev-eui");
     var devName             = $("#dev-name");
@@ -142,6 +152,21 @@
     var devModalCancel      = $("#dev-modal-cancel");
     var devModalSave        = $("#dev-modal-save");
 
+    // Bootstrap Wizard DOM refs
+    var btnTopBootstrap     = $("#btn-top-bootstrap");
+    var bootModalOverlay    = $("#bootstrap-modal-overlay");
+    var bootModalClose      = $("#bootstrap-modal-close");
+    var wizBtnPrev          = $("#wiz-btn-prev");
+    var wizBtnCancel        = $("#wiz-btn-cancel");
+    var wizBtnNext          = $("#wiz-btn-next");
+    var wizOrgName          = $("#wiz-org-name");
+    var wizAppPrefix        = $("#wiz-app-prefix");
+    var wizAppCount         = $("#wiz-app-count");
+    var wizDpPrefix         = $("#wiz-dp-prefix");
+    var wizDpCount          = $("#wiz-dp-count");
+    var wizDevPrefix        = $("#wiz-dev-prefix");
+    var wizDevCount         = $("#wiz-dev-count");
+
     // Login references
     var loginOverlay      = $("#login-overlay");
     var loginForm         = $("#login-form");
@@ -150,9 +175,11 @@
     var loginError        = $("#login-error");
     var btnLoginSubmit    = $("#btn-login-submit");
     var btnLogout         = $("#logout-btn");
+    var appLanguageSelect = $("#app-language");
 
     // ─── State ─────────────────────────────────────────────────────────
     var state = {
+        language: localStorage.getItem("sim_language") || "tr",
         organizations: [],
         filteredOrgs: [],
         activeOrgId: null,
@@ -190,7 +217,13 @@
         appSearchQuery: "",
         appSort: { key: "name", dir: "asc" },
         appPage: 1,
-        appPageSize: 5
+        appPageSize: 5,
+        deviceIntervals: {},
+        devIntPage: 1,
+        devIntPageSize: 10,
+        devIntSearchQuery: "",
+        devIntSort: { key: "name", dir: "asc" },
+        devIntFiltered: []
     };
 
     var pollTimer = null;
@@ -423,7 +456,7 @@
             activation_time: "30s",
             device_count: 5,
             gateway_count: 2,
-            uplink_interval: "30s",
+            uplink_interval: "2m",
             f_port: 10,
             payload: "010203",
             frequency: 868100000,
@@ -463,12 +496,12 @@
         if (r.ok) {
             const data = r.data;
             state.applications = data.applications || [];
-            logEntry("Uygulama listesi alındı: " + state.applications.length + " adet", "success");
+            logEntry("Applications list loaded: " + state.applications.length + " items", "success");
             applyAppFiltersAndRender();
             return true;
         } else {
             const err = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Uygulama listesi alınamadı: " + err, "error");
+            logEntry("Failed to load applications list: " + err, "error");
             showToast(err, "error");
             return false;
         }
@@ -597,10 +630,10 @@
         }
 
         if (data.status === "idle" && state.currentStatus !== "idle") {
-            logEntry("Simülasyon tamamlandı.", "success");
+            logEntry("Simulation finished.", "success");
         }
         if (data.status === "error") {
-            logEntry("Simülasyon hatası oluştu!", "error");
+            logEntry("Simulation error occurred!", "error");
         }
     }
 
@@ -669,12 +702,12 @@
         }
 
         if (r.ok) {
-            logEntry("Ayarlar sunucu veritabanına (SQLite) başarıyla kaydedildi.", "success");
+            logEntry("Settings saved successfully to server database (SQLite).", "success");
             showToast("Ayarlar başarıyla kaydedildi.", "success");
             closeDrawer();
         } else {
             var errMsg = (r.data && r.data.error) || "Kaydetme hatası";
-            logEntry("Ayarlar kaydedilemedi: " + errMsg, "error");
+            logEntry("Failed to save settings: " + errMsg, "error");
             showToast("Kaydetme hatası: " + errMsg, "error");
         }
     }
@@ -784,7 +817,7 @@
         } else {
             state.organizations = [];
             var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
-            logEntry("Organizasyonlar yüklenemedi: " + errMsg, "error");
+            logEntry("Failed to load organizations: " + errMsg, "error");
         }
         applyFiltersAndRender();
         populateDpFilterTenantSelect();
@@ -801,14 +834,14 @@
 
         if (r.ok) {
             var org = r.data;
-            logEntry("Yeni organizasyon oluşturuldu: " + org.name + " (ID: " + org.id + ")", "success");
+            logEntry("New organization created: " + org.name + " (ID: " + org.id + ")", "success");
             showToast("'" + org.name + "' organizasyonu oluşturuldu.", "success");
             await fetchOrganizations();
             openDrawer(org.id);
             return true;
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Organizasyon oluşturma hatası: " + errMsg, "error");
+            logEntry("Failed to create organization: " + errMsg, "error");
             showToast(errMsg, "error");
             return false;
         }
@@ -824,7 +857,7 @@
 
         var r = await api("DELETE", "/api/organizations/" + id);
         if (r.ok) {
-            logEntry("Organizasyon silindi: " + org.name, "success");
+            logEntry("Organization deleted: " + org.name, "success");
             showToast("'" + org.name + "' silindi.", "success");
             if (state.activeOrgId === id) {
                 closeDrawer();
@@ -833,7 +866,7 @@
             await fetchOrganizations();
         } else {
             var errMsg = (r.data && r.data.error) || "Silme hatası";
-            logEntry("Organizasyon silme hatası: " + errMsg, "error");
+            logEntry("Failed to delete organization: " + errMsg, "error");
             showToast(errMsg, "error");
         }
     }
@@ -848,7 +881,7 @@
         } else {
             state.dpList = [];
             var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
-            logEntry("Device profilleri yüklenemedi: " + errMsg, "error");
+            logEntry("Failed to load device profiles: " + errMsg, "error");
         }
         applyDpFiltersAndRender();
     }
@@ -857,13 +890,13 @@
         var r = await api("POST", "/api/device-profiles", data);
         if (r.ok) {
             var dp = r.data;
-            logEntry("Yeni device profile oluşturuldu: " + dp.name + " (ID: " + dp.id + ")", "success");
+            logEntry("New device profile created: " + dp.name + " (ID: " + dp.id + ")", "success");
             showToast("'" + dp.name + "' profili oluşturuldu.", "success");
             await fetchDeviceProfiles(state.dpTenantFilter);
             return true;
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Device profile oluşturma hatası: " + errMsg, "error");
+            logEntry("Failed to create device profile: " + errMsg, "error");
             showToast(errMsg, "error");
             return false;
         }
@@ -883,10 +916,16 @@
         var sk = state.dpSort.key;
         var sd = state.dpSort.dir === "asc" ? 1 : -1;
         state.dpFiltered.sort(function (a, b) {
-            var va = (a[sk] || "").toString().toLowerCase();
-            var vb = (b[sk] || "").toString().toLowerCase();
-            if (va < vb) return -1 * sd;
-            if (va > vb) return 1 * sd;
+            var va = a[sk];
+            var vb = b[sk];
+            if (sk === "tenant_id") {
+                va = getOrgName(va);
+                vb = getOrgName(vb);
+            }
+            var vaStr = (va || "").toString().toLowerCase();
+            var vbStr = (vb || "").toString().toLowerCase();
+            if (vaStr < vbStr) return -1 * sd;
+            if (vaStr > vbStr) return 1 * sd;
             return 0;
         });
         var totalPages = Math.max(1, Math.ceil(state.dpFiltered.length / state.dpPageSize));
@@ -913,6 +952,7 @@
             tr.setAttribute("data-id", dp.id);
             tr.innerHTML =
                 '<td><span class="org-name-primary">' + escapeHtml(dp.name) + '</span></td>' +
+                '<td><span class="org-name-primary">' + escapeHtml(getOrgName(dp.tenant_id)) + '</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">' + escapeHtml(dp.tenant_id || "—") + '</span></td>' +
                 '<td><span class="status-pill active">' + escapeHtml(dp.region || "—") + '</span></td>' +
                 '<td><span class="id-cell">' + escapeHtml((dp.mac_version || "").replace("LORAWAN_", "")) + '</span></td>' +
                 '<td>' + (dp.supports_otaa ? '✓' : '—') + '</td>' +
@@ -939,7 +979,7 @@
         var current = state.dpPage;
         var prevBtn = document.createElement("button");
         prevBtn.className = "pagination-btn";
-        prevBtn.innerHTML = "< Geri";
+        prevBtn.innerHTML = t("prev_page");
         prevBtn.disabled = (current <= 1);
         prevBtn.addEventListener("click", function () { goToDpPage(current - 1); });
         dpPaginationEl.appendChild(prevBtn);
@@ -957,14 +997,14 @@
         }
         var nextBtn = document.createElement("button");
         nextBtn.className = "pagination-btn";
-        nextBtn.innerHTML = "İleri >";
+        nextBtn.innerHTML = t("next_page");
         nextBtn.disabled = (current >= totalPages);
         nextBtn.addEventListener("click", function () { goToDpPage(current + 1); });
         dpPaginationEl.appendChild(nextBtn);
     }
 
     function renderDpTotalCount() {
-        dpTotalCountEl.innerHTML = "Toplam: <strong>" + state.dpFiltered.length + "</strong> Profil";
+        dpTotalCountEl.innerHTML = t("footer_total_dp").replace("{count}", state.dpFiltered.length);
     }
 
     function updateDpSortIcons() {
@@ -1112,12 +1152,12 @@
         if (!confirm("'" + dp.name + "' profilini silmek istediğinize emin misiniz?")) return;
         var r = await api("DELETE", "/api/device-profiles/" + id);
         if (r.ok) {
-            logEntry("Device profile silindi: " + dp.name, "success");
+            logEntry("Device profile deleted: " + dp.name, "success");
             showToast("'" + dp.name + "' silindi.", "success");
             await fetchDeviceProfiles(state.dpTenantFilter);
         } else {
             var errMsg = (r.data && r.data.error) || "Silme hatası";
-            logEntry("Device profile silme hatası: " + errMsg, "error");
+            logEntry("Failed to delete device profile: " + errMsg, "error");
             showToast(errMsg, "error");
         }
     }
@@ -1202,6 +1242,10 @@
             var idShort = org.id.length > 20 ? org.id.substring(0, 20) + "…" : org.id;
             var isActive = true; // varsayılan: tümü aktif
 
+            var appCount = state.applications.filter(function (app) { return app.tenant_id === org.id; }).length;
+            var dpCount = state.dpList.filter(function (dp) { return dp.tenant_id === org.id; }).length;
+            var devCount = state.devList.filter(function (dev) { return dev.tenant_id === org.id; }).length;
+
             tr.innerHTML =
                 '<td>' +
                     '<div class="org-name-cell">' +
@@ -1214,6 +1258,9 @@
                 '</td>' +
                 '<td><span class="status-pill active">AKTİF</span></td>' +
                 '<td><span class="id-cell">' + escapeHtml(idShort) + '</span></td>' +
+                '<td><span class="badge" style="background: rgba(0, 82, 255, 0.08); color: var(--blue); border: 1px solid rgba(0, 82, 255, 0.2);">' + appCount + ' Ağ</span></td>' +
+                '<td><span class="badge" style="background: rgba(240, 160, 64, 0.08); color: var(--accent); border: 1px solid rgba(240, 160, 64, 0.2);">' + dpCount + ' Profil</span></td>' +
+                '<td><span class="badge" style="background: rgba(0, 255, 135, 0.08); color: var(--green); border: 1px solid rgba(0, 255, 135, 0.2);">' + devCount + ' Cihaz</span></td>' +
                 '<td><span class="date-cell">—</span></td>' +
                 '<td>' +
                     '<div class="row-actions">' +
@@ -1262,7 +1309,7 @@
         // Geri butonu
         var prevBtn = document.createElement("button");
         prevBtn.className = "pagination-btn";
-        prevBtn.innerHTML = "< Geri";
+        prevBtn.innerHTML = t("prev_page");
         prevBtn.disabled = (current <= 1);
         prevBtn.addEventListener("click", function () { goToPage(current - 1); });
         paginationEl.appendChild(prevBtn);
@@ -1286,7 +1333,7 @@
         // Sonraki butonu
         var nextBtn = document.createElement("button");
         nextBtn.className = "pagination-btn";
-        nextBtn.innerHTML = "İleri >";
+        nextBtn.innerHTML = t("next_page");
         nextBtn.disabled = (current >= totalPages);
         nextBtn.addEventListener("click", function () { goToPage(current + 1); });
         paginationEl.appendChild(nextBtn);
@@ -1294,7 +1341,7 @@
 
     function renderTotalCount() {
         var total = state.filteredOrgs.length;
-        totalCountEl.innerHTML = "Toplam: <strong>" + total + "</strong> Organizasyon";
+        totalCountEl.innerHTML = t("footer_total_org").replace("{count}", total);
     }
 
     function updateSortIcons() {
@@ -1361,7 +1408,7 @@
         drawerEl.classList.add("open");
         drawerOverlay.classList.add("open");
 
-        logEntry("Organizasyon seçildi: " + org.name, "info");
+        logEntry("Organization selected: " + org.name, "info");
         renderTable(); // selected vurgusu
     }
 
@@ -1396,19 +1443,34 @@
 
         // Sayfa başlığını güncelle
         updatePageTitle();
+
+        // Aktif tab'a göre verileri çek
+        if (name === "overview") {
+            fetchOrganizations();
+        } else if (name === "devices") {
+            fetchDeviceProfiles(state.dpTenantFilter);
+        } else if (name === "networks") {
+            fetchApplications(state.netTenantFilter);
+        } else if (name === "device-list") {
+            fetchDevices(state.devTenantFilter);
+        } else if (name === "device-intervals") {
+            fetchDevices("");
+            fetchDeviceIntervals();
+        }
     }
 
     function updatePageTitle() {
         var titles = {
-            overview: "Organizasyonlar",
-            devices: "Device Profilleri",
-            networks: "Ağ Uygulamaları",
-            "device-list": "Cihazlar",
-            settings: "Ayarlar",
-            console: "Canlı Log Konsolu"
+            overview: t("nav_organizations"),
+            devices: t("nav_device_profiles"),
+            networks: t("nav_networks"),
+            "device-list": t("nav_devices"),
+            settings: t("nav_settings"),
+            console: t("console_title"),
+            info: t("info_title")
         };
         if (pageTitleBar) {
-            pageTitleBar.textContent = titles[state.currentTab] || "Genel Bakış";
+            pageTitleBar.textContent = titles[state.currentTab] || "Overview";
         }
     }
 
@@ -1465,6 +1527,18 @@
             if (state.organizations[i].id === id) return state.organizations[i];
         }
         return null;
+    }
+
+    function getOrgName(tenantId) {
+        if (!tenantId) return "—";
+        var org = findOrg(tenantId);
+        return org ? org.name : tenantId;
+    }
+
+    function getDpName(dpId) {
+        if (!dpId) return "—";
+        var dp = findDp(dpId);
+        return dp ? dp.name : dpId;
     }
 
     // ─── Form Fields Config ────────────────────────────────────────────
@@ -1589,17 +1663,18 @@
         }
 
         if (btnStart) btnStart.disabled = true;
-        logEntry("Simülasyon başlatılıyor...", "info");
+        logEntry("Simulation is starting...", "info");
 
         var r = await api("POST", "/api/start", cfg);
 
         if (r.ok) {
-            logEntry("Başlatma isteği gönderildi.", "success");
+            logEntry("Start request sent.", "success");
             showToast("Simülasyon başlatılıyor...", "success");
+            connectLogStream();
             startPolling();
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Başlatma hatası: " + errMsg, "error");
+            logEntry("Failed to start: " + errMsg, "error");
             showToast(errMsg, "error");
             if (btnStart) btnStart.disabled = false;
         }
@@ -1608,16 +1683,16 @@
     // ─── Stop Simulation ───────────────────────────────────────────────
     async function stopSimulation() {
         if (btnStop) btnStop.disabled = true;
-        logEntry("Simülasyon durduruluyor...", "info");
+        logEntry("Simulation is stopping...", "info");
 
         var r = await api("POST", "/api/stop");
 
         if (r.ok) {
-            logEntry("Durdurma isteği gönderildi.", "success");
+            logEntry("Stop request sent.", "success");
             showToast("Simülasyon durduruluyor...", "success");
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Durdurma hatası: " + errMsg, "error");
+            logEntry("Failed to stop: " + errMsg, "error");
             showToast(errMsg, "error");
             if (btnStop) btnStop.disabled = false;
         }
@@ -1818,13 +1893,13 @@
         });
         if (r.ok) {
             var app = r.data;
-            logEntry("Yeni uygulama oluşturuldu: " + app.name + " (ID: " + app.id + ")", "success");
+            logEntry("New application created: " + app.name + " (ID: " + app.id + ")", "success");
             showToast("'" + app.name + "' uygulaması oluşturuldu.", "success");
             await fetchApplications(state.netTenantFilter);
             return true;
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Uygulama oluşturma hatası: " + errMsg, "error");
+            logEntry("Failed to create application: " + errMsg, "error");
             showToast(errMsg, "error");
             return false;
         }
@@ -1836,12 +1911,12 @@
         if (!confirm("'" + app.name + "' uygulamasını silmek istediğinize emin misiniz?")) return;
         var r = await api("DELETE", "/api/applications/" + id);
         if (r.ok) {
-            logEntry("Uygulama silindi: " + app.name, "success");
+            logEntry("Application deleted: " + app.name, "success");
             showToast("'" + app.name + "' silindi.", "success");
             await fetchApplications(state.netTenantFilter);
         } else {
             var errMsg = (r.data && r.data.error) || "Silme hatası";
-            logEntry("Uygulama silme hatası: " + errMsg, "error");
+            logEntry("Failed to delete application: " + errMsg, "error");
             showToast(errMsg, "error");
         }
     }
@@ -1866,10 +1941,16 @@
         const sk = state.appSort.key;
         const sd = state.appSort.dir === "asc" ? 1 : -1;
         state.appFiltered.sort((a, b) => {
-            const va = (a[sk] || "").toString().toLowerCase();
-            const vb = (b[sk] || "").toString().toLowerCase();
-            if (va < vb) return -1 * sd;
-            if (va > vb) return 1 * sd;
+            let va = a[sk];
+            let vb = b[sk];
+            if (sk === "tenant_id") {
+                va = getOrgName(va);
+                vb = getOrgName(vb);
+            }
+            const vaStr = (va || "").toString().toLowerCase();
+            const vbStr = (vb || "").toString().toLowerCase();
+            if (vaStr < vbStr) return -1 * sd;
+            if (vaStr > vbStr) return 1 * sd;
             return 0;
         });
         const totalPages = Math.max(1, Math.ceil(state.appFiltered.length / state.appPageSize));
@@ -1893,7 +1974,7 @@
             tr.setAttribute("data-id", app.id);
             tr.innerHTML =
                 `<td><span class="org-name-primary">${escapeHtml(app.name)}</span></td>` +
-                `<td><span class="status-pill active">${escapeHtml(app.tenant_id || "—")}</span></td>` +
+                `<td><span class="org-name-primary">${escapeHtml(getOrgName(app.tenant_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(app.tenant_id || "—")}</span></td>` +
                 `<td><div class="row-actions"><button class="row-action-btn view-btn" data-id="${app.id}" title="Görüntüle">👁</button>` +
                 `<button class="row-action-btn danger delete-btn" data-id="${app.id}" title="Sil">🗑</button></div></td>`;
             tr.addEventListener("click", (e) => {
@@ -1910,7 +1991,7 @@
         var current = state.appPage;
         var prevBtn = document.createElement("button");
         prevBtn.className = "pagination-btn";
-        prevBtn.innerHTML = "< Geri";
+        prevBtn.innerHTML = t("prev_page");
         prevBtn.disabled = (current <= 1);
         prevBtn.addEventListener("click", function () { goToAppPage(current - 1); });
         netPaginationEl.appendChild(prevBtn);
@@ -1928,14 +2009,14 @@
         }
         var nextBtn = document.createElement("button");
         nextBtn.className = "pagination-btn";
-        nextBtn.innerHTML = "İleri >";
+        nextBtn.innerHTML = t("next_page");
         nextBtn.disabled = (current >= totalPages);
         nextBtn.addEventListener("click", function () { goToAppPage(current + 1); });
         netPaginationEl.appendChild(nextBtn);
     }
 
     function renderAppTotalCount() {
-        netTotalCountEl.innerHTML = "Toplam: <strong>" + state.appFiltered.length + "</strong> Uygulama";
+        netTotalCountEl.innerHTML = t("footer_total_net").replace("{count}", state.appFiltered.length);
     }
 
     function updateAppSortIcons() {
@@ -1968,7 +2049,7 @@
         } else {
             state.devList = [];
             var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
-            logEntry("Cihazlar yüklenemedi: " + errMsg, "error");
+            logEntry("Failed to load devices: " + errMsg, "error");
         }
         applyDevFiltersAndRender();
     }
@@ -1977,13 +2058,13 @@
         var r = await api("POST", "/api/devices", data);
         if (r.ok) {
             var dev = r.data;
-            logEntry("Yeni cihaz oluşturuldu: " + dev.name + " (EUI: " + dev.dev_eui + ")", "success");
+            logEntry("New device created: " + dev.name + " (EUI: " + dev.dev_eui + ")", "success");
             showToast("'" + dev.name + "' cihazı oluşturuldu.", "success");
             await fetchDevices(state.devTenantFilter);
             return true;
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Cihaz oluşturma hatası: " + errMsg, "error");
+            logEntry("Failed to create device: " + errMsg, "error");
             showToast(errMsg, "error");
             return false;
         }
@@ -1995,12 +2076,12 @@
         if (!confirm("'" + dev.name + "' cihazını silmek istediğinize emin misiniz?")) return;
         var r = await api("DELETE", "/api/devices/" + devEui);
         if (r.ok) {
-            logEntry("Cihaz silindi: " + dev.name, "success");
+            logEntry("Device deleted: " + dev.name, "success");
             showToast("'" + dev.name + "' silindi.", "success");
             await fetchDevices(state.devTenantFilter);
         } else {
             var errMsg = (r.data && r.data.error) || "Silme hatası";
-            logEntry("Cihaz silme hatası: " + errMsg, "error");
+            logEntry("Failed to delete device: " + errMsg, "error");
             showToast(errMsg, "error");
         }
     }
@@ -2026,10 +2107,20 @@
         var sk = state.devSort.key;
         var sd = state.devSort.dir === "asc" ? 1 : -1;
         state.devFiltered.sort(function (a, b) {
-            var va = (a[sk] || "").toString().toLowerCase();
-            var vb = (b[sk] || "").toString().toLowerCase();
-            if (va < vb) return -1 * sd;
-            if (va > vb) return 1 * sd;
+            var va = a[sk];
+            var vb = b[sk];
+            if (sk === "tenant_id") {
+                va = getOrgName(va);
+                vb = getOrgName(vb);
+            }
+            if (sk === "device_profile_id") {
+                va = getDpName(va);
+                vb = getDpName(vb);
+            }
+            var vaStr = (va || "").toString().toLowerCase();
+            var vbStr = (vb || "").toString().toLowerCase();
+            if (vaStr < vbStr) return -1 * sd;
+            if (vaStr > vbStr) return 1 * sd;
             return 0;
         });
         var totalPages = Math.max(1, Math.ceil(state.devFiltered.length / state.devPageSize));
@@ -2056,8 +2147,18 @@
             tr.setAttribute("data-id", dev.dev_eui);
             tr.innerHTML =
                 '<td><span class="org-name-primary">' + escapeHtml(dev.name) + '</span></td>' +
+                '<td><span class="org-name-primary">' + escapeHtml(getOrgName(dev.tenant_id)) + '</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">' + escapeHtml(dev.tenant_id || "—") + '</span></td>' +
                 '<td><span class="id-cell">' + escapeHtml(dev.dev_eui) + '</span></td>' +
-                '<td><span class="id-cell">' + escapeHtml(dev.device_profile_id) + '</span></td>' +
+                '<td><span class="org-name-primary">' + escapeHtml(getDpName(dev.device_profile_id)) + '</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">' + escapeHtml(dev.device_profile_id || "—") + '</span></td>' +
+                '<td>' +
+                    '<select class="page-size-select dev-table-interval-select" data-id="' + dev.dev_eui + '" style="font-size: 11px; padding: 2px 6px; background: rgba(0, 255, 135, 0.05); color: var(--green); border: 1px solid rgba(0, 255, 135, 0.2); border-radius: var(--radius-xs); cursor: pointer; max-width: 100px;">' +
+                        '<option value="1m"' + ((state.deviceIntervals[dev.dev_eui] || "2m") === "1m" ? " selected" : "") + '>' + (state.language === "tr" ? "1 dk" : "1 min") + '</option>' +
+                        '<option value="2m"' + ((state.deviceIntervals[dev.dev_eui] || "2m") === "2m" ? " selected" : "") + '>' + (state.language === "tr" ? "2 dk" : "2 min") + '</option>' +
+                        '<option value="4m"' + ((state.deviceIntervals[dev.dev_eui] || "2m") === "4m" ? " selected" : "") + '>' + (state.language === "tr" ? "4 dk" : "4 min") + '</option>' +
+                        '<option value="5m"' + ((state.deviceIntervals[dev.dev_eui] || "2m") === "5m" ? " selected" : "") + '>' + (state.language === "tr" ? "5 dk" : "5 min") + '</option>' +
+                        '<option value="10m"' + ((state.deviceIntervals[dev.dev_eui] || "2m") === "10m" ? " selected" : "") + '>' + (state.language === "tr" ? "10 dk" : "10 min") + '</option>' +
+                    '</select>' +
+                '</td>' +
                 '<td>' +
                     '<div class="row-actions">' +
                         '<button class="row-action-btn danger delete-btn" data-id="' + dev.dev_eui + '" title="Sil">🗑</button>' +
@@ -2068,6 +2169,16 @@
                     if (e.target.closest(".delete-btn")) { e.stopPropagation(); deleteDevice(devEui); return; }
                 };
             })(dev.dev_eui));
+
+            var intervalSelect = tr.querySelector(".dev-table-interval-select");
+            if (intervalSelect) {
+                intervalSelect.addEventListener("change", function (e) {
+                    var devEui = this.getAttribute("data-id");
+                    var val = this.value;
+                    updateDeviceInterval(devEui, val);
+                });
+            }
+
             devTableBody.appendChild(tr);
         }
     }
@@ -2079,7 +2190,7 @@
         var current = state.devPage;
         var prevBtn = document.createElement("button");
         prevBtn.className = "pagination-btn";
-        prevBtn.innerHTML = "< Geri";
+        prevBtn.innerHTML = t("prev_page");
         prevBtn.disabled = (current <= 1);
         prevBtn.addEventListener("click", function () { goToDevPage(current - 1); });
         devPaginationEl.appendChild(prevBtn);
@@ -2097,14 +2208,14 @@
         }
         var nextBtn = document.createElement("button");
         nextBtn.className = "pagination-btn";
-        nextBtn.innerHTML = "İleri >";
+        nextBtn.innerHTML = t("next_page");
         nextBtn.disabled = (current >= totalPages);
         nextBtn.addEventListener("click", function () { goToDevPage(current + 1); });
         devPaginationEl.appendChild(nextBtn);
     }
 
     function renderDevTotalCount() {
-        devTotalCountEl.innerHTML = "Toplam: <strong>" + state.devFiltered.length + "</strong> Cihaz";
+        devTotalCountEl.innerHTML = t("footer_total_dev").replace("{count}", state.devFiltered.length);
     }
 
     function updateDevSortIcons() {
@@ -2125,6 +2236,241 @@
         if (n < 1 || n > totalPages) return;
         state.devPage = n;
         applyDevFiltersAndRender();
+    }
+
+    // ─── Device Intervals API & Table ──────────────────────────────────
+    async function fetchDeviceIntervals() {
+        var r = await api("GET", "/api/device-intervals");
+        if (r.ok && r.data.intervals) {
+            state.deviceIntervals = r.data.intervals;
+        } else {
+            state.deviceIntervals = {};
+        }
+        applyDevIntFiltersAndRender();
+    }
+
+    function lockUI(msg) {
+        var overlay = document.getElementById("loading-lock-overlay");
+        var message = document.getElementById("loading-lock-message");
+        if (overlay) overlay.style.display = "flex";
+        if (message) message.textContent = msg;
+    }
+
+    function unlockUI() {
+        var overlay = document.getElementById("loading-lock-overlay");
+        if (overlay) overlay.style.display = "none";
+    }
+
+    async function updateDeviceInterval(devEui, interval) {
+        lockUI("Gönderim sıklığı kaydediliyor...");
+        var r = await api("POST", "/api/device-intervals", { dev_eui: devEui, interval: interval });
+        if (!r.ok) {
+            showToast("Güncelleme başarısız: " + ((r.data && r.data.error) || "Hata"), "error");
+            unlockUI();
+            fetchDeviceIntervals();
+            return;
+        }
+        state.deviceIntervals[devEui] = interval;
+
+        lockUI("Simülatör durumu kontrol ediliyor...");
+        var statusRes = await api("GET", "/api/status");
+        if (!statusRes.ok) {
+            showToast("Simülatör durumu alınamadı.", "error");
+            unlockUI();
+            applyDevFiltersAndRender();
+            return;
+        }
+
+        var simStatus = statusRes.data.status;
+        var simConfig = statusRes.data.config;
+
+        if (simStatus === "running" || simStatus === "starting") {
+            lockUI("Simülatör durduruluyor...");
+            var stopRes = await api("POST", "/api/stop");
+            if (!stopRes.ok) {
+                showToast("Simülatör durdurulamadı: " + ((stopRes.data && stopRes.data.error) || ""), "error");
+                unlockUI();
+                applyDevFiltersAndRender();
+                return;
+            }
+
+            // Poll status until idle
+            var isStopped = false;
+            for (var attempt = 0; attempt < 30; attempt++) {
+                await new Promise(function(resolve) { setTimeout(resolve, 500); });
+                var pollRes = await api("GET", "/api/status");
+                if (pollRes.ok && pollRes.data.status === "idle") {
+                    isStopped = true;
+                    break;
+                }
+            }
+
+            if (!isStopped) {
+                showToast("Simülatör durdurulurken zaman aşımı oluştu.", "error");
+                unlockUI();
+                applyDevFiltersAndRender();
+                return;
+            }
+
+            showToast("Simülatör durduruldu", "info");
+            logEntry("Simulator stopped.", "info");
+
+            await new Promise(function(resolve) { setTimeout(resolve, 1000); });
+
+            lockUI("Simülatör yeniden başlatılıyor...");
+            if (simConfig) {
+                var startRes = await api("POST", "/api/start", simConfig);
+                if (startRes.ok) {
+                    showToast("Simülatör yeniden başlatıldı", "success");
+                    logEntry("Simulator restarted.", "success");
+                } else {
+                    showToast("Simülatör başlatılamadı: " + ((startRes.data && startRes.data.error) || ""), "error");
+                }
+            } else {
+                showToast("Başlatma konfigürasyonu bulunamadı.", "error");
+            }
+        } else {
+            showToast("Gönderim sıklığı güncellendi.", "success");
+        }
+
+        unlockUI();
+        applyDevFiltersAndRender();
+    }
+
+    function getDeviceIntervalText(devEui) {
+        var val = state.deviceIntervals[devEui] || "2m";
+        var mapping = {
+            "1m": "1 dk",
+            "2m": "2 dk",
+            "4m": "4 dk",
+            "5m": "5 dk",
+            "10m": "10 dk"
+        };
+        return mapping[val] || val;
+    }
+
+    function applyDevIntFiltersAndRender() {
+        var q = state.devIntSearchQuery.toLowerCase();
+        if (q) {
+            state.devIntFiltered = state.devList.filter(function (dev) {
+                return (dev.name && dev.name.toLowerCase().indexOf(q) !== -1) ||
+                       (dev.dev_eui && dev.dev_eui.toLowerCase().indexOf(q) !== -1);
+            });
+        } else {
+            state.devIntFiltered = state.devList.slice();
+        }
+        var sk = state.devIntSort.key;
+        var sd = state.devIntSort.dir === "asc" ? 1 : -1;
+        state.devIntFiltered.sort(function (a, b) {
+            var va = a[sk];
+            var vb = b[sk];
+            if (sk === "tenant_id") {
+                va = getOrgName(va);
+                vb = getOrgName(vb);
+            }
+            var vaStr = (va || "").toString().toLowerCase();
+            var vbStr = (vb || "").toString().toLowerCase();
+            if (vaStr < vbStr) return -1 * sd;
+            if (vaStr > vbStr) return 1 * sd;
+            return 0;
+        });
+        var totalPages = Math.max(1, Math.ceil(state.devIntFiltered.length / state.devIntPageSize));
+        if (state.devIntPage > totalPages) state.devIntPage = totalPages;
+        renderDevIntTable();
+        renderDevIntPagination();
+        renderDevIntTotalCount();
+    }
+
+    function renderDevIntTable() {
+        devIntTableBody.innerHTML = "";
+        if (state.devIntFiltered.length === 0) {
+            devIntEmptyState.style.display = "block";
+            return;
+        }
+        devIntEmptyState.style.display = "none";
+        var start = (state.devIntPage - 1) * state.devIntPageSize;
+        var end = Math.min(start + state.devIntPageSize, state.devIntFiltered.length);
+        var pageItems = state.devIntFiltered.slice(start, end);
+        for (var i = 0; i < pageItems.length; i++) {
+            var dev = pageItems[i];
+            var currentInterval = state.deviceIntervals[dev.dev_eui] || "2m";
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-id", dev.dev_eui);
+            
+            var optionsHtml = "";
+            var intervalsList = [
+                { val: "1m", label: "1 dk" },
+                { val: "2m", label: "2 dk" },
+                { val: "4m", label: "4 dk" },
+                { val: "5m", label: "5 dk" },
+                { val: "10m", label: "10 dk" }
+            ];
+            for (var k = 0; k < intervalsList.length; k++) {
+                var isSelected = (intervalsList[k].val === currentInterval) ? "selected" : "";
+                optionsHtml += '<option value="' + intervalsList[k].val + '" ' + isSelected + '>' + intervalsList[k].label + '</option>';
+            }
+
+            tr.innerHTML =
+                '<td><span class="org-name-primary">' + escapeHtml(dev.name) + '</span></td>' +
+                '<td><span class="org-name-primary">' + escapeHtml(getOrgName(dev.tenant_id)) + '</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">' + escapeHtml(dev.tenant_id || "—") + '</span></td>' +
+                '<td><span class="id-cell">' + escapeHtml(dev.dev_eui) + '</span></td>' +
+                '<td>' +
+                    '<select class="page-size-select dev-interval-select" style="max-width: 160px;" data-id="' + dev.dev_eui + '">' +
+                        optionsHtml +
+                    '</select>' +
+                '</td>';
+            
+            var selectEl = tr.querySelector(".dev-interval-select");
+            selectEl.addEventListener("change", function () {
+                var devEuiVal = this.getAttribute("data-id");
+                var intervalVal = this.value;
+                updateDeviceInterval(devEuiVal, intervalVal);
+            });
+
+            devIntTableBody.appendChild(tr);
+        }
+    }
+
+    function renderDevIntPagination() {
+        devIntPaginationEl.innerHTML = "";
+        var total = state.devIntFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(total / state.devIntPageSize));
+        var current = state.devIntPage;
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "pagination-btn";
+        prevBtn.innerHTML = t("prev_page");
+        prevBtn.disabled = (current <= 1);
+        prevBtn.addEventListener("click", function () { goToDevIntPage(current - 1); });
+        devIntPaginationEl.appendChild(prevBtn);
+        var startPage = Math.max(1, current - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (var p = startPage; p <= endPage; p++) {
+            var pageBtn = document.createElement("button");
+            pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.addEventListener("click", (function (pageNum) {
+                return function () { goToDevIntPage(pageNum); };
+            })(p));
+            devIntPaginationEl.appendChild(pageBtn);
+        }
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "pagination-btn";
+        nextBtn.innerHTML = t("next_page");
+        nextBtn.disabled = (current >= totalPages);
+        nextBtn.addEventListener("click", function () { goToDevIntPage(current + 1); });
+        devIntPaginationEl.appendChild(nextBtn);
+    }
+
+    function renderDevIntTotalCount() {
+        devIntTotalCountEl.innerHTML = t("footer_total_dev").replace("{count}", state.devIntFiltered.length);
+    }
+
+    function goToDevIntPage(n) {
+        var totalPages = Math.max(1, Math.ceil(state.devIntFiltered.length / state.devIntPageSize));
+        if (n < 1 || n > totalPages) return;
+        state.devIntPage = n;
+        applyDevIntFiltersAndRender();
     }
 
     // ─── Devices Modal Controls ────────────────────────────────────────
@@ -2198,6 +2544,298 @@
             opt.value = filteredDps[i].id;
             opt.textContent = filteredDps[i].name;
             devProfile.appendChild(opt);
+        }
+    }
+
+    // ─── Setup Wizard Modal Controls ───────────────────────────────────
+    var wizardCurrentStep = 1;
+
+    function showBootstrapWizard() {
+        wizardCurrentStep = 1;
+        wizOrgName.value = "";
+        wizAppPrefix.value = "ag";
+        wizAppCount.value = "5";
+        wizDpPrefix.value = "profile";
+        wizDpCount.value = "5";
+        wizDevPrefix.value = "device";
+        wizDevCount.value = "5";
+        
+        wizBtnNext.disabled = false;
+        wizBtnNext.textContent = t("btn_next");
+        renderBootstrapStep();
+        bootModalOverlay.style.display = "flex";
+        setTimeout(function () { wizOrgName.focus(); }, 100);
+    }
+
+    function hideBootstrapWizard() {
+        bootModalOverlay.style.display = "none";
+    }
+
+    function renderBootstrapStep() {
+        for (var i = 1; i <= 6; i++) {
+            var pane = $("#wiz-pane-" + i);
+            if (pane) pane.style.display = "none";
+            
+            var stepIndicator = $("#wiz-step-" + i);
+            if (stepIndicator) {
+                stepIndicator.classList.remove("active");
+                stepIndicator.style.color = "var(--text-muted)";
+            }
+        }
+
+        var currentPane = $("#wiz-pane-" + wizardCurrentStep);
+        if (currentPane) currentPane.style.display = "block";
+        
+        var currentIndicator = $("#wiz-step-" + wizardCurrentStep);
+        if (currentIndicator) {
+            currentIndicator.classList.add("active");
+            currentIndicator.style.color = "var(--accent)";
+        }
+
+        setTimeout(function () {
+            if (wizardCurrentStep === 1) wizOrgName.focus();
+            else if (wizardCurrentStep === 2) wizAppPrefix.focus();
+            else if (wizardCurrentStep === 3) wizDpPrefix.focus();
+            else if (wizardCurrentStep === 4) wizDevPrefix.focus();
+        }, 100);
+
+        if (wizardCurrentStep === 1 || wizardCurrentStep === 6) {
+            wizBtnPrev.style.display = "none";
+        } else {
+            wizBtnPrev.style.display = "inline-block";
+        }
+
+        if (wizardCurrentStep === 5) {
+            // Populate Step 5 Summary
+            var sumOrg = $("#wiz-summary-org");
+            var sumApps = $("#wiz-summary-apps");
+            var sumProfiles = $("#wiz-summary-profiles");
+
+            if (sumOrg) sumOrg.textContent = wizOrgName.value.trim();
+            if (sumApps) sumApps.textContent = wizAppCount.value;
+            if (sumProfiles) sumProfiles.textContent = wizDpCount.value;
+
+            var slotsBody = $("#wiz-summary-slots-body");
+            if (slotsBody) {
+                slotsBody.innerHTML = "";
+                var devCount = parseInt(wizDevCount.value, 10) || 0;
+                var dpCount = parseInt(wizDpCount.value, 10) || 0;
+                var devPref = wizDevPrefix.value.trim() || "device";
+                var dpPref = wizDpPrefix.value.trim() || "profile";
+                var orgNameVal = wizOrgName.value.trim();
+
+                for (var sIdx = 1; sIdx <= devCount; sIdx++) {
+                    var tr = document.createElement("tr");
+                    
+                    // Profile dropdown options
+                    var dpOptionsHtml = "";
+                    for (var pIdx = 1; pIdx <= dpCount; pIdx++) {
+                        var profileDisplayName = orgNameVal + "-" + dpPref + "-" + pIdx;
+                        var isSelected = ((sIdx - 1) % dpCount === (pIdx - 1)) ? "selected" : "";
+                        dpOptionsHtml += '<option value="' + pIdx + '" ' + isSelected + '>' + escapeHtml(profileDisplayName) + '</option>';
+                    }
+
+                    // Interval dropdown options
+                    var intervalsList = [
+                        { val: "1m", label: "1 dk" },
+                        { val: "2m", label: "2 dk" },
+                        { val: "4m", label: "4 dk" },
+                        { val: "5m", label: "5 dk" },
+                        { val: "10m", label: "10 dk" }
+                    ];
+                    var intOptionsHtml = "";
+                    for (var k = 0; k < intervalsList.length; k++) {
+                        var isIntSelected = (intervalsList[k].val === "2m") ? "selected" : "";
+                        intOptionsHtml += '<option value="' + intervalsList[k].val + '" ' + isIntSelected + '>' + intervalsList[k].label + '</option>';
+                    }
+
+                    tr.innerHTML = 
+                        '<td style="padding: 6px 8px;"><strong>' + escapeHtml(devPref) + '-' + sIdx + '</strong></td>' +
+                        '<td style="padding: 6px 8px;">' +
+                            '<select class="page-size-select wiz-slot-dp-select" style="max-width: 100%; font-size:11px;" data-slot="' + sIdx + '">' +
+                                dpOptionsHtml +
+                            '</select>' +
+                        '</td>' +
+                        '<td style="padding: 6px 8px;">' +
+                            '<select class="page-size-select wiz-slot-int-select" style="max-width: 100%; font-size:11px;" data-slot="' + sIdx + '">' +
+                                intOptionsHtml +
+                            '</select>' +
+                        '</td>';
+
+                    slotsBody.appendChild(tr);
+                }
+            }
+
+            wizBtnCancel.style.display = "inline-block";
+            wizBtnNext.textContent = t("wiz_btn_confirm");
+        } else if (wizardCurrentStep === 6) {
+            wizBtnCancel.style.display = "none";
+            wizBtnNext.textContent = t("wiz_btn_close");
+            wizBtnNext.disabled = false;
+        } else {
+            wizBtnCancel.style.display = "inline-block";
+            wizBtnNext.textContent = t("btn_next");
+        }
+    }
+
+    function prevBootstrapStep() {
+        if (wizardCurrentStep > 1) {
+            wizardCurrentStep--;
+            renderBootstrapStep();
+        }
+    }
+
+    async function nextBootstrapStep() {
+        if (wizardCurrentStep === 6) {
+            hideBootstrapWizard();
+            return;
+        }
+        if (wizardCurrentStep === 1) {
+            var org = wizOrgName.value.trim();
+            if (!org) {
+                showToast("Organizasyon adı zorunludur!", "error");
+                wizOrgName.focus();
+                return;
+            }
+        } else if (wizardCurrentStep === 2) {
+            var appPref = wizAppPrefix.value.trim();
+            var appCnt = parseInt(wizAppCount.value, 10);
+            if (!appPref) {
+                showToast("Uygulama prefix'i zorunludur!", "error");
+                wizAppPrefix.focus();
+                return;
+            }
+            if (isNaN(appCnt) || appCnt < 1 || appCnt > 50) {
+                showToast("Geçerli bir ağ sayısı girin (1-50)!", "error");
+                wizAppCount.focus();
+                return;
+            }
+        } else if (wizardCurrentStep === 3) {
+            var dpPref = wizDpPrefix.value.trim();
+            var dpCnt = parseInt(wizDpCount.value, 10);
+            if (!dpPref) {
+                showToast("Profil prefix'i zorunludur!", "error");
+                wizDpPrefix.focus();
+                return;
+            }
+            if (isNaN(dpCnt) || dpCnt < 1 || dpCnt > 50) {
+                showToast("Geçerli bir profil sayısı girin (1-50)!", "error");
+                wizDpCount.focus();
+                return;
+            }
+        } else if (wizardCurrentStep === 4) {
+            var devPref = wizDevPrefix.value.trim();
+            var devCnt = parseInt(wizDevCount.value, 10);
+            if (!devPref) {
+                showToast("Cihaz prefix'i zorunludur!", "error");
+                wizDevPrefix.focus();
+                return;
+            }
+            if (isNaN(devCnt) || devCnt < 1 || devCnt > 100) {
+                showToast("Geçerli bir cihaz sayısı girin (1-100)!", "error");
+                wizDevCount.focus();
+                return;
+            }
+        } else if (wizardCurrentStep === 5) {
+            await submitBootstrap();
+            return;
+        }
+
+        wizardCurrentStep++;
+        renderBootstrapStep();
+    }
+
+    async function submitBootstrap() {
+        var payload = {
+            org_name: wizOrgName.value.trim(),
+            app_prefix: wizAppPrefix.value.trim(),
+            app_count: parseInt(wizAppCount.value, 10),
+            dp_prefix: wizDpPrefix.value.trim(),
+            dp_count: parseInt(wizDpCount.value, 10),
+            dev_prefix: wizDevPrefix.value.trim(),
+            dev_count: parseInt(wizDevCount.value, 10)
+        };
+
+        var devicesConfig = [];
+        var dpSelects = $$(".wiz-slot-dp-select");
+        var intSelects = $$(".wiz-slot-int-select");
+
+        for (var i = 0; i < dpSelects.length; i++) {
+            var slotIdx = parseInt(dpSelects[i].getAttribute("data-slot"), 10);
+            var profIdx = parseInt(dpSelects[i].value, 10);
+            var intervalVal = intSelects[i].value;
+
+            devicesConfig.push({
+                device_index: slotIdx,
+                profile_index: profIdx,
+                interval: intervalVal
+            });
+        }
+        payload.devices_config = devicesConfig;
+
+        wizBtnNext.disabled = true;
+        wizBtnNext.textContent = t("wiz_btn_creating");
+
+        try {
+            var res = await fetch("/api/bootstrap", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            var data = await res.json();
+            if (res.ok) {
+                // Populate success pane
+                var orgEl = $("#wiz-success-org");
+                var orgIdEl = $("#wiz-success-org-id");
+                var devCountEl = $("#wiz-success-dev-count");
+                
+                if (orgEl) orgEl.textContent = data.tenant_name || "";
+                if (orgIdEl) orgIdEl.textContent = data.tenant_id ? "ID: " + data.tenant_id : "";
+                if (devCountEl) devCountEl.textContent = data.devices_count || "0";
+
+                var appsList = $("#wiz-success-apps-list");
+                if (appsList) {
+                    appsList.innerHTML = "";
+                    if (data.applications) {
+                        data.applications.forEach(function (app) {
+                            var li = document.createElement("li");
+                            li.innerHTML = escapeHtml(app.name) + ' <span style="font-size:11px; opacity:0.6;">(ID: ' + escapeHtml(app.id) + ')</span>';
+                            appsList.appendChild(li);
+                        });
+                    }
+                }
+
+                var profilesList = $("#wiz-success-profiles-list");
+                if (profilesList) {
+                    profilesList.innerHTML = "";
+                    if (data.profiles) {
+                        data.profiles.forEach(function (prof) {
+                            var li = document.createElement("li");
+                            li.innerHTML = escapeHtml(prof.name) + ' <span style="font-size:11px; opacity:0.6;">(ID: ' + escapeHtml(prof.id) + ')</span>';
+                            profilesList.appendChild(li);
+                        });
+                    }
+                }
+
+                // Move to step 6 (success summary)
+                wizardCurrentStep = 6;
+                renderBootstrapStep();
+                
+                // Refresh list of organizations and intervals
+                fetchOrganizations();
+                fetchDeviceIntervals();
+            } else {
+                showToast(data.error || "Kurulum başarısız oldu!", "error");
+                wizBtnNext.disabled = false;
+                wizBtnNext.textContent = t("wiz_btn_confirm");
+            }
+        } catch (err) {
+            showToast("Bağlantı hatası oluştu: " + err.toString(), "error");
+            wizBtnNext.disabled = false;
+            wizBtnNext.textContent = t("wiz_btn_confirm");
         }
     }
 
@@ -2288,6 +2926,21 @@
             });
         });
 
+        // Device table sort
+        $$("#dev-table thead th.sortable").forEach(function (th) {
+            th.addEventListener("click", function () {
+                var key = this.getAttribute("data-sort");
+                if (state.devSort.key === key) {
+                    state.devSort.dir = state.devSort.dir === "asc" ? "desc" : "asc";
+                } else {
+                    state.devSort.key = key;
+                    state.devSort.dir = "asc";
+                }
+                state.devPage = 1;
+                applyDevFiltersAndRender();
+            });
+        });
+
         btnAddDev.addEventListener("click", showDevModal);
 
         btnRandomDevEui.addEventListener("click", function () {
@@ -2302,6 +2955,28 @@
         devModalOverlay.addEventListener("click", function (e) {
             if (e.target === devModalOverlay) hideDevModal();
         });
+
+        // Setup Wizard Event Listeners
+        if (btnTopBootstrap) {
+            btnTopBootstrap.addEventListener("click", showBootstrapWizard);
+        }
+        if (bootModalClose) {
+            bootModalClose.addEventListener("click", hideBootstrapWizard);
+        }
+        if (wizBtnCancel) {
+            wizBtnCancel.addEventListener("click", hideBootstrapWizard);
+        }
+        if (wizBtnPrev) {
+            wizBtnPrev.addEventListener("click", prevBootstrapStep);
+        }
+        if (wizBtnNext) {
+            wizBtnNext.addEventListener("click", nextBootstrapStep);
+        }
+        if (bootModalOverlay) {
+            bootModalOverlay.addEventListener("click", function (e) {
+                if (e.target === bootModalOverlay) hideBootstrapWizard();
+            });
+        }
 
         devSearchInput.addEventListener("input", function () {
             state.devSearchQuery = this.value;
@@ -2324,6 +2999,29 @@
                 state.devTenantFilter = this.value;
                 state.devPage = 1;
                 fetchDevices(state.devTenantFilter);
+            });
+        }
+
+        if (devIntSearchInput) {
+            devIntSearchInput.addEventListener("input", function () {
+                state.devIntSearchQuery = this.value;
+                state.devIntPage = 1;
+                applyDevIntFiltersAndRender();
+            });
+        }
+
+        if (devIntPageSizeSelect) {
+            devIntPageSizeSelect.addEventListener("change", function () {
+                state.devIntPageSize = parseInt(this.value, 10) || 10;
+                state.devIntPage = 1;
+                applyDevIntFiltersAndRender();
+            });
+        }
+
+        if (btnDevIntRefresh) {
+            btnDevIntRefresh.addEventListener("click", function () {
+                fetchDevices("");
+                fetchDeviceIntervals();
             });
         }
     }
@@ -2366,6 +3064,13 @@
         }
 
         el.textContent = line;
+
+        // Apply console filter if active
+        var filterVal = consoleLogFilter ? consoleLogFilter.value.trim().toLowerCase() : "";
+        if (filterVal && !line.toLowerCase().includes(filterVal)) {
+            el.style.display = "none";
+        }
+
         consoleLogContainer.appendChild(el);
 
         while (consoleLogContainer.children.length > 300) {
@@ -2401,6 +3106,22 @@
     }
 
     function bindConsoleEvents() {
+
+        if (consoleLogFilter && consoleLogContainer) {
+            consoleLogFilter.addEventListener("input", function () {
+                var filterVal = this.value.trim().toLowerCase();
+                var lines = consoleLogContainer.querySelectorAll(".console-log-line");
+                for (var i = 0; i < lines.length; i++) {
+                    var el = lines[i];
+                    if (!filterVal || el.textContent.toLowerCase().includes(filterVal)) {
+                        el.style.display = "";
+                    } else {
+                        el.style.display = "none";
+                    }
+                }
+                consoleLogContainer.scrollTop = consoleLogContainer.scrollHeight;
+            });
+        }
 
         if (btnConsoleClear && consoleLogContainer) {
             btnConsoleClear.addEventListener("click", function (e) {
@@ -2521,7 +3242,7 @@
 
                 if (r.ok) {
                     hideLoginScreen();
-                    logEntry("Kullanıcı girişi başarılı.", "success");
+                    logEntry("User login successful.", "success");
                     showToast("Giriş başarılı.", "success");
                     await loadDashboardData();
                 } else {
@@ -2548,7 +3269,7 @@
                         logSource = null;
                     }
                     if (consoleLogContainer) consoleLogContainer.innerHTML = "";
-                    logEntry("Oturum kapatıldı.", "info");
+                    logEntry("Session closed.", "info");
                     showLoginScreen();
                 } else {
                     showToast("Çıkış hatası", "error");
@@ -2563,9 +3284,9 @@
         // Health check
         var online = await checkHealth();
         if (online) {
-            logEntry("API bağlantısı kuruldu.", "success");
+            logEntry("API connection established.", "success");
         } else {
-            logEntry("API'ye bağlanılamadı! Sunucu çalışıyor mu?", "error");
+            logEntry("Failed to connect to API! Is the server running?", "error");
         }
 
         // Load organizations from ChirpStack API
@@ -2582,6 +3303,7 @@
 
         // Load devices
         await fetchDevices("");
+        await fetchDeviceIntervals();
 
         // Load connections settings
         await fetchSystemConfig();
@@ -2608,10 +3330,10 @@
             if (integrationMqttInput) integrationMqttInput.value = data.integration_mqtt_server || "";
             if (gatewayMqttInput) gatewayMqttInput.value = data.gateway_mqtt_server || "";
             
-            logEntry("Bağlantı ayarları yüklendi.", "success");
+            logEntry("Connection settings loaded.", "success");
         } else {
             var err = (r.data && r.data.error) || "Bilinmeyen hata";
-            logEntry("Bağlantı ayarları alınamadı: " + err, "error");
+            logEntry("Failed to load connection settings: " + err, "error");
         }
     }
 
@@ -2620,7 +3342,7 @@
         var r = await api("POST", "/api/config", payload);
         if (r.ok) {
             showToast("Bağlantı ayarları başarıyla kaydedildi.", "success");
-            logEntry("Bağlantı ayarları kaydedildi ve yeni bağlantılar kuruldu.", "success");
+            logEntry("Connection settings saved and new connections established.", "success");
             
             // Re-load data to ensure we pull using the new connection configuration
             await fetchOrganizations();
@@ -2635,7 +3357,7 @@
         } else {
             var err = (r.data && r.data.error) || "Bilinmeyen hata";
             showToast("Hata: " + err, "error");
-            logEntry("Bağlantı ayarları güncellenemedi: " + err, "error");
+            logEntry("Failed to update connection settings: " + err, "error");
             return false;
         }
     }
@@ -2737,11 +3459,496 @@
         });
     }
 
+    // ─── i18n Translations ──────────────────────────────────────────────
+    var translations = {
+        tr: {
+            app_title: "ChirpStack Simülatörü",
+            nav_grp_mgmt: "Yönetim",
+            nav_organizations: "Organizasyonlar",
+            nav_grp_apps: "Uygulamalar",
+            nav_networks: "Ağ Uygulamaları",
+            nav_device_profiles: "Cihaz Profilleri",
+            nav_devices: "Cihazlar",
+            nav_grp_system: "Sistem",
+            nav_settings: "Ayarlar",
+            nav_console: "Konsol",
+            nav_info: "Bilgi Notları",
+            top_bootstrap: "Yeni Oluştur",
+            top_bootstrap_title: "Hızlı Kurulum Sihirbazı",
+            top_start: "▶ Başlat",
+            top_start_title: "Simülasyonu Başlat",
+            top_stop: "■ Durdur",
+            top_stop_title: "Simülasyonu Durdur",
+            badge_no_conn: "Bağlantı Yok",
+            badge_connected: "Bağlantı Var",
+            badge_idle: "IDLE",
+            badge_running: "RUNNING",
+            badge_starting: "STARTING",
+            badge_stopping: "STOPPING",
+            theme_toggle_title: "Tema Değiştir",
+            lang_toggle_title: "Dili Değiştir (Switch Language)",
+            console_title: "Canlı Log Konsolu",
+            console_subtitle: "Simülasyon cihazlarına ait veri akışını gerçek zamanlı izleyin.",
+            console_filter_placeholder: "🔍 Cihaz veya log ara (örn: sim-dev-1)...",
+            console_clear: "🧹 Ekranı Temizle",
+            console_placeholder: "Simülasyon başlatıldığında canlı loglar burada görünecektir.",
+            info_title: "Simülasyon Çalıştırma Kılavuzu",
+            info_subtitle: "Simülatörün adım adım kullanım yönergeleri.",
+            info_step_1: "<strong>Ağ Yapılandırması:</strong> Sağ çekmeceyi açarak simülasyon ayarlarını düzenleyin ve <em>\"Ayarları Kaydet\"</em> ile kaydedin. Yeni bir ağ kurmak için üst barda bulunan <em>\"Yeni Oluştur\"</em> sihirbazını kullanabilirsiniz.",
+            info_step_2: "<strong>Simülasyonu Başlatma:</strong> Üst menüdeki yeşil <strong>\"▶ Başlat\"</strong> butonuna tıklayın. Veritabanındaki tüm organizasyonlar aynı anda paralel çalışmaya başlayacaktır.",
+            info_step_3: "<strong>Ağ Katılımı (OTAA):</strong> Cihazlar otomatik olarak ChirpStack üzerinde OTAA katılım isteği gönderir ve onaylandığında veri göndermeye başlar.",
+            info_step_4: "<strong>Canlı İzleme ve Filtreleme:</strong> <strong>\"Konsol\"</strong> sekmesinden veri akışını izleyin. Yoğun log akışında arama kutusunu kullanarak spesifik bir cihazı (örn: <code>sim-dev-1</code>) filtreleyin.",
+            info_step_5: "<strong>Süre Güncelleme:</strong> Çalışma sırasında <strong>\"Cihazlar\"</strong> listesinden veri sıklığı ayarını (örn: 4 dk) değiştirin. Sistem simülatörü otomatik olarak durdurup yeni ayarla kesintisiz yeniden başlatacaktır.",
+            info_step_6: "<strong>Simülasyonu Durdurma:</strong> İstediğiniz zaman üst menüdeki kırmızı <strong>\"🛑 Durdur\"</strong> butonuna basarak tüm cihazları pasif konuma çekebilirsiniz.",
+            
+            // New Localization Keys
+            title_overview: "Organizasyonlar",
+            subtitle_overview: "Sistemdeki ana organizasyonları ve üst çatı yapıları yönetin.",
+            btn_add_org: "+ Yeni Organizasyon Ekle",
+            placeholder_search_org: "Organizasyon ara...",
+            table_org_name: "Organizasyon Adı",
+            table_org_status: "Durum",
+            table_org_id: "ID",
+            table_org_net_count: "Ağ Sayısı",
+            table_org_dp_count: "Profil Sayısı",
+            table_org_dev_count: "Cihaz Sayısı",
+            table_org_date: "Kayıt Tarihi",
+            table_actions: "İşlemler",
+            empty_state_org_title: "Henüz organizasyon yok",
+            empty_state_org_text: "Üst bardaki \"Yeni Oluştur\" butonuyla hızlı kurulum yapabilirsiniz.",
+            footer_page_size: "Sayfa Başına:",
+            footer_total_org: "Toplam: <strong>{count}</strong> Organizasyon",
+
+            title_networks: "Ağ Uygulamaları",
+            subtitle_networks: "ChirpStack tenant'larına ait LoRaWAN uygulamalarını yönetin.",
+            btn_add_net: "+ Yeni Uygulama",
+            select_all_tenants: "Tüm Tenant'lar",
+            placeholder_search_net: "Uygulama ara...",
+            table_net_name: "Uygulama Adı",
+            table_net_org: "Organizasyon",
+            empty_state_net_title: "Henüz uygulama yok",
+            empty_state_net_text: "Üst bardaki \"Yeni Oluştur\" butonuyla hızlı kurulum yapabilirsiniz.",
+            footer_total_net: "Toplam: <strong>{count}</strong> Uygulama",
+
+            title_dp: "Cihaz Profilleri",
+            subtitle_dp: "ChirpStack tenant'larına ait LoRaWAN cihaz profillerini yönetin.",
+            btn_add_dp: "+ Yeni Cihaz Profili",
+            placeholder_search_dp: "Cihaz profili ara...",
+            table_dp_name: "Profil Adı",
+            table_dp_org: "Organizasyon",
+            table_dp_region: "Bölge",
+            table_dp_mac: "MAC Versiyon",
+            table_dp_otaa: "OTAA",
+            empty_state_dp_title: "Henüz cihaz profili yok",
+            empty_state_dp_text: "Üst bardaki \"Yeni Oluştur\" butonuyla hızlı kurulum yapabilirsiniz.",
+            footer_total_dp: "Toplam: <strong>{count}</strong> Profil",
+
+            title_dev: "Cihazlar",
+            subtitle_dev: "ChirpStack uygulamalarına ait LoRaWAN cihazlarını yönetin.",
+            btn_add_dev: "+ Yeni Cihaz",
+            placeholder_search_dev: "Cihaz ara...",
+            table_dev_name: "Cihaz Adı",
+            table_dev_org: "Organizasyon",
+            table_dev_deveui: "DevEUI",
+            table_dev_profile: "Cihaz Profili",
+            table_dev_interval: "Sıklık",
+            empty_state_dev_title: "Henüz cihaz yok",
+            empty_state_dev_text: "Üst bardaki \"Yeni Oluştur\" butonuyla hızlı kurulum yapabilirsiniz.",
+            footer_total_dev: "Toplam: <strong>{count}</strong> Cihaz",
+
+            title_settings: "Ayarlar",
+            subtitle_settings: "Sistem, bağlantı ve konsol ayarlarını yönetin.",
+            settings_grp_account: "Hesap & Sistem",
+            settings_tab_general: "Genel Ayarlar",
+            settings_tab_connections: "Bağlantı Ayarları",
+            settings_tab_theme: "Konsol Teması",
+            settings_tab_logs: "Sistem Logları",
+            settings_tab_guide: "Simülasyon Rehberi",
+            settings_title_general: "Genel Simülasyon Ayarları",
+            settings_sec_rf: "RF Parametreleri",
+            settings_lbl_freq: "Frekans (Hz)",
+            settings_lbl_bw: "Bant Genişliği (Hz)",
+            settings_lbl_sf: "Spreading Factor",
+            settings_sec_telemetry: "Telemetri Ayarları",
+            settings_lbl_uplink_int: "Uplink Aralığı",
+            settings_lbl_fport: "FPort",
+            settings_lbl_payload: "Payload (hex)",
+            settings_sec_timing: "Zamanlama Parametreleri",
+            settings_lbl_duration: "Süre (0=süresiz)",
+            settings_lbl_act_time: "Aktivasyon Süresi",
+            settings_sec_mqtt: "MQTT Topic Şablonları",
+            settings_lbl_evt_topic: "Event Topic Şablonu",
+            settings_lbl_cmd_topic: "Command Topic Şablonu",
+            settings_title_connections: "ChirpStack & Broker Bağlantı Ayarları",
+            settings_sec_cs_api: "ChirpStack API",
+            settings_lbl_api_host: "ChirpStack API Sunucusu (Host:Port)",
+            settings_lbl_api_key: "API Anahtarı (JWT Token)",
+            settings_lbl_api_insecure: "Güvensiz Bağlantı (Insecure/TLS'siz)",
+            settings_sec_mqtt_brokers: "MQTT Broker Bağlantıları",
+            settings_lbl_conn_save: "Kaydet ve Bağlan",
+            settings_title_theme: "Konsol Tema Ayarları",
+            settings_lbl_theme_presets: "Hazır Temalar (Presets)",
+            settings_lbl_preview_mode: "Önizleme Modu",
+            settings_mode_dark: "Koyu Mod",
+            settings_mode_light: "Açık Mod",
+            settings_lbl_color_palette: "Renk Paleti (Swatches)",
+            settings_lbl_preview: "Önizleme (Live Preview)",
+            settings_btn_theme_reset: "Varsayılana Sıfırla",
+            settings_btn_theme_save: "✓ Temayı Kaydet ve Uygula",
+            settings_title_logs: "Sistem Logları",
+            settings_lang_section: "Uygulama Dili",
+            settings_lang_label: "Varsayılan Dil (Language)",
+
+            modal_add_org_title: "Yeni Organizasyon Ekle",
+            modal_add_org_name: "Organizasyon Adı *",
+            modal_add_org_name_placeholder: "Örn: Test Organizasyonu",
+            modal_add_org_name_placeholder_wiz: "Örn: Kullanici-X",
+            modal_add_org_ref: "Referans ID (opsiyonel)",
+            modal_add_org_ref_placeholder: "Boş bırakılırsa ChirpStack otomatik oluşturur",
+            modal_add_org_ref_hint: "Sadece referans amaçlıdır. ChirpStack kendi ID'sini üretir.",
+            modal_add_org_desc: "Açıklama (isteğe bağlı)",
+            modal_add_org_desc_placeholder: "Örn: Test amaçlı organizasyon",
+            btn_cancel: "İptal",
+            btn_save: "Kaydet",
+            btn_prev: "Geri",
+            btn_next: "İleri",
+
+            modal_add_dp_title: "Yeni Cihaz Profili",
+            modal_add_dp_tenant: "Tenant *",
+            modal_add_dp_desc: "Açıklama (opsiyonel)",
+            modal_add_dp_desc_placeholder: "Profil açıklaması",
+            modal_add_dp_reg_params: "Bölgesel Parametreler *",
+            modal_add_dp_adr: "ADR Algoritması",
+            modal_add_dp_otaa_check: "OTAA (Over-The-Air Activation) destekler",
+            modal_add_dp_class_b_check: "Class B destekler",
+            modal_add_dp_class_c_check: "Class C destekler",
+            modal_add_dp_name_placeholder: "Örn: EU868 OTAA Profili",
+
+            modal_add_net_title: "Yeni Uygulama Ekle",
+            modal_add_net_tenant: "Tenant (Organizasyon) *",
+            modal_add_net_desc: "Açıklama (opsiyonel)",
+            modal_add_net_desc_placeholder: "Uygulama açıklaması",
+            modal_add_net_name_placeholder: "Örn: Sensor Ağı",
+
+            modal_add_dev_title: "Yeni Cihaz Ekle",
+            modal_add_dev_eui_label: "DevEUI * (16 hex karakter)",
+            modal_add_dev_app: "Uygulama *",
+            modal_add_dev_select_app_first: "Önce uygulama seçin",
+            modal_add_dev_desc: "Açıklama (opsiyonel)",
+            modal_add_dev_desc_placeholder: "Cihaz açıklaması",
+            modal_add_dev_name_placeholder: "Örn: Sensor-001",
+
+            wiz_step_1: "1. Organizasyon",
+            wiz_step_2: "2. Ağ",
+            wiz_step_3: "3. Cihaz Profili",
+            wiz_step_4: "4. Cihaz",
+            wiz_step_5: "5. Özet",
+            wiz_org_hint: "Oluşturulacak yeni tenant/organizasyon adı.",
+            wiz_app_prefix: "Ağ Uygulaması Prefix *",
+            wiz_app_count: "Oluşturulacak Ağ Sayısı *",
+            wiz_app_count_hint: "Örn: Kullanici-X-ag-1, Kullanici-X-ag-2...",
+            wiz_dp_prefix: "Cihaz Profili Ön Eki *",
+            wiz_dp_count: "Oluşturulacak Profil Sayısı *",
+            wiz_dp_count_hint: "Örn: Kullanici-X-profile-1, Kullanici-X-profile-2...",
+            wiz_dev_prefix: "Cihaz Prefix *",
+            wiz_dev_count: "Her Ağdaki Cihaz Sayısı *",
+            wiz_dev_count_hint: "Her bir ağ uygulamasında oluşturulacak cihaz adedi.",
+            wiz_summary_title: "Oluşturulacak Yapılandırma Özeti",
+            wiz_summary_subtitle: "Lütfen oluşturulacak cihazlar için veri sıklığı (Interval) ve profil (Profile) atamalarını özelleştirip onaylayın.",
+            wiz_summary_org_lbl: "Org:",
+            wiz_summary_net_lbl: "Ağ:",
+            wiz_summary_dp_lbl: "Profil:",
+            wiz_summary_unit: "adet",
+            wiz_table_dev_template: "Cihaz Şablonu",
+            wiz_summary_confirm_text: "Bu kurulumu onaylıyor musunuz?",
+            wiz_success_title: "Kurulum Başarıyla Tamamlandı",
+            wiz_success_subtitle: "ChirpStack üzerinden oluşturma teyit raporu",
+            wiz_success_org_lbl: "Organizasyon:",
+            wiz_success_total_dev_lbl: "Toplam Cihaz:",
+            wiz_success_dev_created_unit: "adet cihaz oluşturuldu.",
+            wiz_success_net_created_lbl: "Oluşturulan Ağ Uygulamaları:",
+            wiz_success_dp_created_lbl: "Oluşturulan Cihaz Profilleri:",
+            wiz_btn_confirm: "Onayla ve Oluştur",
+            wiz_btn_close: "Kapat",
+            wiz_btn_creating: "Oluşturuluyor..."
+        },
+        en: {
+            app_title: "ChirpStack Simulator",
+            nav_grp_mgmt: "Management",
+            nav_organizations: "Organizations",
+            nav_grp_apps: "Applications",
+            nav_networks: "Network Applications",
+            nav_device_profiles: "Device Profiles",
+            nav_devices: "Devices",
+            nav_grp_system: "System",
+            nav_settings: "Settings",
+            nav_console: "Console",
+            nav_info: "Info Notes",
+            top_bootstrap: "Create New",
+            top_bootstrap_title: "Quick Setup Wizard",
+            top_start: "▶ Start",
+            top_start_title: "Start Simulation",
+            top_stop: "■ Stop",
+            top_stop_title: "Stop Simulation",
+            badge_no_conn: "No Connection",
+            badge_connected: "Connected",
+            badge_idle: "IDLE",
+            badge_running: "RUNNING",
+            badge_starting: "STARTING",
+            badge_stopping: "STOPPING",
+            theme_toggle_title: "Change Theme",
+            lang_toggle_title: "Switch Language (Dili Değiştir)",
+            console_title: "Live Log Console",
+            console_subtitle: "Monitor real-time data streams from simulated devices.",
+            console_filter_placeholder: "🔍 Search devices or logs (e.g. sim-dev-1)...",
+            console_clear: "🧹 Clear Screen",
+            console_placeholder: "Live logs will appear here when simulation starts.",
+            info_title: "Simulation Operation Guide",
+            info_subtitle: "Step-by-step simulator usage guidelines.",
+            info_step_1: "<strong>Network Configuration:</strong> Open the right drawer to edit simulation settings and save with <em>\"Save Settings\"</em>. You can use the <em>\"Create New\"</em> wizard in the top bar to set up a network from scratch.",
+            info_step_2: "<strong>Start Simulation:</strong> Click the green <strong>\"▶ Start\"</strong> button in the top menu. All organizations in the database will start running concurrently in parallel.",
+            info_step_3: "<strong>Network Join (OTAA):</strong> Devices automatically send an OTAA join request to ChirpStack and begin sending data once activated.",
+            info_step_4: "<strong>Live Monitoring & Filtering:</strong> Watch the data stream in the <strong>\"Console\"</strong> tab. In busy streams, use the search box to filter for a specific device (e.g. <code>sim-dev-1</code>).",
+            info_step_5: "<strong>Interval Update:</strong> Change the sending frequency of any device in the <strong>\"Devices\"</strong> table while running (e.g., 4 min). The system will automatically stop the simulator, save, and restart it seamlessly.",
+            info_step_6: "<strong>Stop Simulation:</strong> Click the red <strong>\"🛑 Stop\"</strong> button in the top menu at any time to set all devices to passive mode.",
+            
+            // New Localization Keys
+            title_overview: "Organizations",
+            subtitle_overview: "Manage main organizations and tenants in the system.",
+            btn_add_org: "+ Add New Organization",
+            placeholder_search_org: "Search organizations...",
+            table_org_name: "Organization Name",
+            table_org_status: "Status",
+            table_org_id: "ID",
+            table_org_net_count: "Networks Count",
+            table_org_dp_count: "Profiles Count",
+            table_org_dev_count: "Devices Count",
+            table_org_date: "Registration Date",
+            table_actions: "Actions",
+            empty_state_org_title: "No organizations yet",
+            empty_state_org_text: "You can perform a quick setup using the \"Create New\" button in the top bar.",
+            footer_page_size: "Per Page:",
+            footer_total_org: "Total: <strong>{count}</strong> Organizations",
+
+            title_networks: "Network Applications",
+            subtitle_networks: "Manage LoRaWAN applications belonging to ChirpStack tenants.",
+            btn_add_net: "+ New Application",
+            select_all_tenants: "All Tenants",
+            placeholder_search_net: "Search applications...",
+            table_net_name: "Application Name",
+            table_net_org: "Organization",
+            empty_state_net_title: "No applications yet",
+            empty_state_net_text: "You can perform a quick setup using the \"Create New\" button in the top bar.",
+            footer_total_net: "Total: <strong>{count}</strong> Applications",
+
+            title_dp: "Device Profiles",
+            subtitle_dp: "Manage LoRaWAN device profiles belonging to ChirpStack tenants.",
+            btn_add_dp: "+ New Device Profile",
+            placeholder_search_dp: "Search device profiles...",
+            table_dp_name: "Profile Name",
+            table_dp_org: "Organization",
+            table_dp_region: "Region",
+            table_dp_mac: "MAC Version",
+            table_dp_otaa: "OTAA",
+            empty_state_dp_title: "No device profiles yet",
+            empty_state_dp_text: "You can perform a quick setup using the \"Create New\" button in the top bar.",
+            footer_total_dp: "Total: <strong>{count}</strong> Profiles",
+
+            title_dev: "Devices",
+            subtitle_dev: "Manage LoRaWAN devices belonging to ChirpStack applications.",
+            btn_add_dev: "+ New Device",
+            placeholder_search_dev: "Search devices...",
+            table_dev_name: "Device Name",
+            table_dev_org: "Organization",
+            table_dev_deveui: "DevEUI",
+            table_dev_profile: "Device Profile",
+            table_dev_interval: "Interval",
+            empty_state_dev_title: "No devices yet",
+            empty_state_dev_text: "You can perform a quick setup using the \"Create New\" button in the top bar.",
+            footer_total_dev: "Total: <strong>{count}</strong> Devices",
+
+            title_settings: "Settings",
+            subtitle_settings: "Manage system, connection, and console settings.",
+            settings_grp_account: "Account & System",
+            settings_tab_general: "General Settings",
+            settings_tab_connections: "Connection Settings",
+            settings_tab_theme: "Console Theme",
+            settings_tab_logs: "System Logs",
+            settings_tab_guide: "Simulation Guide",
+            settings_title_general: "General Simulation Settings",
+            settings_sec_rf: "RF Parameters",
+            settings_lbl_freq: "Frequency (Hz)",
+            settings_lbl_bw: "Bandwidth (Hz)",
+            settings_lbl_sf: "Spreading Factor",
+            settings_sec_telemetry: "Telemetry Settings",
+            settings_lbl_uplink_int: "Uplink Interval",
+            settings_lbl_fport: "FPort",
+            settings_lbl_payload: "Payload (hex)",
+            settings_sec_timing: "Timing Parameters",
+            settings_lbl_duration: "Duration (0=infinite)",
+            settings_lbl_act_time: "Activation Time",
+            settings_sec_mqtt: "MQTT Topic Templates",
+            settings_lbl_evt_topic: "Event Topic Template",
+            settings_lbl_cmd_topic: "Command Topic Template",
+            settings_title_connections: "ChirpStack & Broker Connection Settings",
+            settings_sec_cs_api: "ChirpStack API",
+            settings_lbl_api_host: "ChirpStack API Server (Host:Port)",
+            settings_lbl_api_key: "API Key (JWT Token)",
+            settings_lbl_api_insecure: "Insecure Connection (Without TLS)",
+            settings_sec_mqtt_brokers: "MQTT Broker Connections",
+            settings_lbl_conn_save: "Save and Connect",
+            settings_title_theme: "Console Theme Settings",
+            settings_lbl_theme_presets: "Presets",
+            settings_lbl_preview_mode: "Preview Mode",
+            settings_mode_dark: "Dark Mode",
+            settings_mode_light: "Light Mode",
+            settings_lbl_color_palette: "Color Palette (Swatches)",
+            settings_lbl_preview: "Live Preview",
+            settings_btn_theme_reset: "Reset to Default",
+            settings_btn_theme_save: "✓ Save & Apply Theme",
+            settings_title_logs: "System Logs",
+            settings_lang_section: "Application Language",
+            settings_lang_label: "Language",
+
+            modal_add_org_title: "Add New Organization",
+            modal_add_org_name: "Organization Name *",
+            modal_add_org_name_placeholder: "e.g. Test Organization",
+            modal_add_org_name_placeholder_wiz: "e.g. User-X",
+            modal_add_org_ref: "Reference ID (optional)",
+            modal_add_org_ref_placeholder: "Leave empty for auto-generation",
+            modal_add_org_ref_hint: "For reference only. ChirpStack generates its own ID.",
+            modal_add_org_desc: "Description (optional)",
+            modal_add_org_desc_placeholder: "e.g. Organization for testing",
+            btn_cancel: "Cancel",
+            btn_save: "Save",
+            btn_prev: "Back",
+            btn_next: "Next",
+
+            modal_add_dp_title: "New Device Profile",
+            modal_add_dp_tenant: "Tenant *",
+            modal_add_dp_desc: "Description (optional)",
+            modal_add_dp_desc_placeholder: "Profile description",
+            modal_add_dp_reg_params: "Regional Parameters *",
+            modal_add_dp_adr: "ADR Algorithm",
+            modal_add_dp_otaa_check: "Supports OTAA (Over-The-Air Activation)",
+            modal_add_dp_class_b_check: "Supports Class B",
+            modal_add_dp_class_c_check: "Supports Class C",
+            modal_add_dp_name_placeholder: "e.g. EU868 OTAA Profile",
+
+            modal_add_net_title: "Add New Application",
+            modal_add_net_tenant: "Tenant (Organization) *",
+            modal_add_net_desc: "Description (optional)",
+            modal_add_net_desc_placeholder: "Application description",
+            modal_add_net_name_placeholder: "e.g. Sensor Network",
+
+            modal_add_dev_title: "Add New Device",
+            modal_add_dev_eui_label: "DevEUI * (16 hex chars)",
+            modal_add_dev_app: "Application *",
+            modal_add_dev_select_app_first: "Select application first",
+            modal_add_dev_desc: "Description (optional)",
+            modal_add_dev_desc_placeholder: "Device description",
+            modal_add_dev_name_placeholder: "e.g. Sensor-001",
+
+            wiz_step_1: "1. Organization",
+            wiz_step_2: "2. Network",
+            wiz_step_3: "3. Profile",
+            wiz_step_4: "4. Device",
+            wiz_step_5: "5. Summary",
+            wiz_org_hint: "New tenant/organization name to be created.",
+            wiz_app_prefix: "Network Application Prefix *",
+            wiz_app_count: "Networks to Create *",
+            wiz_app_count_hint: "e.g. User-X-ag-1, User-X-ag-2...",
+            wiz_dp_prefix: "Device Profile Prefix *",
+            wiz_dp_count: "Profiles to Create *",
+            wiz_dp_count_hint: "e.g. User-X-profile-1, User-X-profile-2...",
+            wiz_dev_prefix: "Device Prefix *",
+            wiz_dev_count: "Devices per Network *",
+            wiz_dev_count_hint: "Number of devices to create in each network application.",
+            wiz_summary_title: "Configuration Summary",
+            wiz_summary_subtitle: "Please customize LoRaWAN uplink intervals and profiles before confirming.",
+            wiz_summary_org_lbl: "Org:",
+            wiz_summary_net_lbl: "Net:",
+            wiz_summary_dp_lbl: "Profile:",
+            wiz_summary_unit: "qty",
+            wiz_table_dev_template: "Device Template",
+            wiz_summary_confirm_text: "Do you confirm this setup?",
+            wiz_success_title: "Setup Completed Successfully",
+            wiz_success_subtitle: "ChirpStack creation confirmation report",
+            wiz_success_org_lbl: "Organization:",
+            wiz_success_total_dev_lbl: "Total Devices:",
+            wiz_success_dev_created_unit: "devices created.",
+            wiz_success_net_created_lbl: "Created Network Applications:",
+            wiz_success_dp_created_lbl: "Created Device Profiles:",
+            wiz_btn_confirm: "Confirm & Create",
+            wiz_btn_close: "Close",
+            wiz_btn_creating: "Creating..."
+        }
+    };
+
+    function t(key) {
+        var lang = state.language || "tr";
+        var dict = translations[lang] || translations["tr"];
+        return dict[key] || key;
+    }
+
+    function translateDOM() {
+        var elements = document.querySelectorAll("[data-i18n]");
+        elements.forEach(function (el) {
+            var key = el.getAttribute("data-i18n");
+            var translation = t(key);
+            if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+                el.placeholder = translation;
+            } else if (el.tagName === "OPTION") {
+                el.textContent = translation;
+            } else {
+                if (el.getAttribute("data-i18n-html") === "true") {
+                    el.innerHTML = translation;
+                } else {
+                    el.textContent = translation;
+                }
+            }
+        });
+
+        var placeholders = document.querySelectorAll("[data-i18n-placeholder]");
+        placeholders.forEach(function (el) {
+            var key = el.getAttribute("data-i18n-placeholder");
+            el.placeholder = t(key);
+        });
+
+        var titles = document.querySelectorAll("[data-i18n-title]");
+        titles.forEach(function (el) {
+            var key = el.getAttribute("data-i18n-title");
+            el.title = t(key);
+        });
+
+        document.title = t("app_title");
+    }
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
         bindSettingsEvents();
         bindAuthEvents();
         initSettingsSubTabs();
+        
+        // Language Selector dropdown change listener
+        if (appLanguageSelect) {
+            appLanguageSelect.value = state.language;
+            appLanguageSelect.addEventListener("change", function (e) {
+                state.language = this.value;
+                localStorage.setItem("sim_language", state.language);
+                translateDOM();
+                updatePageTitle();
+                // Refresh dynamic tables to apply translations
+                applyFiltersAndRender();
+                applyDpFiltersAndRender();
+                applyNetFiltersAndRender();
+                applyDevFiltersAndRender();
+            });
+        }
+
+        // Apply translations on load
+        translateDOM();
+        updatePageTitle();
         
         // Load saved console/system theme
         var savedTheme = localStorage.getItem("console-custom-theme");

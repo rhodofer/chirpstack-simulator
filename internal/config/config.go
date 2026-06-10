@@ -64,6 +64,7 @@ type SimulatorConfig struct {
 	DeviceNamePrefix string                 `mapstructure:"device_name_prefix" toml:"device_name_prefix"`
 	Device           SimulatorDeviceConfig  `mapstructure:"device" toml:"device"`
 	Gateway          SimulatorGatewayConfig `mapstructure:"gateway" toml:"gateway"`
+	DeviceIntervals  map[string]time.Duration `mapstructure:"device_intervals" toml:"device_intervals"`
 }
 
 type PrometheusConfig struct {

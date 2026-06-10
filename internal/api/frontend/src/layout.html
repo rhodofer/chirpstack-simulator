@@ -30,6 +30,8 @@
 
 {{TAB_CONSOLE}}
 
+{{TAB_INFO}}
+
             </div><!-- /.main-scroll -->
         </main>
     </div>
@@ -39,6 +41,12 @@
 {{MODALS}}
 
 {{LOGIN}}
+
+    <!-- ═══ LOCK OVERLAY ════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="loading-lock-overlay" style="display:none; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.75);">
+        <div class="spinner-loader"></div>
+        <div class="lock-message" id="loading-lock-message">Simülatör yeniden başlatılıyor...</div>
+    </div>
 
     <script src="app.js?v=5"></script>
 </body>

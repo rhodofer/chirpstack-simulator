@@ -267,19 +267,25 @@ Simülatör web arayüzü varsayılan olarak **`9002`** portundan yayın yapar (
 - Web UI: `http://localhost:9002`
 
 ### 3. Local Development vs Docker Environment
-Arayüz statik dosyaları (`index.html`, `style.css`, `app.js` dosyaları `internal/api/frontend/` klasörü altındadır) derleme (build) sırasında binary içerisine gömüldüğü (`go:embed` yöntemiyle) için, arayüz değişikliklerinin yansıması için **yeniden derleme (build) yapılması zorunludur.**
-- **Docker Compose (Önerilen/Varsayılan):** Simülatörü docker-compose üzerinden çalıştırıyorsanız, yerelde yaptığınız arayüz değişikliklerinin docker imajında aktif olması için docker konteynerini yeniden başlatmanız yeterlidir (konteyner başlarken otomatik derleme yapar):
+  Arayüz statik dosyaları (`index.html`, `style.css`, `app.js` dosyaları `internal/api/frontend/` klasörü altındadır) derleme (build) sırasında binary içerisine gömüldüğü (`go:embed` yöntemiyle) için, arayüz değişikliklerinin yansıması için **yeniden derleme (build) yapılması zorunludur.**
+
+  **Önemli Not (Modüler HTML Bileşenleri):** Eğer `internal/api/frontend/src/` dizini altındaki modüler HTML şablonlarında (örn: `sidebar.html`, `tabs/settings.html` vb.) değişiklik yaptıysanız, projeyi derlemeden veya konteyneri yeniden başlatmadan önce bu değişiklikleri `index.html` dosyasına derlemek için yerel makinenizde **Python 3** kullanarak şu komutu çalıştırmalısınız:
   ```powershell
-  docker-compose restart
+  python internal/api/frontend/build.py
   ```
-- **Local Windows Binary (Yerel Çalıştırma):** Simülatörü yerel Windows terminalinizden çalıştırmak istiyorsanız:
-  ```powershell
-  # Windows exe derleme
-  go build -ldflags "-s -w -X main.version=1.0.0" -o build/chirpstack-simulator.exe cmd/chirpstack-simulator/main.go
-  
-  # Çalıştırma
-  .\build\chirpstack-simulator.exe --config simulator.toml
-  ```
+
+  - **Docker Compose (Önerilen/Varsayılan):** Simülatörü docker-compose üzerinden çalıştırıyorsanız, yerelde yaptığınız arayüz değişikliklerinin docker imajında aktif olması için docker konteynerini yeniden başlatmanız yeterlidir (konteyner başlarken otomatik derleme yapar):
+    ```powershell
+    docker-compose restart
+    ```
+  - **Local Windows Binary (Yerel Çalıştırma):** Simülatörü yerel Windows terminalinizden çalıştırmak istiyorsanız:
+    ```powershell
+    # Windows exe derleme
+    go build -ldflags "-s -w -X main.version=1.0.0" -o build/chirpstack-simulator.exe cmd/chirpstack-simulator/main.go
+    
+    # Çalıştırma
+    .\build\chirpstack-simulator.exe --config simulator.toml
+    ```
 
 ### 4. Tenant-Scoped Filtering (Tenant Bazlı Filtreleme)
 Simülatör API'si global filtreleme ve tenant-scoped veri erişimini destekler:
