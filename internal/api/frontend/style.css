@@ -121,8 +121,7 @@ body.light-theme .log-entry {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-body.light-theme .btn-success,
-body.light-theme .btn-primary {
+body.light-theme .btn-success {
     color: #ffffff;
 }
 
@@ -501,7 +500,7 @@ body {
 .btn-danger { background: var(--red); color: #fff; }
 .btn-danger:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
 
-.btn-primary { background: var(--accent); color: #000; }
+.btn-primary { background: var(--accent); color: var(--accent-fg); }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
 
 .btn-secondary {
@@ -1553,7 +1552,7 @@ body.light-theme .console-log-line {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 10% 20%, var(--bg-deepest) 0%, var(--bg) 100%);
+    background: var(--bg-deepest);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1580,28 +1579,7 @@ body.light-theme .console-log-line {
 
 /* Glow Orbs */
 .glow-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.15;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.orb-1 {
-    width: 300px;
-    height: 300px;
-    background: var(--accent);
-    top: -50px;
-    left: -50px;
-}
-
-.orb-2 {
-    width: 400px;
-    height: 400px;
-    background: var(--ansi-4);
-    bottom: -100px;
-    right: -100px;
+    display: none;
 }
 
 /* Left Hero section */
@@ -1626,16 +1604,13 @@ body.light-theme .console-log-line {
 .landing-logo-icon {
     font-size: 2rem;
     color: var(--accent);
-    filter: drop-shadow(0 0 10px var(--accent-soft));
 }
 
 .landing-logo-text {
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--text) 0%, var(--text-dim) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text);
 }
 
 .landing-title {
@@ -1644,9 +1619,7 @@ body.light-theme .console-log-line {
     line-height: 1.25;
     margin-bottom: 20px;
     letter-spacing: -0.8px;
-    background: linear-gradient(135deg, var(--text) 0%, var(--text-dim) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text);
 }
 
 .landing-subtitle {
@@ -1897,8 +1870,8 @@ body.light-theme .console-log-line {
 }
 
 .btn-console-mode.active {
-    background: var(--accent-dim);
-    color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-fg);
     border-color: var(--accent);
 }
 
@@ -1976,7 +1949,7 @@ body.light-theme .console-log-line {
 
 .settings-sidebar-link.active {
     background: var(--accent) !important;
-    color: #ffffff !important;
+    color: var(--accent-fg) !important;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), 0 2px 4px var(--accent-soft);
 }
 

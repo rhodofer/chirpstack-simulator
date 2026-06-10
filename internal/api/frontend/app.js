@@ -381,6 +381,7 @@
         var accent = cu;
         var accentHover = adjustColorBrightness(cu, isLight ? -10 : 10);
         var accentSoft = "rgba(" + hexToRgb(cu) + ", 0.12)";
+        var accentFg = isLightColor(accent) ? "#0f172a" : "#ffffff";
 
         var green = normalizeHex(themeObj[2] || themeObj[10] || "#22c55e");
         var red = normalizeHex(themeObj[1] || themeObj[9] || "#ef4444");
@@ -403,6 +404,7 @@
         root.style.setProperty("--accent", accent);
         root.style.setProperty("--accent-hover", accentHover);
         root.style.setProperty("--accent-soft", accentSoft);
+        root.style.setProperty("--accent-fg", accentFg);
 
         root.style.setProperty("--green", green);
         root.style.setProperty("--red", red);
@@ -413,6 +415,13 @@
         for (var i = 0; i <= 15; i++) {
             var val = themeObj[i] || presets["falt-cosmic"][i];
             root.style.setProperty("--ansi-" + i, normalizeHex(val));
+        }
+
+        // Apply/remove light-theme class on body
+        if (isLight) {
+            document.body.classList.add("light-theme");
+        } else {
+            document.body.classList.remove("light-theme");
         }
     }
 
@@ -1486,23 +1495,55 @@
     function toggleTheme() {
         var isLight = isLightColor(activeTheme.bg);
         if (isLight) {
-            var savedPreset = localStorage.getItem("console-custom-preset") || "falt-cosmic";
-            if (savedPreset === "custom" || isLightColor(presets[savedPreset] ? presets[savedPreset].bg : "#000000")) {
-                savedPreset = "falt-cosmic";
+            // Switching from light mode to dark mode.
+            // Restore last active dark preset
+            var savedPreset = localStorage.getItem("console-last-dark-preset") || "solarized-dark";
+            var savedThemeStr = localStorage.getItem("console-last-dark-theme");
+            
+            if (savedPreset === "custom" && savedThemeStr) {
+                currentPreset = "custom";
+                activeTheme = JSON.parse(savedThemeStr);
+            } else {
+                if (!presets[savedPreset]) {
+                    savedPreset = "solarized-dark";
+                }
+                currentPreset = savedPreset;
+                activeTheme = Object.assign({}, presets[savedPreset]);
             }
-            currentPreset = savedPreset;
-            activeTheme = Object.assign({}, presets[savedPreset]);
         } else {
-            currentPreset = "solarized-light";
-            activeTheme = Object.assign({}, presets["solarized-light"]);
+            // Switching from dark mode to light mode.
+            // Restore last active light preset
+            var savedPreset = localStorage.getItem("console-last-light-preset") || "solarized-light";
+            var savedThemeStr = localStorage.getItem("console-last-light-theme");
+            
+            if (savedPreset === "custom" && savedThemeStr) {
+                currentPreset = "custom";
+                activeTheme = JSON.parse(savedThemeStr);
+            } else {
+                if (!presets[savedPreset]) {
+                    savedPreset = "solarized-light";
+                }
+                currentPreset = savedPreset;
+                activeTheme = Object.assign({}, presets[savedPreset]);
+            }
         }
         applyTheme(activeTheme);
         updateInputs(activeTheme);
 
+        // Save current active theme
         localStorage.setItem("console-custom-theme", JSON.stringify(activeTheme));
         localStorage.setItem("console-custom-preset", currentPreset);
 
+        // Update respective last-mode variables
         var currentIsLight = isLightColor(activeTheme.bg);
+        if (currentIsLight) {
+            localStorage.setItem("console-last-light-preset", currentPreset);
+            localStorage.setItem("console-last-light-theme", JSON.stringify(activeTheme));
+        } else {
+            localStorage.setItem("console-last-dark-preset", currentPreset);
+            localStorage.setItem("console-last-dark-theme", JSON.stringify(activeTheme));
+        }
+
         themeToggle.textContent = currentIsLight ? "☀" : "🌙";
     }
 
@@ -3407,6 +3448,16 @@
             btnSave.addEventListener("click", function () {
                 localStorage.setItem("console-custom-theme", JSON.stringify(activeTheme));
                 localStorage.setItem("console-custom-preset", currentPreset);
+                
+                var isLight = isLightColor(activeTheme.bg);
+                if (isLight) {
+                    localStorage.setItem("console-last-light-preset", currentPreset);
+                    localStorage.setItem("console-last-light-theme", JSON.stringify(activeTheme));
+                } else {
+                    localStorage.setItem("console-last-dark-preset", currentPreset);
+                    localStorage.setItem("console-last-dark-theme", JSON.stringify(activeTheme));
+                }
+                
                 window.location.reload();
             });
         }
@@ -3960,6 +4011,20 @@
             } catch(e) {}
         }
         applyTheme(activeTheme);
+
+        // Populate last-dark/last-light if they don't exist
+        var isLight = isLightColor(activeTheme.bg);
+        if (isLight) {
+            if (!localStorage.getItem("console-last-light-preset")) {
+                localStorage.setItem("console-last-light-preset", currentPreset);
+                localStorage.setItem("console-last-light-theme", JSON.stringify(activeTheme));
+            }
+        } else {
+            if (!localStorage.getItem("console-last-dark-preset")) {
+                localStorage.setItem("console-last-dark-preset", currentPreset);
+                localStorage.setItem("console-last-dark-theme", JSON.stringify(activeTheme));
+            }
+        }
 
         // Update top-right button text/icon
         var currentIsLight = isLightColor(activeTheme.bg);
