@@ -1,21 +1,18 @@
-import grpc
-import sys
+import socket
+import ssl
 
-host = 'api-chirpstack.iofeteknoloji.com'
-token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjaGlycHN0YWNrIiwiaXNzIjoiY2hpcnBzdGFjayIsInN1YiI6Ijc0MDgwZTJhLTdhN2MtNDkxMi04NDVhLTM4ZGY0M2IxNDk1MyIsInR5cCI6ImtleSJ9.sj4TGI6PQ8iFe7j_YiE8_gVSU_IcmdDjaEdNwzekBac'
+ip = '46.1.21.146'
+port = 443
 
-print("Trying port 80 (insecure)...")
+print("Connecting to IP directly...")
 try:
-    channel = grpc.insecure_channel(f"{host}:80")
-    grpc.channel_ready_future(channel).result(timeout=5)
-    print("Port 80 channel is ready!")
+    s = socket.create_connection((ip, port), timeout=5)
+    context = ssl._create_unverified_context()
+    # wrap_socket without server_hostname means no SNI is sent
+    ssl_sock = context.wrap_socket(s)
+    print("SSL/TLS handshake successful.")
+    cert = ssl_sock.getpeercert(binary_form=True)
+    print("Certificate obtained (binary form).")
+    ssl_sock.close()
 except Exception as e:
-    print("Port 80 failed:", e)
-
-print("Trying port 443 (secure)...")
-try:
-    channel = grpc.secure_channel(f"{host}:443", grpc.ssl_channel_credentials())
-    grpc.channel_ready_future(channel).result(timeout=5)
-    print("Port 443 channel is ready!")
-except Exception as e:
-    print("Port 443 failed:", e)
+    print(f"Error: {e}")
