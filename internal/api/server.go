@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -58,6 +59,8 @@ func New(bind string) *Server {
 	mux.HandleFunc("/api/stop", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		handleStop(w, r, state)
 	}))
+	mux.HandleFunc("/api/simulation/metrics", requireAuth(handleSimulationMetrics))
+	mux.HandleFunc("/api/simulation/devices", requireAuth(handleSimulationDevices))
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/organizations", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -428,6 +431,12 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		return
 	}
 
+	if err := validateStartRequest(&req); err != nil {
+		state.mu.Unlock()
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
 	// Apply defaults.
 	if req.DeviceCount == 0 {
 		req.DeviceCount = 10
@@ -510,6 +519,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	state.Config = &req
 	state.Status = StatusStarting
 	state.StartedAt = time.Now().UnixMilli()
+	sim_pkg.ActiveDevices.Clear()
 	state.mu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -673,4 +683,39 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 	}
 
 	return cfg
+}
+
+func validateStartRequest(req *StartRequest) error {
+	if req.UplinkInterval != "" {
+		d, err := time.ParseDuration(req.UplinkInterval)
+		if err != nil {
+			return fmt.Errorf("geçersiz uplink sıklığı formatı (örn: 5m, 30s): %w", err)
+		}
+		if d < time.Second {
+			return fmt.Errorf("uplink sıklığı en az 1 saniye olmalıdır")
+		}
+	}
+	if req.Duration != "" && req.Duration != "0s" {
+		_, err := time.ParseDuration(req.Duration)
+		if err != nil {
+			return fmt.Errorf("geçersiz süre formatı (örn: 5m, 1h): %w", err)
+		}
+	}
+	if req.ActivationTime != "" {
+		_, err := time.ParseDuration(req.ActivationTime)
+		if err != nil {
+			return fmt.Errorf("geçersiz aktivasyon süresi formatı (örn: 30s, 1m): %w", err)
+		}
+	}
+	return nil
+}
+
+func handleSimulationMetrics(w http.ResponseWriter, r *http.Request) {
+	metrics := sim_pkg.GetMetrics()
+	writeJSON(w, http.StatusOK, metrics)
+}
+
+func handleSimulationDevices(w http.ResponseWriter, r *http.Request) {
+	devices := sim_pkg.ActiveDevices.GetStatuses()
+	writeJSON(w, http.StatusOK, map[string]interface{}{"devices": devices})
 }

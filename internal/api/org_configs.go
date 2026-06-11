@@ -34,6 +34,11 @@ func handleSaveOrgConfig(w http.ResponseWriter, r *http.Request, orgID string) {
 		return
 	}
 
+	if err := validateStartRequest(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
 	err := SaveOrgConfig(orgID, &req)
 	if err != nil {
 		log.WithError(err).WithField("org_id", orgID).Error("org_configs: save config error")

@@ -67,6 +67,10 @@
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_devices">Cihazlar</span>
                         </div>
+                        <div class="secondary-nav-link" data-tab="device-status">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_device_status">Cihaz Durumları</span>
+                        </div>
                     </div>
                 </div>
 
@@ -140,8 +144,6 @@
                             </button>
                         </div>
                     </div>
-
-
 
                     <!-- Toolbar -->
                     <div class="toolbar">
@@ -220,6 +222,45 @@
         </div>
     </div>
 
+    <!-- Canlı Metrik Kartları -->
+    <div class="dashboard-metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">📡</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_uplinks">Gönderilen Uplink</span>
+                <strong class="metric-value" id="metric-uplinks">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">📥</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_join_reqs">Join İsteği</span>
+                <strong class="metric-value" id="metric-join-reqs">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">✅</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_joins">Başarılı Join</span>
+                <strong class="metric-value" id="metric-joins">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">📶</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_gw_uplinks">GW Uplink</span>
+                <strong class="metric-value" id="metric-gw-uplinks">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">⬇️</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_gw_downlinks">GW Downlink</span>
+                <strong class="metric-value" id="metric-gw-downlinks">0</strong>
+            </div>
+        </div>
+    </div>
+
     <!-- Dashboard Grid: Map & Live Metrics Chart -->
     <div id="overview-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px;">
         <!-- Map Card -->
@@ -228,6 +269,7 @@
                 <h3 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
                     🗺️ <span>Canlı Cihaz & Gateway Haritası</span>
                 </h3>
+                <label for="map-org-select" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">Harita Organizasyon Filtresi</label>
                 <select id="map-org-select" class="page-size-select" style="max-width: 200px; padding: 4px 8px; font-size: 0.75rem; margin: 0; height: auto;"></select>
             </div>
             <div id="simulation-map" style="flex: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); z-index: 10; min-height: 400px; background: var(--bg-deepest);"></div>
@@ -239,6 +281,7 @@
                 <h3 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
                     📈 <span>Canlı Ağ Paket Aktivitesi</span>
                 </h3>
+                <label for="chart-org-select" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">Grafik Organizasyon Filtresi</label>
                 <select id="chart-org-select" class="page-size-select" style="max-width: 200px; padding: 4px 8px; font-size: 0.75rem; margin: 0; height: auto;"></select>
             </div>
             <div style="flex: 1; min-height: 400px; position: relative;">
@@ -459,6 +502,73 @@
                             </span>
                         </div>
                         <div class="pagination" id="dev-pagination"></div>
+                    </div>
+                </div>
+
+
+                <div class="tab-content" id="content-device-status">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title" data-i18n="title_dev_status">Cihaz Durumları</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_dev_status">Simülasyonu aktif olan cihazların anlık bağlantı ve join durumlarını izleyin.</p>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="dev-status-search-input" data-i18n-placeholder="placeholder_search_dev" placeholder="Cihaz ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-dev-status-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dev-status-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="device_name">
+                                        <span data-i18n="table_dev_name">Cihaz Adı</span> <span class="sort-icon" id="dev-status-sort-icon-device_name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dev_eui">
+                                        <span data-i18n="table_dev_deveui">DevEUI</span> <span class="sort-icon" id="dev-status-sort-icon-dev_eui">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="app_name">
+                                        <span data-i18n="table_dev_app">Uygulama</span> <span class="sort-icon" id="dev-status-sort-icon-app_name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="state">
+                                        <span data-i18n="table_dev_status">Durum</span> <span class="sort-icon" id="dev-status-sort-icon-state">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="uplink_count">
+                                        <span data-i18n="table_dev_uplink_cnt">Paket Sayısı</span> <span class="sort-icon" id="dev-status-sort-icon-uplink_count">▲</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="dev-status-table-body"></tbody>
+                        </table>
+
+                        <div class="empty-state" id="dev-status-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📡</div>
+                            <div class="empty-state-title" data-i18n="empty_state_dev_status_title">Aktif simüle cihaz yok</div>
+                            <div class="empty-state-text" data-i18n="empty_state_dev_status_text">Şu anda çalışan aktif simülasyon bulunmuyor. Bir organizasyon seçip simülasyonu başlattığınızda cihaz durumları burada listelenecektir.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
+                                <select class="page-size-select" id="dev-status-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="dev-status-total-count">
+                                Toplam: <strong>0</strong> Cihaz
+                            </span>
+                        </div>
+                        <div class="pagination" id="dev-status-pagination"></div>
                     </div>
                 </div>
 
@@ -715,7 +825,7 @@
                                                 <div class="color-swatch-item" title="Yeşil (ANSI 2)"><label>2</label><input type="color" id="c-color-2"></div>
                                                 <div class="color-swatch-item" title="Sarı (ANSI 3)"><label>3</label><input type="color" id="c-color-3"></div>
                                                 <div class="color-swatch-item" title="Mavi (ANSI 4)"><label>4</label><input type="color" id="c-color-4"></div>
-                                                <div class="color-swatch-item" title="Magenta (ANSI 5)"><label>5</label><input type="color" id="c-color-5"></div>
+                                                <div class="color-swatch-item" title="Pembe (ANSI 5)"><label>5</label><input type="color" id="c-color-5"></div>
                                                 <div class="color-swatch-item" title="Cyan (ANSI 6)"><label>6</label><input type="color" id="c-color-6"></div>
                                                 <div class="color-swatch-item" title="Beyaz (ANSI 7)"><label>7</label><input type="color" id="c-color-7"></div>
                                                 <div class="color-swatch-item" title="Açık Siyah (ANSI 8)"><label>8</label><input type="color" id="c-color-8"></div>
@@ -723,7 +833,7 @@
                                                 <div class="color-swatch-item" title="Açık Yeşil (ANSI 10)"><label>10</label><input type="color" id="c-color-10"></div>
                                                 <div class="color-swatch-item" title="Açık Sarı (ANSI 11)"><label>11</label><input type="color" id="c-color-11"></div>
                                                 <div class="color-swatch-item" title="Açık Mavi (ANSI 12)"><label>12</label><input type="color" id="c-color-12"></div>
-                                                <div class="color-swatch-item" title="Açık Magenta (ANSI 13)"><label>13</label><input type="color" id="c-color-13"></div>
+                                                <div class="color-swatch-item" title="Açık Pembe (ANSI 13)"><label>13</label><input type="color" id="c-color-13"></div>
                                                 <div class="color-swatch-item" title="Açık Cyan (ANSI 14)"><label>14</label><input type="color" id="c-color-14"></div>
                                                 <div class="color-swatch-item" title="Açık Beyaz (ANSI 15)"><label>15</label><input type="color" id="c-color-15"></div>
                                             </div>

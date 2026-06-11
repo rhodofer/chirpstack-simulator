@@ -7,6 +7,45 @@
         </div>
     </div>
 
+    <!-- Canlı Metrik Kartları -->
+    <div class="dashboard-metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">📡</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_uplinks">Gönderilen Uplink</span>
+                <strong class="metric-value" id="metric-uplinks">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">📥</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_join_reqs">Join İsteği</span>
+                <strong class="metric-value" id="metric-join-reqs">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">✅</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_joins">Başarılı Join</span>
+                <strong class="metric-value" id="metric-joins">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">📶</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_gw_uplinks">GW Uplink</span>
+                <strong class="metric-value" id="metric-gw-uplinks">0</strong>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">⬇️</div>
+            <div class="metric-info">
+                <span class="metric-label" data-i18n="metrics_gw_downlinks">GW Downlink</span>
+                <strong class="metric-value" id="metric-gw-downlinks">0</strong>
+            </div>
+        </div>
+    </div>
+
     <!-- Dashboard Grid: Map & Live Metrics Chart -->
     <div id="overview-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px;">
         <!-- Map Card -->
@@ -15,6 +54,7 @@
                 <h3 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
                     🗺️ <span>Canlı Cihaz & Gateway Haritası</span>
                 </h3>
+                <label for="map-org-select" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">Harita Organizasyon Filtresi</label>
                 <select id="map-org-select" class="page-size-select" style="max-width: 200px; padding: 4px 8px; font-size: 0.75rem; margin: 0; height: auto;"></select>
             </div>
             <div id="simulation-map" style="flex: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); z-index: 10; min-height: 400px; background: var(--bg-deepest);"></div>
@@ -26,6 +66,7 @@
                 <h3 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
                     📈 <span>Canlı Ağ Paket Aktivitesi</span>
                 </h3>
+                <label for="chart-org-select" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">Grafik Organizasyon Filtresi</label>
                 <select id="chart-org-select" class="page-size-select" style="max-width: 200px; padding: 4px 8px; font-size: 0.75rem; margin: 0; height: auto;"></select>
             </div>
             <div style="flex: 1; min-height: 400px; position: relative;">

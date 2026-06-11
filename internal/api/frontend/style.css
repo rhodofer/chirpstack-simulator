@@ -2030,4 +2030,59 @@ body.light-theme .console-log-line {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Metrics Dashboard & Device Statuses */
+.dashboard-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.metric-icon {
+    font-size: 1.6rem;
+    background: rgba(240, 160, 64, 0.08);
+    color: var(--accent);
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+body.light-theme .metric-icon {
+    background: rgba(217, 119, 6, 0.06);
+}
+.metric-info {
+    display: flex;
+    flex-direction: column;
+}
+.metric-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 500;
+}
+.metric-value {
+    font-size: 1.3rem;
+    color: var(--text);
+    font-weight: 700;
+    margin-top: 2px;
+}
+.status-pill.otaa {
+    background: rgba(234,179,8,0.12);
+    color: var(--yellow);
+}
+.status-pill.activated {
+    background: rgba(34,197,94,0.12);
+    color: var(--green);
+}
+
 
