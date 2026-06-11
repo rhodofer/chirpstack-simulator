@@ -295,6 +295,8 @@ func NewDevice(ctx context.Context, wg *sync.WaitGroup, opts ...DeviceOption) (*
 		"device_name": d.deviceName,
 	}).Info(fmt.Sprintf("[%s] simulator: new otaa device", d.appName))
 
+	ActiveDevices.Register(d)
+
 	wg.Add(2)
 
 	go d.uplinkLoop()
@@ -308,6 +310,7 @@ func NewDevice(ctx context.Context, wg *sync.WaitGroup, opts ...DeviceOption) (*
 func (d *Device) uplinkLoop() {
 	defer d.cancel()
 	defer d.wg.Done()
+	defer ActiveDevices.Unregister(d.devEUI)
 
 	var cancelled bool
 	go func() {
@@ -738,7 +741,7 @@ func (d *Device) getState() deviceState {
 // setState sets the device to the given state.
 func (d *Device) setState(s deviceState) {
 	d.Lock()
-	d.Unlock()
+	defer d.Unlock()
 
 	d.state = s
 }

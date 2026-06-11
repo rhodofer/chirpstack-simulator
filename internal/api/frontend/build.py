@@ -14,6 +14,7 @@ def build():
         '{{TAB_DEVICES}}': os.path.join(src_dir, 'tabs', 'devices.html'),
         '{{TAB_NETWORKS}}': os.path.join(src_dir, 'tabs', 'networks.html'),
         '{{TAB_DEVICE_LIST}}': os.path.join(src_dir, 'tabs', 'device-list.html'),
+        '{{TAB_DEVICE_STATUS}}': os.path.join(src_dir, 'tabs', 'device-status.html'),
         '{{TAB_SETTINGS}}': os.path.join(src_dir, 'tabs', 'settings.html'),
         '{{TAB_CONSOLE}}': os.path.join(src_dir, 'tabs', 'console.html'),
         '{{TAB_INFO}}': os.path.join(src_dir, 'tabs', 'info.html'),

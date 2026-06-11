@@ -1,0 +1,65 @@
+                <div class="tab-content" id="content-device-status">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title" data-i18n="title_dev_status">Cihaz Durumları</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_dev_status">Simülasyonu aktif olan cihazların anlık bağlantı ve join durumlarını izleyin.</p>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="dev-status-search-input" data-i18n-placeholder="placeholder_search_dev" placeholder="Cihaz ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-dev-status-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dev-status-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="device_name">
+                                        <span data-i18n="table_dev_name">Cihaz Adı</span> <span class="sort-icon" id="dev-status-sort-icon-device_name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dev_eui">
+                                        <span data-i18n="table_dev_deveui">DevEUI</span> <span class="sort-icon" id="dev-status-sort-icon-dev_eui">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="app_name">
+                                        <span data-i18n="table_dev_app">Uygulama</span> <span class="sort-icon" id="dev-status-sort-icon-app_name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="state">
+                                        <span data-i18n="table_dev_status">Durum</span> <span class="sort-icon" id="dev-status-sort-icon-state">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="uplink_count">
+                                        <span data-i18n="table_dev_uplink_cnt">Paket Sayısı</span> <span class="sort-icon" id="dev-status-sort-icon-uplink_count">▲</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="dev-status-table-body"></tbody>
+                        </table>
+
+                        <div class="empty-state" id="dev-status-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📡</div>
+                            <div class="empty-state-title" data-i18n="empty_state_dev_status_title">Aktif simüle cihaz yok</div>
+                            <div class="empty-state-text" data-i18n="empty_state_dev_status_text">Şu anda çalışan aktif simülasyon bulunmuyor. Bir organizasyon seçip simülasyonu başlattığınızda cihaz durumları burada listelenecektir.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
+                                <select class="page-size-select" id="dev-status-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="dev-status-total-count">
+                                Toplam: <strong>0</strong> Cihaz
+                            </span>
+                        </div>
+                        <div class="pagination" id="dev-status-pagination"></div>
+                    </div>
+                </div>

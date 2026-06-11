@@ -138,6 +138,11 @@
     var devPaginationEl     = $("#dev-pagination");
     var devModalOverlay     = $("#dev-modal-overlay");
 
+    // Device Status DOM refs
+    var devStatusSearchInput    = $("#dev-status-search-input");
+    var btnDevStatusRefresh     = $("#btn-dev-status-refresh");
+    var devStatusPageSizeSelect = $("#dev-status-page-size-select");
+
     // Device Intervals DOM refs
     var devIntTableBody      = $("#dev-int-table-body");
     var devIntEmptyState     = $("#dev-int-empty-state");
@@ -216,6 +221,12 @@
         devPageSize: 5,
         devSearchQuery: "",
         devTenantFilter: "",
+        devStatusList: [],
+        devStatusFiltered: [],
+        devStatusSort: { key: "device_name", dir: "asc" },
+        devStatusPage: 1,
+        devStatusPageSize: 5,
+        devStatusSearchQuery: "",
         applications: [],
         appFiltered: [],
         appSearchQuery: "",
@@ -1033,6 +1044,19 @@
                 metricsChart.update();
             }
         }
+
+        if (data.status === "running" || data.status === "starting") {
+            fetchSimulationMetrics();
+            if (state.currentTab === "device-status") {
+                fetchSimulationDevices();
+            }
+        } else {
+            resetSimulationMetrics();
+            if (state.currentTab === "device-status") {
+                state.devStatusList = [];
+                applyDevStatusFiltersAndRender();
+            }
+        }
     }
 
     function startPolling() {
@@ -1046,6 +1070,23 @@
             clearInterval(pollTimer);
             pollTimer = null;
         }
+    }
+
+    function validateDuration(str) {
+        if (!str) return false;
+        return /^\d+(ns|us|µs|ms|s|m|h)$/.test(str);
+    }
+
+    function validateUplinkInterval(str) {
+        if (!str) return false;
+        const match = str.match(/^(\d+)(ns|us|µs|ms|s|m|h)$/);
+        if (!match) return false;
+        const val = parseInt(match[1], 10);
+        const unit = match[2];
+        if (unit === "ms" && val < 1000) return false;
+        if (unit === "ns" || unit === "us" || unit === "µs") return false;
+        if (val === 0) return false;
+        return true;
     }
 
     async function saveOrgConfig(orgId) {
@@ -1073,15 +1114,35 @@
         var latencyMsEl = document.getElementById("latency_ms");
         var payloadScriptEl = document.getElementById("payload_script");
 
+        var uplinkIntervalVal = uplinkEl ? uplinkEl.value.trim() : "5m";
+        var durationVal = durationEl ? durationEl.value.trim() : "5m";
+        var activationTimeVal = actTimeEl ? actTimeEl.value.trim() : "1m";
+
+        if (!validateUplinkInterval(uplinkIntervalVal)) {
+            showToast("Uplink aralığı geçersiz veya 1 saniyeden az (örn: 5m, 10s)", "error");
+            logEntry("Validation error: Uplink interval must be >= 1s (e.g., 5m, 30s)", "error");
+            return;
+        }
+        if (durationVal && durationVal !== "0s" && !validateDuration(durationVal)) {
+            showToast("Süre formatı geçersiz (örn: 5m, 1h)", "error");
+            logEntry("Validation error: Invalid duration format", "error");
+            return;
+        }
+        if (activationTimeVal && !validateDuration(activationTimeVal)) {
+            showToast("Aktivasyon süresi formatı geçersiz (örn: 30s, 1m)", "error");
+            logEntry("Validation error: Invalid activation time format", "error");
+            return;
+        }
+
         var data = {
             tenant_id: tenantEl ? tenantEl.value.trim() : orgId,
             app_name: appNameEl ? appNameEl.value.trim() : "",
             device_prefix: devPrefixEl ? devPrefixEl.value.trim() : "sim-dev",
             device_count: parseInt(devCountEl ? devCountEl.value : "5", 10),
             gateway_count: parseInt(gwCountEl ? gwCountEl.value : "2", 10),
-            duration: durationEl ? durationEl.value.trim() : "5m",
-            activation_time: actTimeEl ? actTimeEl.value.trim() : "1m",
-            uplink_interval: uplinkEl ? uplinkEl.value.trim() : "5m",
+            duration: durationVal,
+            activation_time: activationTimeVal,
+            uplink_interval: uplinkIntervalVal,
             f_port: parseInt(fPortEl ? fPortEl.value : "10", 10),
             payload: payloadEl ? payloadEl.value.trim() : "010203",
             frequency: parseInt(freqEl ? freqEl.value : "868100000", 10),
@@ -1973,6 +2034,8 @@
             fetchApplications(state.netTenantFilter);
         } else if (name === "device-list") {
             fetchDevices(state.devTenantFilter);
+        } else if (name === "device-status") {
+            fetchSimulationDevices();
         } else if (name === "device-intervals") {
             fetchDevices("");
             fetchDeviceIntervals();
@@ -1986,6 +2049,7 @@
             devices: t("nav_device_profiles"),
             networks: t("nav_networks"),
             "device-list": t("nav_devices"),
+            "device-status": t("nav_device_status"),
             settings: t("nav_settings"),
             console: t("console_title"),
             info: t("info_title")
@@ -4203,6 +4267,11 @@
             nav_live_map: "Canlı İzleme",
             title_live_map: "Canlı İzleme",
             subtitle_live_map: "Cihazların canlı konumlarını ve ağ paket aktivitelerini takip edin.",
+            metrics_uplinks: "Gönderilen Uplink",
+            metrics_join_reqs: "Join İsteği",
+            metrics_joins: "Başarılı Join",
+            metrics_gw_uplinks: "GW Uplink",
+            metrics_gw_downlinks: "GW Downlink",
             console_src_all: "Tüm Günlükler",
             console_src_local: "Sadece Yerel Simülatör",
             console_src_remote: "Sadece Uzak Bağlantı (ChirpStack)",
@@ -4436,6 +4505,11 @@
             nav_live_map: "Live Monitoring",
             title_live_map: "Live Monitoring",
             subtitle_live_map: "Track live device locations and network packet activity.",
+            metrics_uplinks: "Sent Uplink",
+            metrics_join_reqs: "Join Request",
+            metrics_joins: "Successful Join",
+            metrics_gw_uplinks: "GW Uplink",
+            metrics_gw_downlinks: "GW Downlink",
             console_src_all: "All Logs",
             console_src_local: "Local Simulator Only",
             console_src_remote: "Remote Connection Only (ChirpStack)",
@@ -4703,11 +4777,228 @@
         document.title = t("app_title");
     }
 
+    // ─── Simulation Metrics & Device Statuses ──────────────────────────
+    async function fetchSimulationMetrics() {
+        var r = await api("GET", "/api/simulation/metrics");
+        if (r.ok && r.data) {
+            var m = r.data;
+            var upVal = m.device_uplink_count || 0;
+            var reqVal = m.device_join_request_count || 0;
+            var joinVal = m.device_join_accept_count || 0;
+            var gwVal = m.gateway_uplink_count || 0;
+            var downVal = m.gateway_downlink_count || 0;
+
+            var elUp = document.getElementById("metric-uplinks");
+            var elReq = document.getElementById("metric-join-reqs");
+            var elJoin = document.getElementById("metric-joins");
+            var elGw = document.getElementById("metric-gw-uplinks");
+            var elDown = document.getElementById("metric-gw-downlinks");
+
+            if (elUp) elUp.textContent = upVal;
+            if (elReq) elReq.textContent = reqVal;
+            if (elJoin) elJoin.textContent = joinVal;
+            if (elGw) elGw.textContent = gwVal;
+            if (elDown) elDown.textContent = downVal;
+        }
+    }
+
+    function resetSimulationMetrics() {
+        var elUp = document.getElementById("metric-uplinks");
+        var elReq = document.getElementById("metric-join-reqs");
+        var elJoin = document.getElementById("metric-joins");
+        var elGw = document.getElementById("metric-gw-uplinks");
+        var elDown = document.getElementById("metric-gw-downlinks");
+
+        if (elUp) elUp.textContent = "0";
+        if (elReq) elReq.textContent = "0";
+        if (elJoin) elJoin.textContent = "0";
+        if (elGw) elGw.textContent = "0";
+        if (elDown) elDown.textContent = "0";
+    }
+
+    async function fetchSimulationDevices() {
+        var r = await api("GET", "/api/simulation/devices");
+        if (r.ok && r.data && r.data.devices) {
+            state.devStatusList = r.data.devices;
+            applyDevStatusFiltersAndRender();
+        }
+    }
+
+    function applyDevStatusFiltersAndRender() {
+        var q = state.devStatusSearchQuery.toLowerCase();
+        if (q) {
+            state.devStatusFiltered = state.devStatusList.filter(function (d) {
+                return (d.device_name && d.device_name.toLowerCase().indexOf(q) !== -1) ||
+                       (d.dev_eui && d.dev_eui.toLowerCase().indexOf(q) !== -1) ||
+                       (d.app_name && d.app_name.toLowerCase().indexOf(q) !== -1);
+            });
+        } else {
+            state.devStatusFiltered = state.devStatusList.slice();
+        }
+
+        var sk = state.devStatusSort.key;
+        var sd = state.devStatusSort.dir === "asc" ? 1 : -1;
+        state.devStatusFiltered.sort(function (a, b) {
+            var va = a[sk];
+            var vb = b[sk];
+            if (typeof va === "number" && typeof vb === "number") {
+                return (va - vb) * sd;
+            }
+            var vaStr = (va || "").toString().toLowerCase();
+            var vbStr = (vb || "").toString().toLowerCase();
+            if (vaStr < vbStr) return -1 * sd;
+            if (vaStr > vbStr) return 1 * sd;
+            return 0;
+        });
+
+        var totalPages = Math.max(1, Math.ceil(state.devStatusFiltered.length / state.devStatusPageSize));
+        if (state.devStatusPage > totalPages) state.devStatusPage = totalPages;
+
+        renderDevStatusTable();
+        renderDevStatusPagination();
+        renderDevStatusTotalCount();
+        updateDevStatusSortIcons();
+    }
+
+    function renderDevStatusTable() {
+        var tbody = document.getElementById("dev-status-table-body");
+        var empty = document.getElementById("dev-status-empty-state");
+        if (!tbody || !empty) return;
+
+        tbody.innerHTML = "";
+        if (state.devStatusFiltered.length === 0) {
+            empty.style.display = "block";
+            return;
+        }
+        empty.style.display = "none";
+
+        var start = (state.devStatusPage - 1) * state.devStatusPageSize;
+        var end = Math.min(start + state.devStatusPageSize, state.devStatusFiltered.length);
+        var pageItems = state.devStatusFiltered.slice(start, end);
+
+        for (var i = 0; i < pageItems.length; i++) {
+            var d = pageItems[i];
+            var tr = document.createElement("tr");
+            var stateClass = d.state === "Activated" ? "activated" : "otaa";
+            var stateLabel = d.state === "Activated" ? "AKTİF" : "OTAA";
+            
+            tr.innerHTML =
+                '<td><span class="org-name-primary">' + escapeHtml(d.device_name) + '</span></td>' +
+                '<td><span class="id-cell">' + escapeHtml(d.dev_eui) + '</span></td>' +
+                '<td><span class="org-name-secondary">' + escapeHtml(d.app_name) + '</span></td>' +
+                '<td><span class="status-pill ' + stateClass + '">' + stateLabel + '</span></td>' +
+                '<td><span class="org-name-primary">' + d.uplink_count + '</span></td>';
+            tbody.appendChild(tr);
+        }
+    }
+
+    function renderDevStatusPagination() {
+        var el = document.getElementById("dev-status-pagination");
+        if (!el) return;
+        el.innerHTML = "";
+        var total = state.devStatusFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(total / state.devStatusPageSize));
+        var current = state.devStatusPage;
+
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "pagination-btn";
+        prevBtn.innerHTML = t("prev_page");
+        prevBtn.disabled = (current <= 1);
+        prevBtn.addEventListener("click", function () { goToDevStatusPage(current - 1); });
+        el.appendChild(prevBtn);
+
+        var startPage = Math.max(1, current - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (var p = startPage; p <= endPage; p++) {
+            var pageBtn = document.createElement("button");
+            pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+            pageBtn.textContent = p;
+            pageBtn.addEventListener("click", (function (pageNum) {
+                return function () { goToDevStatusPage(pageNum); };
+            })(p));
+            el.appendChild(pageBtn);
+        }
+
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "pagination-btn";
+        nextBtn.innerHTML = t("next_page");
+        nextBtn.disabled = (current >= totalPages);
+        nextBtn.addEventListener("click", function () { goToDevStatusPage(current + 1); });
+        el.appendChild(nextBtn);
+    }
+
+    function renderDevStatusTotalCount() {
+        var el = document.getElementById("dev-status-total-count");
+        if (!el) return;
+        el.innerHTML = t("footer_total_dev").replace("{count}", state.devStatusFiltered.length);
+    }
+
+    // Font Awesome characters replaced by standard HTML triangle indicators for sort
+    function updateDevStatusSortIcons() {
+        var allIcons = document.querySelectorAll("[id^='dev-status-sort-icon-']");
+        for (var i = 0; i < allIcons.length; i++) {
+            allIcons[i].classList.remove("active");
+            allIcons[i].textContent = "▲";
+        }
+        var icon = document.getElementById("dev-status-sort-icon-" + state.devStatusSort.key);
+        if (icon) {
+            icon.classList.add("active");
+            icon.textContent = state.devStatusSort.dir === "asc" ? "▲" : "▼";
+        }
+    }
+
+    function goToDevStatusPage(n) {
+        var totalPages = Math.max(1, Math.ceil(state.devStatusFiltered.length / state.devStatusPageSize));
+        if (n < 1 || n > totalPages) return;
+        state.devStatusPage = n;
+        applyDevStatusFiltersAndRender();
+    }
+
+    function bindDevStatusEvents() {
+        if (devStatusSearchInput) {
+            devStatusSearchInput.addEventListener("input", function () {
+                state.devStatusSearchQuery = this.value;
+                state.devStatusPage = 1;
+                applyDevStatusFiltersAndRender();
+            });
+        }
+        if (btnDevStatusRefresh) {
+            btnDevStatusRefresh.addEventListener("click", function () {
+                fetchSimulationDevices();
+            });
+        }
+        if (devStatusPageSizeSelect) {
+            devStatusPageSizeSelect.addEventListener("change", function () {
+                state.devStatusPageSize = parseInt(this.value, 10) || 5;
+                state.devStatusPage = 1;
+                applyDevStatusFiltersAndRender();
+            });
+        }
+
+        // Sorting
+        var headers = document.querySelectorAll("#dev-status-table thead th.sortable");
+        headers.forEach(function (th) {
+            th.addEventListener("click", function () {
+                var key = this.getAttribute("data-sort");
+                if (state.devStatusSort.key === key) {
+                    state.devStatusSort.dir = state.devStatusSort.dir === "asc" ? "desc" : "asc";
+                } else {
+                    state.devStatusSort.key = key;
+                    state.devStatusSort.dir = "asc";
+                }
+                state.devStatusPage = 1;
+                applyDevStatusFiltersAndRender();
+            });
+        });
+    }
+
     // ─── Init ──────────────────────────────────────────────────────────
     async function init() {
         bindSettingsEvents();
         bindAuthEvents();
         initSettingsSubTabs();
+        bindDevStatusEvents();
         
         // Language Selector dropdown change listener
         if (appLanguageSelect) {
@@ -4722,6 +5013,7 @@
                 applyDpFiltersAndRender();
                 applyNetFiltersAndRender();
                 applyDevFiltersAndRender();
+                applyDevStatusFiltersAndRender();
             });
         }
 
