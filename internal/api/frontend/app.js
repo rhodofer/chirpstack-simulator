@@ -106,7 +106,13 @@
     var dpSupportsClassC    = $("#dp-supports-class-c");
     var dpModalClose        = $("#dp-modal-close");
     var dpModalCancel       = $("#dp-modal-cancel");
-    var dpModalSave         = $("#dp-modal-save");
+    var dpWizBtnPrev        = $("#dp-wiz-btn-prev");
+    var dpWizBtnNext        = $("#dp-wiz-btn-next");
+    var dpSummaryOrgName    = $("#dp-summary-org-name");
+    var dpSummaryName       = $("#dp-summary-name");
+    var dpSummaryRegionMac  = $("#dp-summary-region-mac");
+    var dpSummaryActivation = $("#dp-summary-activation");
+    var dpSummaryClasses    = $("#dp-summary-classes");
 
     // Settings tab
     var statServerStatus  = $("#stat-server-status");
@@ -128,12 +134,17 @@
     var netTotalCountEl     = $("#net-total-count");
     var netPaginationEl     = $("#net-pagination");
     var netModalOverlay     = $("#net-modal-overlay");
-    var netName             = $("#net-name");
-    var netTenant           = $("#net-tenant");
-    var netDescription      = $("#net-description");
+    var netWizTenant        = $("#net-wiz-tenant");
+    var netWizName          = $("#net-wiz-name");
+    var netWizPrefix        = $("#net-wiz-prefix");
     var netModalClose       = $("#net-modal-close");
     var netModalCancel      = $("#net-modal-cancel");
-    var netModalSave        = $("#net-modal-save");
+    var netWizBtnPrev       = $("#net-wiz-btn-prev");
+    var netWizBtnNext       = $("#net-wiz-btn-next");
+    var netSummaryOrgName   = $("#net-summary-org-name");
+    var netSummaryOrgId     = $("#net-summary-org-id");
+    var netSummaryAppName   = $("#net-summary-app-name");
+    var netSummaryPrefix    = $("#net-summary-prefix");
 
     // Devices DOM refs
     var btnAddDev           = $("#btn-add-dev");
@@ -1689,6 +1700,7 @@
 
     // ─── Device Profile Modal ──────────────────────────────────────────
     function populateDpTenantSelect() {
+        if (!dpTenant) return;
         dpTenant.innerHTML = "";
         if (state.organizations.length === 0) {
             var opt = document.createElement("option");
@@ -1698,6 +1710,11 @@
             dpTenant.appendChild(opt);
             return;
         }
+        var defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.textContent = "Lütfen seçiniz...";
+        dpTenant.appendChild(defaultOpt);
+
         for (var i = 0; i < state.organizations.length; i++) {
             var opt = document.createElement("option");
             opt.value = state.organizations[i].id;
@@ -1745,32 +1762,105 @@
         }
     }
 
+    // ─── Device Profile Wizard Logic ────────────────────────────────────
+    var dpWizCurrentStep = 1;
+
     function showDpModal() {
-        dpName.value = "";
-        dpDescription.value = "";
-        dpRegion.value = "EU868";
-        dpMacVersion.value = "LORAWAN_1_0_3";
-        dpRegParams.value = "B";
-        dpAdrAlg.value = "default";
-        dpSupportsOtaa.checked = true;
-        dpSupportsClassB.checked = false;
-        dpSupportsClassC.checked = false;
+        if (dpName) dpName.value = "";
+        if (dpDescription) dpDescription.value = "";
+        if (dpRegion) dpRegion.value = "EU868";
+        if (dpMacVersion) dpMacVersion.value = "LORAWAN_1_0_3";
+        if (dpRegParams) dpRegParams.value = "B";
+        if (dpAdrAlg) dpAdrAlg.value = "default";
+        if (dpSupportsOtaa) dpSupportsOtaa.checked = true;
+        if (dpSupportsClassB) dpSupportsClassB.checked = false;
+        if (dpSupportsClassC) dpSupportsClassC.checked = false;
         populateDpTenantSelect();
-        dpModalOverlay.style.display = "flex";
-        setTimeout(function () { dpName.focus(); }, 100);
+        dpWizCurrentStep = 1;
+        renderDpWizStep();
+        if (dpModalOverlay) dpModalOverlay.style.display = "flex";
+        setTimeout(function () { if (dpName) dpName.focus(); }, 100);
     }
 
     function hideDpModal() {
-        dpModalOverlay.style.display = "none";
+        if (dpModalOverlay) dpModalOverlay.style.display = "none";
     }
 
-    async function handleDpModalSave() {
+    function renderDpWizStep() {
+        for (var i = 1; i <= 3; i++) {
+            var pane = $("#dp-wiz-pane-" + i);
+            if (pane) pane.style.display = (i === dpWizCurrentStep) ? "block" : "none";
+            
+            var stepIndicator = $("#dp-wiz-step-" + i);
+            if (stepIndicator) {
+                if (i === dpWizCurrentStep) {
+                    stepIndicator.classList.add("active");
+                    stepIndicator.style.color = "var(--accent)";
+                } else {
+                    stepIndicator.classList.remove("active");
+                    stepIndicator.style.color = "";
+                }
+            }
+        }
+
+        if (dpWizBtnPrev) {
+            dpWizBtnPrev.style.display = (dpWizCurrentStep === 1) ? "none" : "inline-block";
+        }
+
+        if (dpWizBtnNext) {
+            dpWizBtnNext.textContent = (dpWizCurrentStep === 3) ? "Onayla ve Oluştur" : "İleri";
+        }
+
+        checkDpWizValidation();
+    }
+
+    function checkDpWizValidation() {
+        if (!dpWizBtnNext) return;
+        if (dpWizCurrentStep === 1) {
+            var hasTenant = dpTenant && dpTenant.value !== "";
+            var hasName = dpName && dpName.value.trim() !== "";
+            dpWizBtnNext.disabled = !(hasTenant && hasName);
+        } else {
+            dpWizBtnNext.disabled = false;
+        }
+    }
+
+    function prevDpWizStep() {
+        if (dpWizCurrentStep > 1) {
+            dpWizCurrentStep--;
+            renderDpWizStep();
+        }
+    }
+
+    function nextDpWizStep() {
+        if (dpWizCurrentStep === 3) {
+            submitDpWiz();
+        } else {
+            dpWizCurrentStep++;
+            if (dpWizCurrentStep === 3) {
+                if (dpSummaryOrgName) dpSummaryOrgName.textContent = dpTenant ? dpTenant.options[dpTenant.selectedIndex].text : "";
+                if (dpSummaryName) dpSummaryName.textContent = dpName ? dpName.value.trim() : "";
+                if (dpSummaryRegionMac) dpSummaryRegionMac.textContent = (dpRegion ? dpRegion.value : "") + " / " + (dpMacVersion ? dpMacVersion.value : "");
+                if (dpSummaryActivation) dpSummaryActivation.textContent = (dpSupportsOtaa && dpSupportsOtaa.checked) ? "OTAA" : "ABP";
+                var classes = ["Class A"];
+                if (dpSupportsClassB && dpSupportsClassB.checked) classes.push("Class B");
+                if (dpSupportsClassC && dpSupportsClassC.checked) classes.push("Class C");
+                if (dpSummaryClasses) dpSummaryClasses.textContent = classes.join(", ");
+            }
+            renderDpWizStep();
+        }
+    }
+
+    async function submitDpWiz() {
         var name = dpName.value.trim();
         var tenantId = dpTenant.value;
-        if (!name) { showToast("Profil adı zorunludur!", "error"); dpName.focus(); return; }
-        if (!tenantId) { showToast("Tenant seçimi zorunludur!", "error"); return; }
-        dpModalSave.disabled = true;
-        dpModalSave.textContent = "Oluşturuluyor...";
+        if (!name || !tenantId) return;
+
+        if (dpWizBtnNext) {
+            dpWizBtnNext.disabled = true;
+            dpWizBtnNext.textContent = "Oluşturuluyor...";
+        }
+
         var data = {
             name: name,
             tenant_id: tenantId,
@@ -1783,9 +1873,12 @@
             supports_class_b: dpSupportsClassB.checked,
             supports_class_c: dpSupportsClassC.checked
         };
+
         var ok = await createDeviceProfile(data);
-        dpModalSave.disabled = false;
-        dpModalSave.textContent = "Kaydet";
+        if (dpWizBtnNext) {
+            dpWizBtnNext.disabled = false;
+            dpWizBtnNext.textContent = "Onayla ve Oluştur";
+        }
         if (ok) hideDpModal();
     }
 
@@ -2646,17 +2739,189 @@
     });
 
     // Add device profile
-    btnAddDp.addEventListener("click", showDpModal);
+    if (btnAddDp) {
+        btnAddDp.addEventListener("click", showDpModal);
+    }
 
     // Device Profile modal
-    dpModalClose.addEventListener("click", hideDpModal);
-    dpModalCancel.addEventListener("click", hideDpModal);
-    dpModalSave.addEventListener("click", handleDpModalSave);
-    dpModalOverlay.addEventListener("click", function (e) {
-        if (e.target === dpModalOverlay) hideDpModal();
-    });
+    if (dpModalClose) {
+        dpModalClose.addEventListener("click", hideDpModal);
+    }
+    if (dpModalCancel) {
+        dpModalCancel.addEventListener("click", hideDpModal);
+    }
+    if (dpWizBtnPrev) {
+        dpWizBtnPrev.addEventListener("click", prevDpWizStep);
+    }
+    if (dpWizBtnNext) {
+        dpWizBtnNext.addEventListener("click", nextDpWizStep);
+    }
+    if (dpTenant) {
+        dpTenant.addEventListener("change", checkDpWizValidation);
+    }
+    if (dpName) {
+        dpName.addEventListener("input", checkDpWizValidation);
+    }
+    if (dpModalOverlay) {
+        dpModalOverlay.addEventListener("click", function (e) {
+            if (e.target === dpModalOverlay) hideDpModal();
+        });
+    }
+
+    // Add application wizard
+    if (btnAddNet) {
+        btnAddNet.addEventListener("click", showNetModal);
+    }
+
+    // Network modal
+    if (netModalClose) {
+        netModalClose.addEventListener("click", hideNetModal);
+    }
+    if (netModalCancel) {
+        netModalCancel.addEventListener("click", hideNetModal);
+    }
+    if (netWizBtnPrev) {
+        netWizBtnPrev.addEventListener("click", prevNetWizStep);
+    }
+    if (netWizBtnNext) {
+        netWizBtnNext.addEventListener("click", nextNetWizStep);
+    }
+    if (netWizTenant) {
+        netWizTenant.addEventListener("change", checkNetWizValidation);
+    }
+    if (netWizName) {
+        netWizName.addEventListener("input", checkNetWizValidation);
+    }
+    if (netModalOverlay) {
+        netModalOverlay.addEventListener("click", function (e) {
+            if (e.target === netModalOverlay) hideNetModal();
+        });
+    }
 
     // ─── Networks API ──────────────────────────────────────────────────
+    // ─── Network Application Wizard Logic ───────────────────────────────
+    var netWizCurrentStep = 1;
+
+    function populateNetWizTenantSelect() {
+        if (!netWizTenant) return;
+        netWizTenant.innerHTML = "";
+        if (state.organizations.length === 0) {
+            var opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Önce organizasyon oluşturun";
+            opt.disabled = true;
+            netWizTenant.appendChild(opt);
+            return;
+        }
+        var defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.textContent = "Lütfen seçiniz...";
+        netWizTenant.appendChild(defaultOpt);
+
+        for (var i = 0; i < state.organizations.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = state.organizations[i].id;
+            opt.textContent = state.organizations[i].name;
+            netWizTenant.appendChild(opt);
+        }
+    }
+
+    function showNetModal() {
+        if (netWizName) netWizName.value = "";
+        if (netWizPrefix) netWizPrefix.value = "";
+        populateNetWizTenantSelect();
+        netWizCurrentStep = 1;
+        renderNetWizStep();
+        if (netModalOverlay) netModalOverlay.style.display = "flex";
+        setTimeout(function () { if (netWizTenant) netWizTenant.focus(); }, 100);
+    }
+
+    function hideNetModal() {
+        if (netModalOverlay) netModalOverlay.style.display = "none";
+    }
+
+    function renderNetWizStep() {
+        for (var i = 1; i <= 3; i++) {
+            var pane = $("#net-wiz-pane-" + i);
+            if (pane) pane.style.display = (i === netWizCurrentStep) ? "block" : "none";
+            
+            var stepIndicator = $("#net-wiz-step-" + i);
+            if (stepIndicator) {
+                if (i === netWizCurrentStep) {
+                    stepIndicator.classList.add("active");
+                    stepIndicator.style.color = "var(--accent)";
+                } else {
+                    stepIndicator.classList.remove("active");
+                    stepIndicator.style.color = "";
+                }
+            }
+        }
+
+        if (netWizBtnPrev) {
+            netWizBtnPrev.style.display = (netWizCurrentStep === 1) ? "none" : "inline-block";
+        }
+
+        if (netWizBtnNext) {
+            netWizBtnNext.textContent = (netWizCurrentStep === 3) ? "Onayla ve Oluştur" : "İleri";
+        }
+
+        checkNetWizValidation();
+    }
+
+    function checkNetWizValidation() {
+        if (!netWizBtnNext) return;
+        if (netWizCurrentStep === 1) {
+            var hasTenant = netWizTenant && netWizTenant.value !== "";
+            netWizBtnNext.disabled = !hasTenant;
+        } else if (netWizCurrentStep === 2) {
+            var hasName = netWizName && netWizName.value.trim() !== "";
+            netWizBtnNext.disabled = !hasName;
+        } else {
+            netWizBtnNext.disabled = false;
+        }
+    }
+
+    function prevNetWizStep() {
+        if (netWizCurrentStep > 1) {
+            netWizCurrentStep--;
+            renderNetWizStep();
+        }
+    }
+
+    function nextNetWizStep() {
+        if (netWizCurrentStep === 3) {
+            submitNetWiz();
+        } else {
+            netWizCurrentStep++;
+            if (netWizCurrentStep === 3) {
+                if (netSummaryOrgName) netSummaryOrgName.textContent = netWizTenant ? netWizTenant.options[netWizTenant.selectedIndex].text : "";
+                if (netSummaryOrgId) netSummaryOrgId.textContent = netWizTenant ? "ID: " + netWizTenant.value : "";
+                if (netSummaryAppName) netSummaryAppName.textContent = netWizName ? netWizName.value.trim() : "";
+                if (netSummaryPrefix) netSummaryPrefix.textContent = netWizPrefix ? netWizPrefix.value.trim() : "";
+            }
+            renderNetWizStep();
+        }
+    }
+
+    async function submitNetWiz() {
+        var name = netWizName.value.trim();
+        var tenantId = netWizTenant.value;
+        var description = netWizPrefix.value.trim();
+        if (!name || !tenantId) return;
+
+        if (netWizBtnNext) {
+            netWizBtnNext.disabled = true;
+            netWizBtnNext.textContent = "Oluşturuluyor...";
+        }
+
+        var ok = await createApplication(name, tenantId, description);
+        if (netWizBtnNext) {
+            netWizBtnNext.disabled = false;
+            netWizBtnNext.textContent = "Onayla ve Oluştur";
+        }
+        if (ok) hideNetModal();
+    }
+
     async function createApplication(name, tenantId, description) {
         var r = await api("POST", "/api/applications", {
             name: name,
@@ -5150,7 +5415,7 @@
                 // Refresh dynamic tables to apply translations
                 applyFiltersAndRender();
                 applyDpFiltersAndRender();
-                applyNetFiltersAndRender();
+                applyAppFiltersAndRender();
                 applyDevFiltersAndRender();
                 applyDevStatusFiltersAndRender();
             });
