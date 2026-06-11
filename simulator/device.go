@@ -120,6 +120,9 @@ type Device struct {
 
 	// Transmission delay.
 	latencyMs int
+
+	// Tenant ID.
+	tenantID string
 }
 
 // WithAppKey sets the AppKey.
@@ -255,6 +258,14 @@ func WithPacketLoss(loss float64) DeviceOption {
 func WithLatencyMs(ms int) DeviceOption {
 	return func(d *Device) error {
 		d.latencyMs = ms
+		return nil
+	}
+}
+
+// WithDeviceTenantID sets the tenant ID.
+func WithDeviceTenantID(tenantID string) DeviceOption {
+	return func(d *Device) error {
+		d.tenantID = tenantID
 		return nil
 	}
 }
@@ -398,7 +409,7 @@ func (d *Device) joinRequest() {
 
 	d.sendUplink(phy)
 
-	DeviceJoinRequestCounter().Inc()
+	DeviceJoinRequestCounter(d.tenantID).Inc()
 }
 
 // dataUp sends an data uplink.
@@ -540,7 +551,7 @@ func (d *Device) dataUp() {
 
 	d.sendUplink(phy)
 
-	DeviceUplinkCounter().Inc()
+	DeviceUplinkCounter(d.tenantID).Inc()
 }
 
 // joinAccept validates and handles the join-accept downlink.
@@ -589,7 +600,7 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 	}).Info(fmt.Sprintf("[%s] simulator: device OTAA activated", d.appName))
 
 	d.setState(deviceStateActivated)
-	DeviceJoinAcceptCounter().Inc()
+	DeviceJoinAcceptCounter(d.tenantID).Inc()
 
 	return nil
 }

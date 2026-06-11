@@ -235,6 +235,26 @@ func getCounterValue(c prometheus.Counter) float64 {
 	return m.GetCounter().GetValue()
 }
 
+func getCounterVecValue(cv *prometheus.CounterVec, tenantID string) float64 {
+	c, err := cv.GetMetricWithLabelValues(tenantID)
+	if err != nil {
+		return 0
+	}
+	return getCounterValue(c)
+}
+
+func getCounterVecSum(cv *prometheus.CounterVec) float64 {
+	reqs, err := GetActiveOrgConfigs()
+	if err != nil {
+		return 0
+	}
+	var sum float64
+	for _, req := range reqs {
+		sum += getCounterVecValue(cv, req.TenantID)
+	}
+	return sum
+}
+
 // handleStatus returns the current simulation state and metrics.
 func handleStatus(w http.ResponseWriter, r *http.Request, state *SimState) {
 	state.mu.Lock()
@@ -253,13 +273,31 @@ func handleStatus(w http.ResponseWriter, r *http.Request, state *SimState) {
 		resp["config"] = state.Config
 	}
 
+	tenantID := r.URL.Query().Get("tenant_id")
+
+	var ducVal, djrcVal, djacVal, gucVal, gdcVal float64
+
+	if tenantID != "" && tenantID != "all" {
+		ducVal = getCounterVecValue(sim_pkg.DeviceUplinkCounterVec(), tenantID)
+		djrcVal = getCounterVecValue(sim_pkg.DeviceJoinRequestCounterVec(), tenantID)
+		djacVal = getCounterVecValue(sim_pkg.DeviceJoinAcceptCounterVec(), tenantID)
+		gucVal = getCounterVecValue(sim_pkg.GatewayUplinkCounterVec(), tenantID)
+		gdcVal = getCounterVecValue(sim_pkg.GatewayDownlinkCounterVec(), tenantID)
+	} else {
+		ducVal = getCounterVecSum(sim_pkg.DeviceUplinkCounterVec())
+		djrcVal = getCounterVecSum(sim_pkg.DeviceJoinRequestCounterVec())
+		djacVal = getCounterVecSum(sim_pkg.DeviceJoinAcceptCounterVec())
+		gucVal = getCounterVecSum(sim_pkg.GatewayUplinkCounterVec())
+		gdcVal = getCounterVecSum(sim_pkg.GatewayDownlinkCounterVec())
+	}
+
 	// Fetch metrics
 	resp["metrics"] = map[string]float64{
-		"device_uplink_count":       getCounterValue(sim_pkg.DeviceUplinkCounter()),
-		"device_join_request_count": getCounterValue(sim_pkg.DeviceJoinRequestCounter()),
-		"device_join_accept_count":  getCounterValue(sim_pkg.DeviceJoinAcceptCounter()),
-		"gateway_uplink_count":      getCounterValue(sim_pkg.GatewayUplinkCounter()),
-		"gateway_downlink_count":    getCounterValue(sim_pkg.GatewayDownlinkCounter()),
+		"device_uplink_count":       ducVal,
+		"device_join_request_count": djrcVal,
+		"device_join_accept_count":  djacVal,
+		"gateway_uplink_count":      gucVal,
+		"gateway_downlink_count":    gdcVal,
 	}
 
 	writeJSON(w, http.StatusOK, resp)

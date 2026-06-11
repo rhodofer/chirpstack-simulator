@@ -34,6 +34,7 @@
     var pageSizeSelect    = $("#page-size-select");
     var paginationEl      = $("#pagination");
     var mapOrgSelect      = $("#map-org-select");
+    var chartOrgSelect    = $("#chart-org-select");
 
     // Buttons
     var btnAddOrg         = $("#btn-add-org");
@@ -969,7 +970,14 @@
 
     // ─── Poll Status ───────────────────────────────────────────────────
     async function pollStatus() {
-        var r = await api("GET", "/api/status");
+        var url = "/api/status";
+        if (chartOrgSelect) {
+            var val = chartOrgSelect.value || "all";
+            if (val !== "all") {
+                url += "?tenant_id=" + encodeURIComponent(val);
+            }
+        }
+        var r = await api("GET", url);
         if (!r.ok) return;
 
         var data = r.data;
@@ -1281,12 +1289,37 @@
         }
     }
 
+    function populateChartOrgSelect() {
+        if (!chartOrgSelect) return;
+        var currentSelected = chartOrgSelect.value || "all";
+        chartOrgSelect.innerHTML = "";
+
+        var allOpt = document.createElement("option");
+        allOpt.value = "all";
+        allOpt.textContent = "Tüm Organizasyonlar";
+        chartOrgSelect.appendChild(allOpt);
+
+        state.organizations.forEach(function (org) {
+            var opt = document.createElement("option");
+            opt.value = org.id;
+            opt.textContent = org.name;
+            chartOrgSelect.appendChild(opt);
+        });
+
+        // Restore selection if valid
+        var validOption = Array.from(chartOrgSelect.options).some(function (opt) {
+            return opt.value === currentSelected;
+        });
+        chartOrgSelect.value = validOption ? currentSelected : "all";
+    }
+
     // ─── Organization API ──────────────────────────────────────────────
     async function fetchOrganizations() {
         var r = await api("GET", "/api/organizations");
         if (r.ok && r.data.organizations) {
             state.organizations = r.data.organizations;
             populateMapOrgSelect();
+            populateChartOrgSelect();
         } else {
             state.organizations = [];
             var errMsg = (r.data && r.data.error) || "Bağlantı hatası";
@@ -2286,6 +2319,22 @@
             var org = findOrg(orgId);
             await loadOrgConfig(orgId, org ? org.name : "");
             updateFormInputsState();
+        });
+    }
+
+    // Chart Org Select Change
+    if (chartOrgSelect) {
+        chartOrgSelect.addEventListener("change", function () {
+            // Reset metrics history to prevent spikes when switching
+            prevMetrics = null;
+            chartDataHistory.labels = [];
+            chartDataHistory.uplinks = [];
+            chartDataHistory.joinRequests = [];
+            chartDataHistory.joinAccepts = [];
+            if (metricsChart) {
+                metricsChart.update();
+            }
+            pollStatus();
         });
     }
 
