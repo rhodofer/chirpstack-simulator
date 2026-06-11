@@ -19,6 +19,7 @@ def build():
         '{{TAB_CONSOLE}}': os.path.join(src_dir, 'tabs', 'console.html'),
         '{{TAB_INFO}}': os.path.join(src_dir, 'tabs', 'info.html'),
         '{{DRAWER}}': os.path.join(src_dir, 'drawer.html'),
+        '{{DETAILS_DRAWER}}': os.path.join(src_dir, 'details-drawer.html'),
         '{{MODALS}}': os.path.join(src_dir, 'modals.html'),
         '{{LOGIN}}': os.path.join(src_dir, 'login.html')
     }

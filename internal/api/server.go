@@ -72,14 +72,20 @@ func New(bind string) *Server {
 		}
 	}))
 
-	// DELETE /api/organizations/{id}
+	// DELETE/PUT /api/organizations/{id}
 	mux.HandleFunc("/api/organizations/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/organizations/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
 			return
 		}
-		handleDeleteOrganization(w, r, id)
+		if r.Method == http.MethodDelete {
+			handleDeleteOrganization(w, r, id)
+		} else if r.Method == http.MethodPut {
+			handleUpdateOrganization(w, r, id)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
 	}))
 
 	// GET/POST /api/org-configs/{orgID}

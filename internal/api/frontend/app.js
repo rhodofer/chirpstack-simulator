@@ -61,6 +61,15 @@
     var drawerSubtitle    = $("#drawer-subtitle");
     var drawerClose       = $("#drawer-close");
 
+    // Details Drawer
+    var detailsDrawerOverlay  = $("#details-drawer-overlay");
+    var detailsDrawerEl       = $("#details-drawer");
+    var detailsDrawerTitle    = $("#details-drawer-title");
+    var detailsDrawerSubtitle = $("#details-drawer-subtitle");
+    var detailsDrawerClose    = $("#details-drawer-close");
+    var detailsDrawerBody     = $("#details-drawer-body");
+    var btnCloseDetails       = $("#btn-close-details");
+
     // Form
     var form              = $("#config-form");
 
@@ -1134,12 +1143,33 @@
             return;
         }
 
+        var orgNameEl = document.getElementById("org_name");
+        var newOrgName = orgNameEl ? orgNameEl.value.trim() : "";
+        var org = findOrg(orgId);
+
+        if (org && newOrgName && org.name !== newOrgName) {
+            var putResp = await api("PUT", "/api/organizations/" + orgId, {
+                name: newOrgName,
+                description: ""
+            });
+            if (putResp.ok) {
+                org.name = newOrgName;
+                logEntry("Organization name updated successfully to: " + newOrgName, "success");
+                renderTable();
+            } else {
+                var putErr = (putResp.data && putResp.data.error) || "Organizasyon adı güncellenemedi";
+                showToast("Organizasyon adı güncellenemedi: " + putErr, "error");
+                logEntry("Failed to update organization name: " + putErr, "error");
+                return;
+            }
+        }
+
         var data = {
             tenant_id: tenantEl ? tenantEl.value.trim() : orgId,
             app_name: appNameEl ? appNameEl.value.trim() : "",
             device_prefix: devPrefixEl ? devPrefixEl.value.trim() : "sim-dev",
-            device_count: parseInt(devCountEl ? devCountEl.value : "5", 10),
-            gateway_count: parseInt(gwCountEl ? gwCountEl.value : "2", 10),
+            device_count: devCountEl ? parseInt(devCountEl.value, 10) : ((state.activeOrgConfig && state.activeOrgConfig.device_count) || 5),
+            gateway_count: gwCountEl ? parseInt(gwCountEl.value, 10) : ((state.activeOrgConfig && state.activeOrgConfig.gateway_count) || 2),
             duration: durationVal,
             activation_time: activationTimeVal,
             uplink_interval: uplinkIntervalVal,
@@ -1288,14 +1318,15 @@
 
     function updateFormInputsState() {
         var isSimRunning = (state.currentStatus === "running" || state.currentStatus === "starting");
+        var isReadOnly = (state.drawerMode === "view" || isSimRunning);
 
         // Drawer form inputs
         var drawerInputs = [
-            "tenant_id", "app_name", "device_prefix", "device_count", "gateway_count"
+            "org_name", "tenant_id", "app_name", "device_prefix", "device_count", "gateway_count"
         ];
         drawerInputs.forEach(function (id) {
             var el = document.getElementById(id);
-            if (el) el.disabled = isSimRunning;
+            if (el) el.disabled = isReadOnly;
         });
 
         // Global settings form inputs
@@ -1310,7 +1341,14 @@
         });
 
         // Save buttons
-        if (btnSaveOrgConfig) btnSaveOrgConfig.disabled = isSimRunning;
+        if (btnSaveOrgConfig) {
+            btnSaveOrgConfig.disabled = isSimRunning;
+            if (state.drawerMode === "view") {
+                btnSaveOrgConfig.style.display = "none";
+            } else {
+                btnSaveOrgConfig.style.display = "inline-flex";
+            }
+        }
         if (btnSaveGeneralSettings) btnSaveGeneralSettings.disabled = isSimRunning;
     }
 
@@ -1404,7 +1442,7 @@
             logEntry("New organization created: " + org.name + " (ID: " + org.id + ")", "success");
             showToast("'" + org.name + "' organizasyonu oluşturuldu.", "success");
             await fetchOrganizations();
-            openDrawer(org.id);
+            openDrawer(org.id, "edit");
             return true;
         } else {
             var errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
@@ -1598,18 +1636,55 @@
     function viewDeviceProfile(id) {
         var dp = findDp(id);
         if (!dp) return;
-        alert(
-            "ID: " + dp.id + "\n" +
-            "Ad: " + dp.name + "\n" +
-            "Tenant: " + dp.tenant_id + "\n" +
-            "Bölge: " + dp.region + "\n" +
-            "MAC: " + dp.mac_version + "\n" +
-            "RegParams: " + dp.reg_params_revision + "\n" +
-            "OTAA: " + (dp.supports_otaa ? "Evet" : "Hayır") + "\n" +
-            "Class B: " + (dp.supports_class_b ? "Evet" : "Hayır") + "\n" +
-            "Class C: " + (dp.supports_class_c ? "Evet" : "Hayır") + "\n" +
-            "ADR: " + (dp.adr_algorithm_id || "default")
-        );
+
+        var isTr = state.language === "tr";
+        var yesText = isTr ? "Evet" : "Yes";
+        var noText = isTr ? "Hayır" : "No";
+
+        var html = 
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Profil Adı' : 'Profile Name') + '</div>' +
+                '<div class="detail-value" style="font-weight: 600; color: var(--accent);">' + escapeHtml(dp.name) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'ID' : 'ID') + '</div>' +
+                '<div class="detail-value id-cell">' + escapeHtml(dp.id) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Organizasyon (Tenant)' : 'Organization (Tenant)') + '</div>' +
+                '<div class="detail-value">' +
+                    '<span style="font-weight: 600;">' + escapeHtml(getOrgName(dp.tenant_id)) + '</span><br>' +
+                    '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(dp.tenant_id || "—") + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Bölge (Region)' : 'Region') + '</div>' +
+                '<div class="detail-value">' + escapeHtml(dp.region || "—") + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'MAC Sürümü' : 'MAC Version') + '</div>' +
+                '<div class="detail-value">' + escapeHtml(dp.mac_version || "—") + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'RegParams Revizyonu' : 'RegParams Revision') + '</div>' +
+                '<div class="detail-value">' + escapeHtml(dp.reg_params_revision || "—") + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Desteklenen Sınıflar' : 'Supported Classes') + '</div>' +
+                '<div class="detail-value" style="margin-top: 4px;">' +
+                    '<span class="badge ' + (dp.supports_otaa ? 'badge-running' : 'badge-idle') + '" style="margin-right: 4px; border: 1px solid rgba(0,0,0,0.15);">OTAA: ' + (dp.supports_otaa ? yesText : noText) + '</span>' +
+                    '<span class="badge ' + (dp.supports_class_b ? 'badge-running' : 'badge-idle') + '" style="margin-right: 4px; border: 1px solid rgba(0,0,0,0.15);">Class B: ' + (dp.supports_class_b ? yesText : noText) + '</span>' +
+                    '<span class="badge ' + (dp.supports_class_c ? 'badge-running' : 'badge-idle') + '" style="border: 1px solid rgba(0,0,0,0.15);">Class C: ' + (dp.supports_class_c ? yesText : noText) + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'ADR Algoritması' : 'ADR Algorithm') + '</div>' +
+                '<div class="detail-value">' + escapeHtml(dp.adr_algorithm_id || "default") + '</div>' +
+            '</div>';
+
+        var title = isTr ? "Cihaz Profili Detayları" : "Device Profile Details";
+        var subtitle = isTr ? "Cihaz profilinin yapılandırma bilgileri" : "Configuration info of the device profile";
+        openDetailsDrawer(title, subtitle, html);
     }
 
     // ─── Device Profile Modal ──────────────────────────────────────────
@@ -1850,17 +1925,17 @@
                     // Düzenle butonuna tıklanırsa
                     if (e.target.closest(".edit-btn")) {
                         e.stopPropagation();
-                        openDrawer(id);
+                        openDrawer(id, "edit");
                         return;
                     }
                     // Görüntüle butonuna tıklanırsa
                     if (e.target.closest(".view-btn")) {
                         e.stopPropagation();
-                        openDrawer(id);
+                        openDrawer(id, "view");
                         return;
                     }
                     // Satır tıklaması → drawer aç
-                    openDrawer(id);
+                    openDrawer(id, "view");
                 };
             })(org.id));
 
@@ -1959,16 +2034,23 @@
     }
 
     // ─── Drawer ────────────────────────────────────────────────────────
-    async function openDrawer(orgId) {
+    async function openDrawer(orgId, mode) {
         var org = findOrg(orgId);
         if (!org) return;
 
         state.activeOrgId = orgId;
+        state.drawerMode = mode || "edit";
         if (mapOrgSelect) mapOrgSelect.value = orgId;
         state.drawerOpen = true;
 
         drawerTitle.textContent = org.name || "Organizasyon";
-        drawerSubtitle.textContent = "Simülasyon ayarlarını yapılandırın";
+        var orgNameEl = document.getElementById("org_name");
+        if (orgNameEl) orgNameEl.value = org.name || "";
+        if (state.drawerMode === "view") {
+            drawerSubtitle.textContent = t("drawer_subtitle_view");
+        } else {
+            drawerSubtitle.textContent = t("drawer_subtitle_edit");
+        }
 
         // Formu doldur
         await loadOrgConfig(orgId, org.name);
@@ -1985,6 +2067,19 @@
         state.drawerOpen = false;
         drawerEl.classList.remove("open");
         drawerOverlay.classList.remove("open");
+    }
+
+    function openDetailsDrawer(title, subtitle, htmlContent) {
+        detailsDrawerTitle.textContent = title;
+        detailsDrawerSubtitle.textContent = subtitle;
+        detailsDrawerBody.innerHTML = htmlContent;
+        detailsDrawerEl.classList.add("open");
+        detailsDrawerOverlay.classList.add("open");
+    }
+
+    function closeDetailsDrawer() {
+        detailsDrawerEl.classList.remove("open");
+        detailsDrawerOverlay.classList.remove("open");
     }
 
     // ─── Tab Switching ─────────────────────────────────────────────────
@@ -2430,6 +2525,11 @@
     // Drawer
     drawerClose.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
+
+    // Details Drawer
+    if (detailsDrawerClose) detailsDrawerClose.addEventListener("click", closeDetailsDrawer);
+    if (detailsDrawerOverlay) detailsDrawerOverlay.addEventListener("click", closeDetailsDrawer);
+    if (btnCloseDetails) btnCloseDetails.addEventListener("click", closeDetailsDrawer);
     if (btnSaveOrgConfig) {
         btnSaveOrgConfig.addEventListener("click", async function (e) {
             e.preventDefault();
@@ -2447,12 +2547,12 @@
                 if (appNameEl) appNameEl.focus();
                 return;
             }
-            if (isNaN(devCount) || devCount <= 0) {
+            if (devCountEl && (isNaN(devCount) || devCount <= 0)) {
                 showToast("Cihaz Sayısı 0'dan büyük bir tam sayı olmalıdır!", "error");
                 if (devCountEl) devCountEl.focus();
                 return;
             }
-            if (isNaN(gwCount) || gwCount <= 0) {
+            if (gwCountEl && (isNaN(gwCount) || gwCount <= 0)) {
                 showToast("Gateway Sayısı 0'dan büyük bir tam sayı olmalıdır!", "error");
                 if (gwCountEl) gwCountEl.focus();
                 return;
@@ -2593,6 +2693,38 @@
         }
     }
 
+    function viewApplication(id) {
+        var app = findNet(id);
+        if (!app) return;
+
+        var isTr = state.language === "tr";
+
+        var html = 
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Uygulama Adı' : 'Application Name') + '</div>' +
+                '<div class="detail-value" style="font-weight: 600; color: var(--accent);">' + escapeHtml(app.name) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'ID' : 'ID') + '</div>' +
+                '<div class="detail-value id-cell">' + escapeHtml(app.id) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Organizasyon (Tenant)' : 'Organization (Tenant)') + '</div>' +
+                '<div class="detail-value">' +
+                    '<span style="font-weight: 600;">' + escapeHtml(getOrgName(app.tenant_id)) + '</span><br>' +
+                    '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(app.tenant_id || "—") + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Açıklama' : 'Description') + '</div>' +
+                '<div class="detail-value">' + escapeHtml(app.description || "—") + '</div>' +
+            '</div>';
+
+        var title = isTr ? "Uygulama Detayları" : "Application Details";
+        var subtitle = isTr ? "Uygulamanın yapılandırma bilgileri" : "Configuration info of the application";
+        openDetailsDrawer(title, subtitle, html);
+    }
+
     function findNet(id) {
         for (var i = 0; i < state.applications.length; i++) {
             if (state.applications[i].id === id) return state.applications[i];
@@ -2651,6 +2783,7 @@
                 `<button class="row-action-btn danger delete-btn" data-id="${app.id}" title="Sil">🗑</button></div></td>`;
             tr.addEventListener("click", (e) => {
                 if (e.target.closest(".delete-btn")) { e.stopPropagation(); deleteApplication(app.id); return; }
+                if (e.target.closest(".view-btn")) { e.stopPropagation(); viewApplication(app.id); return; }
             });
             netTableBody.appendChild(tr);
         }
@@ -4262,11 +4395,13 @@
     var translations = {
         tr: {
             app_title: "ChirpStack Simülatörü",
-            nav_grp_mgmt: "Yönetim",
+            nav_grp_mgmt: "İzleme",
             nav_organizations: "Organizasyonlar",
             nav_live_map: "Canlı İzleme",
             title_live_map: "Canlı İzleme",
             subtitle_live_map: "Cihazların canlı konumlarını ve ağ paket aktivitelerini takip edin.",
+            drawer_subtitle_edit: "Simülasyon ayarlarını yapılandırın",
+            drawer_subtitle_view: "Simülasyon ayarlarını görüntüleyin",
             metrics_uplinks: "Gönderilen Uplink",
             metrics_join_reqs: "Join İsteği",
             metrics_joins: "Başarılı Join",
@@ -4275,7 +4410,7 @@
             console_src_all: "Tüm Günlükler",
             console_src_local: "Sadece Yerel Simülatör",
             console_src_remote: "Sadece Uzak Bağlantı (ChirpStack)",
-            nav_grp_apps: "Uygulamalar",
+            nav_grp_apps: "Yönetim",
             nav_networks: "Ağ Uygulamaları",
             nav_device_profiles: "Cihaz Profilleri",
             nav_devices: "Cihazlar",
@@ -4496,15 +4631,18 @@
             wiz_success_dp_created_lbl: "Oluşturulan Cihaz Profilleri:",
             wiz_btn_confirm: "Onayla ve Oluştur",
             wiz_btn_close: "Kapat",
-            wiz_btn_creating: "Oluşturuluyor..."
+            wiz_btn_creating: "Oluşturuluyor...",
+            btn_close: "Kapat"
         },
         en: {
             app_title: "ChirpStack Simulator",
-            nav_grp_mgmt: "Management",
+            nav_grp_mgmt: "Monitoring",
             nav_organizations: "Organizations",
             nav_live_map: "Live Monitoring",
             title_live_map: "Live Monitoring",
             subtitle_live_map: "Track live device locations and network packet activity.",
+            drawer_subtitle_edit: "Configure simulation settings",
+            drawer_subtitle_view: "View simulation settings",
             metrics_uplinks: "Sent Uplink",
             metrics_join_reqs: "Join Request",
             metrics_joins: "Successful Join",
@@ -4513,7 +4651,7 @@
             console_src_all: "All Logs",
             console_src_local: "Local Simulator Only",
             console_src_remote: "Remote Connection Only (ChirpStack)",
-            nav_grp_apps: "Applications",
+            nav_grp_apps: "Management",
             nav_networks: "Network Applications",
             nav_device_profiles: "Device Profiles",
             nav_devices: "Devices",
@@ -4734,7 +4872,8 @@
             wiz_success_dp_created_lbl: "Created Device Profiles:",
             wiz_btn_confirm: "Confirm & Create",
             wiz_btn_close: "Close",
-            wiz_btn_creating: "Creating..."
+            wiz_btn_creating: "Creating...",
+            btn_close: "Close"
         }
     };
 

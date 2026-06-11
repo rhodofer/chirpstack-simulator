@@ -23,6 +23,12 @@ type CreateOrganizationRequest struct {
 	Description string `json:"description"`
 }
 
+// UpdateOrganizationRequest is the HTTP request body for updating a tenant.
+type UpdateOrganizationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // handleListOrganizations returns all tenants from ChirpStack.
 func handleListOrganizations(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -143,4 +149,64 @@ func handleDeleteOrganization(w http.ResponseWriter, r *http.Request, id string)
 
 	log.WithField("id", id).Info("organizations: tenant deleted")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
+}
+
+// handleUpdateOrganization updates a tenant in ChirpStack.
+func handleUpdateOrganization(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPut {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
+	var req UpdateOrganizationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		return
+	}
+
+	if req.Name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization name is required"})
+		return
+	}
+
+	// First get the existing tenant to update its fields correctly
+	tenantResp, err := as.Tenant().Get(context.Background(), &api.GetTenantRequest{Id: id})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("organizations: get tenant error")
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "Failed to retrieve tenant from ChirpStack: " + err.Error(),
+		})
+		return
+	}
+
+	tenant := tenantResp.GetTenant()
+	tenant.Name = req.Name
+	tenant.Description = req.Description
+
+	_, err = as.Tenant().Update(context.Background(), &api.UpdateTenantRequest{
+		Tenant: tenant,
+	})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("organizations: update tenant error")
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "Failed to update tenant in ChirpStack: " + err.Error(),
+		})
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"id":   id,
+		"name": req.Name,
+	}).Info("organizations: tenant updated")
+
+	writeJSON(w, http.StatusOK, Organization{
+		ID:          id,
+		Name:        req.Name,
+		Description: req.Description,
+	})
 }
