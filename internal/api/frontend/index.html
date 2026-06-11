@@ -109,13 +109,12 @@
             <div class="top-bar">
                 <div class="top-bar-left">
                     <button class="hamburger-btn" id="hamburger-btn">☰</button>
-                    <div class="page-title-bar" id="page-title-bar">Organizasyonlar</div>
+                    <button class="btn btn-primary btn-xs" id="btn-top-bootstrap" data-i18n-title="top_bootstrap_title" title="Hızlı Kurulum Sihirbazı" style="margin-left: 12px; gap: 6px; display: inline-flex; align-items: center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        <span data-i18n="top_bootstrap">Yeni Proje Oluştur</span>
+                    </button>
                 </div>
                 <div class="top-bar-right">
-                    <button class="btn btn-primary btn-xs" id="btn-top-bootstrap" data-i18n-title="top_bootstrap_title" title="Hızlı Kurulum Sihirbazı" style="margin-right: 12px; gap: 6px; display: inline-flex; align-items: center;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                        <span data-i18n="top_bootstrap">Yeni Oluştur</span>
-                    </button>
                     <div class="sim-controls">
                         <button class="btn btn-success btn-xs" id="btn-top-start" data-i18n-title="top_start_title" data-i18n="top_start" title="Simülasyonu Başlat">▶ Başlat</button>
                         <button class="btn btn-danger btn-xs" id="btn-top-stop" data-i18n-title="top_stop_title" data-i18n="top_stop" title="Simülasyonu Durdur" disabled>■ Durdur</button>
@@ -149,9 +148,9 @@
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="search-input" data-i18n-placeholder="placeholder_search_org" placeholder="Organizasyon ara...">
+                            <input type="text" id="org-search-input" data-i18n-placeholder="placeholder_search_org" placeholder="Organizasyon ara...">
                         </div>
-                        <button class="btn-refresh" id="btn-refresh" title="Yenile">🔄</button>
+                        <button class="btn-refresh" id="btn-org-refresh" title="Yenile">🔄</button>
                     </div>
 
                     <!-- Data Table -->
@@ -195,18 +194,18 @@
                         <div class="table-footer-left">
                             <div class="page-size-group">
                                 <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
-                                <select class="page-size-select" id="page-size-select">
+                                <select class="page-size-select" id="org-page-size-select">
                                     <option value="5" selected>5</option>
                                     <option value="10">10</option>
                                     <option value="25">25</option>
                                     <option value="50">50</option>
                                 </select>
                             </div>
-                            <span class="total-count" id="total-count">
+                            <span class="total-count" id="org-total-count">
                                 Toplam: <strong>0</strong> Organizasyon
                             </span>
                         </div>
-                        <div class="pagination" id="pagination">
+                        <div class="pagination" id="org-pagination">
                             <!-- JS tarafından doldurulacak -->
                         </div>
                     </div>

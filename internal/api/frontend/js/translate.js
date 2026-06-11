@@ -26,7 +26,7 @@ export const translations = {
         nav_settings: "Ayarlar",
         nav_console: "Konsol",
         nav_info: "Bilgi Notları",
-        top_bootstrap: "Yeni Oluştur",
+        top_bootstrap: "Yeni Proje Oluştur",
         top_bootstrap_title: "Hızlı Kurulum Sihirbazı",
         wiz_scenario_preset: "Simülasyon Şablonu (Scenario Preset)",
         wiz_preset_default: "Standart Simülasyon (Rastgele Konum & Sabit Payload)",
@@ -240,7 +240,9 @@ export const translations = {
         wiz_btn_confirm: "Onayla ve Oluştur",
         wiz_btn_close: "Kapat",
         wiz_btn_creating: "Oluşturuluyor...",
-        btn_close: "Kapat"
+        btn_close: "Kapat",
+        prev_page: "Geri",
+        next_page: "İleri"
     },
     en: {
         app_title: "ChirpStack Simulator",
@@ -267,7 +269,7 @@ export const translations = {
         nav_settings: "Settings",
         nav_console: "Console",
         nav_info: "Info Notes",
-        top_bootstrap: "Create New",
+        top_bootstrap: "Create New Project",
         top_bootstrap_title: "Quick Setup Wizard",
         wiz_scenario_preset: "Simulation Scenario Preset",
         wiz_preset_default: "Standard Simulation (Random Location & Static Payload)",
@@ -481,7 +483,9 @@ export const translations = {
         wiz_btn_confirm: "Confirm & Create",
         wiz_btn_close: "Close",
         wiz_btn_creating: "Creating...",
-        btn_close: "Close"
+        btn_close: "Close",
+        prev_page: "Prev",
+        next_page: "Next"
     }
 };
 

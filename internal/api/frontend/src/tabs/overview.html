@@ -16,9 +16,9 @@
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="search-input" data-i18n-placeholder="placeholder_search_org" placeholder="Organizasyon ara...">
+                            <input type="text" id="org-search-input" data-i18n-placeholder="placeholder_search_org" placeholder="Organizasyon ara...">
                         </div>
-                        <button class="btn-refresh" id="btn-refresh" title="Yenile">🔄</button>
+                        <button class="btn-refresh" id="btn-org-refresh" title="Yenile">🔄</button>
                     </div>
 
                     <!-- Data Table -->
@@ -62,18 +62,18 @@
                         <div class="table-footer-left">
                             <div class="page-size-group">
                                 <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
-                                <select class="page-size-select" id="page-size-select">
+                                <select class="page-size-select" id="org-page-size-select">
                                     <option value="5" selected>5</option>
                                     <option value="10">10</option>
                                     <option value="25">25</option>
                                     <option value="50">50</option>
                                 </select>
                             </div>
-                            <span class="total-count" id="total-count">
+                            <span class="total-count" id="org-total-count">
                                 Toplam: <strong>0</strong> Organizasyon
                             </span>
                         </div>
-                        <div class="pagination" id="pagination">
+                        <div class="pagination" id="org-pagination">
                             <!-- JS tarafından doldurulacak -->
                         </div>
                     </div>

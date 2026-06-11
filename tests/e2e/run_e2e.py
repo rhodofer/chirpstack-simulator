@@ -19,6 +19,70 @@ def run_command(args):
     print(f"Running command: {' '.join(args)}")
     subprocess.run(args, check=True)
 
+def cleanup_e2e_organizations():
+    import urllib.request
+    import urllib.error
+    import json
+    
+    url = "http://localhost:9002"
+    
+    # 1. Login to get cookie
+    login_url = f"{url}/api/auth/login"
+    login_data = json.dumps({"username": "admin@falt.com", "password": "admin123"}).encode('utf-8')
+    req = urllib.request.Request(login_url, data=login_data, headers={'Content-Type': 'application/json'})
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            cookie = response.info().get('Set-Cookie')
+            if not cookie:
+                print("Could not get session cookie for cleanup")
+                return
+    except Exception as e:
+        print(f"Cleanup login failed: {e}")
+        return
+
+    # Extract sim_session cookie
+    sim_cookie = None
+    if cookie:
+        for part in cookie.split(';'):
+            if 'sim_session=' in part:
+                sim_cookie = part.strip()
+                break
+            
+    if not sim_cookie:
+        print("Could not parse sim_session cookie")
+        return
+
+    # 2. Get organizations list
+    orgs_url = f"{url}/api/organizations?limit=100"
+    req = urllib.request.Request(orgs_url, headers={'Cookie': sim_cookie})
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            orgs = data.get("organizations", [])
+    except Exception as e:
+        print(f"Failed to fetch organizations for cleanup: {e}")
+        return
+
+    # 3. Delete E2E organizations
+    deleted_count = 0
+    for org in orgs:
+        name = org.get("name", "")
+        if name.startswith("E2E-"):
+            org_id = org.get("id")
+            delete_url = f"{url}/api/organizations/{org_id}"
+            req = urllib.request.Request(delete_url, method='DELETE', headers={'Cookie': sim_cookie})
+            try:
+                with urllib.request.urlopen(req) as response:
+                    if response.status == 200:
+                        print(f"Deleted E2E organization: {name} ({org_id})")
+                        deleted_count += 1
+            except Exception as e:
+                print(f"Failed to delete E2E organization {name}: {e}")
+                
+    if deleted_count > 0:
+        print(f"Cleaned up {deleted_count} E2E organizations from ChirpStack.")
+
 def main():
     target_host = "localhost"
     target_port = 9002
@@ -92,6 +156,12 @@ def main():
         print(f"Error running pytest: {e}")
         return_code = 1
     finally:
+        print("\nCleaning up E2E organizations from ChirpStack...")
+        try:
+            cleanup_e2e_organizations()
+        except Exception as e:
+            print(f"Warning: E2E cleanup failed: {e}")
+            
         print("\nRestoring original database state...")
         # Clean up any test database and extra files
         if os.path.exists(db_path):
