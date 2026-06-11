@@ -6,48 +6,68 @@ import (
 )
 
 var (
-	duc = promauto.NewCounter(prometheus.CounterOpts{
+	ducVec = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "device_uplink_count",
 		Help: "The number of uplinks sent by the devices.",
-	})
+	}, []string{"tenant_id"})
 
-	djrc = promauto.NewCounter(prometheus.CounterOpts{
+	djrcVec = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "device_join_request_count",
 		Help: "The number of join-requests sent by the devices.",
-	})
+	}, []string{"tenant_id"})
 
-	djac = promauto.NewCounter(prometheus.CounterOpts{
+	djacVec = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "device_join_accept_count",
 		Help: "The number of join-accepts received by the devices.",
-	})
+	}, []string{"tenant_id"})
 
-	guc = promauto.NewCounter(prometheus.CounterOpts{
+	gucVec = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "gateway_uplink_count",
 		Help: "The number of uplinks sent by the gateways.",
-	})
+	}, []string{"tenant_id"})
 
-	gdc = promauto.NewCounter(prometheus.CounterOpts{
+	gdcVec = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "gateway_downlink_count",
 		Help: "The number of downlinks received by the gateways.",
-	})
+	}, []string{"tenant_id"})
 )
 
-func DeviceUplinkCounter() prometheus.Counter {
-	return duc
+func DeviceUplinkCounter(tenantID string) prometheus.Counter {
+	return ducVec.WithLabelValues(tenantID)
 }
 
-func DeviceJoinRequestCounter() prometheus.Counter {
-	return djrc
+func DeviceJoinRequestCounter(tenantID string) prometheus.Counter {
+	return djrcVec.WithLabelValues(tenantID)
 }
 
-func DeviceJoinAcceptCounter() prometheus.Counter {
-	return djac
+func DeviceJoinAcceptCounter(tenantID string) prometheus.Counter {
+	return djacVec.WithLabelValues(tenantID)
 }
 
-func GatewayUplinkCounter() prometheus.Counter {
-	return guc
+func GatewayUplinkCounter(tenantID string) prometheus.Counter {
+	return gucVec.WithLabelValues(tenantID)
 }
 
-func GatewayDownlinkCounter() prometheus.Counter {
-	return gdc
+func GatewayDownlinkCounter(tenantID string) prometheus.Counter {
+	return gdcVec.WithLabelValues(tenantID)
+}
+
+func DeviceUplinkCounterVec() *prometheus.CounterVec {
+	return ducVec
+}
+
+func DeviceJoinRequestCounterVec() *prometheus.CounterVec {
+	return djrcVec
+}
+
+func DeviceJoinAcceptCounterVec() *prometheus.CounterVec {
+	return djacVec
+}
+
+func GatewayUplinkCounterVec() *prometheus.CounterVec {
+	return gucVec
+}
+
+func GatewayDownlinkCounterVec() *prometheus.CounterVec {
+	return gdcVec
 }

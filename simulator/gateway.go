@@ -36,6 +36,9 @@ type Gateway struct {
 
 	eventTopicTemplate   *template.Template
 	commandTopicTemplate *template.Template
+
+	// Tenant ID.
+	tenantID string
 }
 
 // WithMQTTClient sets the MQTT client for the gateway.
@@ -124,6 +127,14 @@ func WithMQTTCertificates(server, caCert, tlsCert, tlsKey string) GatewayOption 
 func WithGatewayID(gatewayID lorawan.EUI64) GatewayOption {
 	return func(g *Gateway) error {
 		g.gatewayID = gatewayID
+		return nil
+	}
+}
+
+// WithGatewayTenantID sets the tenant ID.
+func WithGatewayTenantID(tenantID string) GatewayOption {
+	return func(g *Gateway) error {
+		g.tenantID = tenantID
 		return nil
 	}
 }
@@ -238,7 +249,7 @@ func (g *Gateway) SendUplinkFrame(pl gw.UplinkFrame) error {
 		return errors.Wrap(err, "simulator: publish uplink frame error")
 	}
 
-	GatewayUplinkCounter().Inc()
+	GatewayUplinkCounter(g.tenantID).Inc()
 
 	return nil
 }
@@ -318,7 +329,7 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 		"topic":      msg.Topic(),
 	}).Debug("simulator: downlink command received")
 
-	GatewayDownlinkCounter().Inc()
+	GatewayDownlinkCounter(g.tenantID).Inc()
 
 	var pl gw.DownlinkFrame
 	if err := proto.Unmarshal(msg.Payload(), &pl); err != nil {

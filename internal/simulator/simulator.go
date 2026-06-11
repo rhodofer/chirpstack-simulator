@@ -206,6 +206,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithMQTTClient(ns.Client()),
 			simulator.WithEventTopicTemplate(s.eventTopicTemplate),
 			simulator.WithCommandTopicTemplate(s.commandTopicTemplate),
+			simulator.WithGatewayTenantID(s.tenantID),
 		)
 		if err != nil {
 			return errors.Wrap(err, "new gateway error")
@@ -254,6 +255,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithPacketLoss(s.packetLoss),
 			simulator.WithLatencyMs(s.latencyMs),
 			simulator.WithGateways(gws),
+			simulator.WithDeviceTenantID(s.tenantID),
 			simulator.WithUplinkTXInfo(gw.UplinkTxInfo{
 				Frequency: uint32(s.frequency),
 				Modulation: &gw.Modulation{
