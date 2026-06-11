@@ -312,19 +312,29 @@ func (d *Device) uplinkLoop() {
 	defer d.wg.Done()
 	defer ActiveDevices.Unregister(d.devEUI)
 
-	var cancelled bool
-	go func() {
-		<-d.ctx.Done()
-		cancelled = true
-	}()
+	if d.otaaDelay > 0 {
+		select {
+		case <-d.ctx.Done():
+			return
+		case <-time.After(d.otaaDelay):
+		}
+	}
 
-	time.Sleep(d.otaaDelay)
+	for {
+		select {
+		case <-d.ctx.Done():
+			return
+		default:
+		}
 
-	for !cancelled {
 		switch d.getState() {
 		case deviceStateOTAA:
 			d.joinRequest()
-			time.Sleep(6 * time.Second)
+			select {
+			case <-d.ctx.Done():
+				return
+			case <-time.After(6 * time.Second):
+			}
 		case deviceStateActivated:
 			d.dataUp()
 
@@ -333,13 +343,21 @@ func (d *Device) uplinkLoop() {
 					// d.cancel() also cancels the downlink loop. Wait one
 					// second in order to process any potential downlink
 					// response (e.g. and ack).
-					time.Sleep(time.Second)
+					select {
+					case <-d.ctx.Done():
+						return
+					case <-time.After(time.Second):
+					}
 					d.cancel()
 					return
 				}
 			}
 
-			time.Sleep(d.uplinkInterval)
+			select {
+			case <-d.ctx.Done():
+				return
+			case <-time.After(d.uplinkInterval):
+			}
 		}
 	}
 }

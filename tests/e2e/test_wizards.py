@@ -96,3 +96,50 @@ def test_device_profile_wizard(page: Page):
     expect(page.locator("#toast")).to_be_visible()
     expect(page.locator("#toast")).to_contain_text("oluşturuldu")
     expect(page.locator("#dp-modal-overlay")).not_to_be_visible()
+def test_bootstrap_wizard(page: Page):
+    # Click "Yeni Oluştur" in top bar
+    page.click("#btn-top-bootstrap")
+    expect(page.locator("#bootstrap-modal-overlay")).to_be_visible()
+    
+    # Step 1: Org Name and Preset
+    page.fill("#wiz-org-name", "E2E-Bootstrap-Org")
+    page.click("#wiz-btn-next")
+    
+    # Step 2: Networks
+    expect(page.locator("#wiz-pane-2")).to_be_visible()
+    page.wait_for_timeout(200) # Wait for autofocus shift
+    page.fill("#wiz-app-prefix", "e2e-app")
+    page.fill("#wiz-app-count", "2")
+    expect(page.locator("#wiz-app-count")).to_have_value("2")
+    page.click("#wiz-btn-next")
+    
+    # Step 3: Device Profiles
+    expect(page.locator("#wiz-pane-3")).to_be_visible()
+    page.wait_for_timeout(200) # Wait for autofocus shift
+    page.fill("#wiz-dp-prefix", "e2e-dp")
+    page.fill("#wiz-dp-count", "2")
+    expect(page.locator("#wiz-dp-count")).to_have_value("2")
+    page.click("#wiz-btn-next")
+    
+    # Step 4: Devices
+    expect(page.locator("#wiz-pane-4")).to_be_visible()
+    page.wait_for_timeout(200) # Wait for autofocus shift
+    page.fill("#wiz-dev-prefix", "e2e-dev")
+    page.fill("#wiz-dev-count", "3")
+    expect(page.locator("#wiz-dev-count")).to_have_value("3")
+    page.click("#wiz-btn-next")
+    
+    # Step 5: Summary
+    expect(page.locator("#wiz-pane-5")).to_be_visible()
+    expect(page.locator("#wiz-summary-org")).to_have_text("E2E-Bootstrap-Org")
+    expect(page.locator("#wiz-summary-apps")).to_have_text("2")
+    expect(page.locator("#wiz-summary-profiles")).to_have_text("2")
+    page.click("#wiz-btn-next")
+    
+    # Step 6: Success
+    expect(page.locator("#wiz-pane-6")).to_be_visible()
+    expect(page.locator("#wiz-success-org")).to_have_text("E2E-Bootstrap-Org")
+    
+    # Close wizard
+    page.click("#wiz-btn-next")
+    expect(page.locator("#bootstrap-modal-overlay")).not_to_be_visible()
