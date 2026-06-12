@@ -566,3 +566,33 @@ func handleDeviceAnomaly(w http.ResponseWriter, r *http.Request, devEUIStr strin
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "applied"})
 }
+
+func handleSMTPConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"enabled":      config.C.SMTP.Enabled,
+		"host":         config.C.SMTP.Host,
+		"port":         config.C.SMTP.Port,
+		"report_email": config.C.SMTP.ReportEmail,
+		"from_email":   config.C.SMTP.FromEmail,
+	})
+}
+
+func handleTestEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	err := SendEmailReport(true)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "delivered"})
+}

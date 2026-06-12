@@ -82,6 +82,16 @@ func SetupDB() error {
 		return fmt.Errorf("create device_intervals table error: %w", err)
 	}
 
+	querySystemStates := `
+	CREATE TABLE IF NOT EXISTS system_states (
+		key TEXT PRIMARY KEY,
+		value TEXT,
+		updated_at DATETIME
+	);`
+	if _, err := db.Exec(querySystemStates); err != nil {
+		return fmt.Errorf("create system_states table error: %w", err)
+	}
+
 	log.Info("sqlite: database initialized successfully")
 	return nil
 }
@@ -287,6 +297,36 @@ func SaveDeviceInterval(devEUI string, interval string) error {
 		updated_at = excluded.updated_at;`
 
 	_, err := db.Exec(query, devEUI, interval, time.Now())
+	return err
+}
+
+// GetSystemState retrieves a system state value for a given key.
+func GetSystemState(key string) (string, error) {
+	if db == nil {
+		return "", fmt.Errorf("database not initialized")
+	}
+
+	var val string
+	err := db.QueryRow("SELECT value FROM system_states WHERE key = ?", key).Scan(&val)
+	if err == sql.ErrNoRows {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+	return val, nil
+}
+
+// SaveSystemState saves/updates a system state key-value pair.
+func SaveSystemState(key string, value string) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	_, err := db.Exec(`
+		INSERT INTO system_states (key, value, updated_at) 
+		VALUES (?, ?, ?) 
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+		key, value, time.Now())
 	return err
 }
 

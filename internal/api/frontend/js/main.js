@@ -229,7 +229,7 @@ function registerGlobalEvents() {
     const loginPassword = $("#login-password");
     const btnLoginSubmit = $("#btn-login-submit");
     const loginError = $("#login-error");
-    const btnLogout = $("#btn-logout");
+    const btnLogout = $("#logout-btn");
 
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {

@@ -82,6 +82,17 @@ type HTTPConfig struct {
 	Bind string `mapstructure:"bind" toml:"bind"`
 }
 
+type SMTPConfig struct {
+	Enabled     bool   `mapstructure:"enabled" toml:"enabled"`
+	Host        string `mapstructure:"host" toml:"host"`
+	Port        int    `mapstructure:"port" toml:"port"`
+	Username    string `mapstructure:"username" toml:"username"`
+	Password    string `mapstructure:"password" toml:"password"`
+	Encryption  string `mapstructure:"encryption" toml:"encryption"`
+	FromEmail   string `mapstructure:"from_email" toml:"from_email"`
+	ReportEmail string `mapstructure:"report_email" toml:"report_email"`
+}
+
 // Config defines the configuration.
 type Config struct {
 	General    GeneralConfig     `mapstructure:"general" toml:"general"`
@@ -89,6 +100,7 @@ type Config struct {
 	Simulator  []SimulatorConfig `mapstructure:"simulator" toml:"simulator"`
 	Prometheus PrometheusConfig  `mapstructure:"prometheus" toml:"prometheus"`
 	HTTP       HTTPConfig        `mapstructure:"http" toml:"http"`
+	SMTP       SMTPConfig        `mapstructure:"smtp" toml:"smtp"`
 }
 
 type DeviceConfig struct {

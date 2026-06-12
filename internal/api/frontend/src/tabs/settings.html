@@ -27,6 +27,9 @@
                                     <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="scripts">
                                         <i class="fas fa-code" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_scripts">Örnek Betikler (JS)</span>
                                     </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="email">
+                                        <i class="fas fa-envelope" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_email">E-Posta Raporlama</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -476,6 +479,48 @@ return payloadHex;</code></pre>
                                                 <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-multi" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
                                                     <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
                                                 </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sub Tab: E-Posta Raporlama -->
+                            <div class="settings-sub-content" id="settings-sub-email">
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;" data-i18n="settings_title_email">Sistem Sağlığı & E-Posta Raporlama Ayarları</h2>
+                                    
+                                    <div class="settings-form-grid" style="display: flex; flex-direction: column; gap: 24px;">
+                                        <!-- SMTP Durumu -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="settings_sec_smtp_status">SMTP Durumu</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_enabled">Raporlama Durumu</label>
+                                                    <span id="smtp-enabled-badge" class="badge" style="padding: 6px 12px; font-size: 0.8rem; display: inline-block;">Yükleniyor...</span>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_server">SMTP Sunucusu</label>
+                                                    <input type="text" id="smtp-server-display" readonly style="background-color: var(--background-dim); color: var(--text-dim);">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_target">Rapor Alıcı E-Postası</label>
+                                                    <input type="text" id="smtp-target-display" readonly style="background-color: var(--background-dim); color: var(--text-dim);">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- E-Posta Test Et -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="settings_sec_smtp_test">E-Posta Bağlantı Testi (Ubuntu VM Uyumlu)</h3>
+                                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 16px;" data-i18n="settings_smtp_test_desc">
+                                                Ubuntu sanal makinesindeki SMTP port erişimlerini ve firewall (güvenlik duvarı) engellerini doğrulamak için anlık bir sistem sağlığı test e-postası gönderebilirsiniz.
+                                            </p>
+                                            <div style="display: flex; gap: 16px; align-items: center;">
+                                                <button type="button" class="btn btn-primary" id="btn-test-smtp">
+                                                    <i class="fas fa-paper-plane" style="margin-right: 8px;"></i> <span data-i18n="btn_send_test_email">Test E-postası Gönder</span>
+                                                </button>
+                                                <span id="smtp-test-status" style="font-size: 0.85rem; font-weight: 500;"></span>
                                             </div>
                                         </div>
                                     </div>

@@ -65,6 +65,16 @@ func TestDatabaseOperations(t *testing.T) {
 		t.Fatalf("failed to create org_configs table: %v", err)
 	}
 
+	querySystemStates := `
+	CREATE TABLE IF NOT EXISTS system_states (
+		key TEXT PRIMARY KEY,
+		value TEXT,
+		updated_at DATETIME
+	);`
+	if _, err := db.Exec(querySystemStates); err != nil {
+		t.Fatalf("failed to create system_states table: %v", err)
+	}
+
 	// 1. Test SaveDeviceInterval & GetDeviceIntervals
 	t.Run("Device Intervals", func(t *testing.T) {
 		err := SaveDeviceInterval("0102030405060708", "5m")
@@ -161,6 +171,44 @@ func TestDatabaseOperations(t *testing.T) {
 
 		if len(configs) != 2 {
 			t.Errorf("expected 2 active configs, got %d", len(configs))
+		}
+	})
+
+	// 3. Test GetSystemState & SaveSystemState
+	t.Run("System States", func(t *testing.T) {
+		val, err := GetSystemState("test_key")
+		if err != nil {
+			t.Fatalf("failed to get state: %v", err)
+		}
+		if val != "" {
+			t.Errorf("expected empty value for non-existent key, got %q", val)
+		}
+
+		err = SaveSystemState("test_key", "test_value")
+		if err != nil {
+			t.Fatalf("failed to save state: %v", err)
+		}
+
+		val, err = GetSystemState("test_key")
+		if err != nil {
+			t.Fatalf("failed to get saved state: %v", err)
+		}
+		if val != "test_value" {
+			t.Errorf("expected test_value, got %q", val)
+		}
+
+		// Update existing
+		err = SaveSystemState("test_key", "new_value")
+		if err != nil {
+			t.Fatalf("failed to update state: %v", err)
+		}
+
+		val, err = GetSystemState("test_key")
+		if err != nil {
+			t.Fatalf("failed to get updated state: %v", err)
+		}
+		if val != "new_value" {
+			t.Errorf("expected new_value, got %q", val)
 		}
 	})
 }

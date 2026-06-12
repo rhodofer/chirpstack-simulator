@@ -181,6 +181,32 @@ bind="{{ .Prometheus.Bind }}"
 
 # IP:port to bind the HTTP API server to.
 bind="{{ .HTTP.Bind }}"
+
+
+# SMTP Daily Email Reporting configuration.
+[smtp]
+
+# Enable daily email reports.
+enabled={{ .SMTP.Enabled }}
+
+# SMTP host (e.g., "smtp.gmail.com").
+host="{{ .SMTP.Host }}"
+
+# SMTP port (e.g., 587 for TLS, 465 for SSL, 25 for unencrypted).
+port={{ .SMTP.Port }}
+
+# SMTP credentials.
+username="{{ .SMTP.Username }}"
+password="{{ .SMTP.Password }}"
+
+# Encryption type ("none", "ssl", "tls").
+encryption="{{ .SMTP.Encryption }}"
+
+# Sender email address.
+from_email="{{ .SMTP.FromEmail }}"
+
+# Target report email address.
+report_email="{{ .SMTP.ReportEmail }}"
 `
 
 var configCmd = &cobra.Command{

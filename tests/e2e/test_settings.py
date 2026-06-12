@@ -56,3 +56,37 @@ def test_settings_validation_limits(page: Page):
     # Verify values have been clamped by backend validation
     expect(page.locator("#packet_loss")).to_have_value("100")
     expect(page.locator("#latency_ms")).to_have_value("5000")
+
+def test_email_reporting_settings(page: Page):
+    # Go to settings tab
+    page.click("[data-tab='settings']")
+    expect(page.locator("#content-settings")).to_be_visible()
+
+    # Click Email Reporting sub-tab
+    page.click("[data-settings-tab='email']")
+    expect(page.locator("#settings-sub-email")).to_be_visible()
+    expect(page.locator("#smtp-enabled-badge")).to_be_visible()
+    expect(page.locator("#btn-test-smtp")).to_be_visible()
+
+    # Mock the test-email API endpoint to return a success response
+    page.route("**/api/system/test-email", lambda route: route.fulfill(
+        status=200,
+        content_type="application/json",
+        body='{"status":"delivered"}'
+    ))
+
+    # Click test email button and verify success message
+    page.click("#btn-test-smtp")
+    expect(page.locator("#smtp-test-status")).to_be_visible()
+    expect(page.locator("#smtp-test-status")).to_contain_text("teslim edildi")
+
+    # Mock the test-email API to return a connection error (firewall/UFW check simulation)
+    page.route("**/api/system/test-email", lambda route: route.fulfill(
+        status=500,
+        content_type="application/json",
+        body='{"error":"connection timeout to smtp.gmail.com:587"}'
+    ))
+
+    # Click test email button and verify failure message propagation
+    page.click("#btn-test-smtp")
+    expect(page.locator("#smtp-test-status")).to_contain_text("Hata")

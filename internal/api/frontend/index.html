@@ -102,7 +102,9 @@
 
             <div class="secondary-sidebar-footer">
                 <span class="version-info">v<span id="version-text">—</span></span>
-                <button class="logout-btn" id="logout-btn" title="Çıkış Yap">🚪 Çıkış</button>
+                <button class="logout-btn" id="logout-btn" data-i18n-title="btn_logout_title" title="Çıkış Yap">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 6px;"></i> <span data-i18n="btn_logout">Çıkış</span>
+                </button>
             </div>
         </aside>
 
@@ -915,6 +917,9 @@
                                     <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="scripts">
                                         <i class="fas fa-code" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_scripts">Örnek Betikler (JS)</span>
                                     </button>
+                                    <button type="button" class="settings-tab-btn settings-sidebar-link" data-settings-tab="email">
+                                        <i class="fas fa-envelope" style="margin-right:8px; width:16px; opacity:0.8;"></i> <span data-i18n="settings_tab_email">E-Posta Raporlama</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1364,6 +1369,48 @@ return payloadHex;</code></pre>
                                                 <button type="button" class="btn btn-secondary btn-sm btn-copy-script" data-target="code-multi" style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px; font-size:11px; padding:4px 8px; height:auto; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
                                                     <i class="far fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
                                                 </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sub Tab: E-Posta Raporlama -->
+                            <div class="settings-sub-content" id="settings-sub-email">
+                                <div class="table-wrapper" style="padding:20px 24px;">
+                                    <h2 style="font-size:0.95rem; font-weight:600; margin-bottom:20px;" data-i18n="settings_title_email">Sistem Sağlığı & E-Posta Raporlama Ayarları</h2>
+                                    
+                                    <div class="settings-form-grid" style="display: flex; flex-direction: column; gap: 24px;">
+                                        <!-- SMTP Durumu -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="settings_sec_smtp_status">SMTP Durumu</h3>
+                                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_enabled">Raporlama Durumu</label>
+                                                    <span id="smtp-enabled-badge" class="badge" style="padding: 6px 12px; font-size: 0.8rem; display: inline-block;">Yükleniyor...</span>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_server">SMTP Sunucusu</label>
+                                                    <input type="text" id="smtp-server-display" readonly style="background-color: var(--background-dim); color: var(--text-dim);">
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="settings_lbl_smtp_target">Rapor Alıcı E-Postası</label>
+                                                    <input type="text" id="smtp-target-display" readonly style="background-color: var(--background-dim); color: var(--text-dim);">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- E-Posta Test Et -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="settings_sec_smtp_test">E-Posta Bağlantı Testi (Ubuntu VM Uyumlu)</h3>
+                                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 16px;" data-i18n="settings_smtp_test_desc">
+                                                Ubuntu sanal makinesindeki SMTP port erişimlerini ve firewall (güvenlik duvarı) engellerini doğrulamak için anlık bir sistem sağlığı test e-postası gönderebilirsiniz.
+                                            </p>
+                                            <div style="display: flex; gap: 16px; align-items: center;">
+                                                <button type="button" class="btn btn-primary" id="btn-test-smtp">
+                                                    <i class="fas fa-paper-plane" style="margin-right: 8px;"></i> <span data-i18n="btn_send_test_email">Test E-postası Gönder</span>
+                                                </button>
+                                                <span id="smtp-test-status" style="font-size: 0.85rem; font-weight: 500;"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -2044,31 +2091,31 @@ return payloadHex;</code></pre>
                     <span class="landing-logo-icon">⚡</span>
                     <span class="landing-logo-text">ChirpStack Simulator</span>
                 </div>
-                <h1 class="landing-title">LoRaWAN Simülasyonunu Yeniden Keşfedin</h1>
-                <p class="landing-subtitle">
+                <h1 class="landing-title" data-i18n="landing_title">LoRaWAN Simülasyonunu Yeniden Keşfedin</h1>
+                <p class="landing-subtitle" data-i18n="landing_subtitle">
                     ChirpStack entegrasyonu ile cihaz ve ağ geçidi simülasyonu yapın, canlı veri akışını izleyin.
                 </p>
                 
                 <div class="landing-features">
                     <div class="landing-feature-card">
-                        <span class="feat-icon">📊</span>
+                        <span class="feat-icon">⚙️</span>
                         <div class="feat-content">
-                            <h4>Canlı Metrik Takibi</h4>
-                            <p>Cihaz durumlarını ve canlı log akışını izleyin.</p>
+                            <h4 data-i18n="login_feat1_title">Dinamik Telemetri</h4>
+                            <p data-i18n="login_feat1_desc">Zaman serisi sensör verileri ve dinamik JS motoru ile gerçekçi payload üretimi.</p>
                         </div>
                     </div>
                     <div class="landing-feature-card">
-                        <span class="feat-icon">📁</span>
+                        <span class="feat-icon">⚠️</span>
                         <div class="feat-content">
-                            <h4>SQLite & Kalıcı Veri</h4>
-                            <p>Simülasyon ayarlarını veritabanında saklayın.</p>
+                            <h4 data-i18n="login_feat2_title">Hata & Anomali Enjeksiyonu</h4>
+                            <p data-i18n="login_feat2_desc">Spike, Flatline, Dropout ve Drift anomalilerini manuel veya olasılıksal simüle edin.</p>
                         </div>
                     </div>
                     <div class="landing-feature-card">
-                        <span class="feat-icon">⚡</span>
+                        <span class="feat-icon">✉️</span>
                         <div class="feat-content">
-                            <h4>Yüksek Performans</h4>
-                            <p>Binlerce mesajı kesintisiz ve hızlıca iletin.</p>
+                            <h4 data-i18n="login_feat3_title">Sistem Sağlığı & Raporlama</h4>
+                            <p data-i18n="login_feat3_desc">Detaylı çalışma metriklerini SMTP e-posta raporları ve VM bağlantı testleri ile izleyin.</p>
                         </div>
                     </div>
                 </div>
@@ -2078,20 +2125,20 @@ return payloadHex;</code></pre>
             <div class="landing-login-panel">
                 <div class="login-card">
                     <div class="login-header">
-                        <h2>Giriş Yapın</h2>
-                        <p>Simülatör paneline erişmek için bilgilerinizi girin.</p>
+                        <h2 data-i18n="login_card_title">Giriş Yapın</h2>
+                        <p data-i18n="login_card_subtitle">Simülatör paneline erişmek için bilgilerinizi girin.</p>
                     </div>
                     <form id="login-form">
                         <div class="form-group">
-                            <label for="login-username">Kullanıcı Adı</label>
+                            <label for="login-username" data-i18n="login_lbl_username">Kullanıcı Adı</label>
                             <input type="text" id="login-username" placeholder="admin@falt.com" required autofocus autocomplete="username">
                         </div>
                         <div class="form-group">
-                            <label for="login-password">Şifre</label>
+                            <label for="login-password" data-i18n="login_lbl_password">Şifre</label>
                             <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
                         </div>
                         <div id="login-error" class="login-error-msg" style="display:none;"></div>
-                        <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit">Giriş Yap</button>
+                        <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit" data-i18n="btn_login_submit">Giriş Yap</button>
                     </form>
                 </div>
             </div>

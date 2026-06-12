@@ -22,6 +22,8 @@ func New(bind string) *Server {
 	if err := SetupDB(); err != nil {
 		log.WithError(err).Fatal("api: failed to initialize sqlite database")
 	}
+	StartReportScheduler()
+	
 	mux := http.NewServeMux()
 	state := GetState()
 
@@ -54,6 +56,8 @@ func New(bind string) *Server {
 	mux.HandleFunc("/api/simulation/metrics", requireAuth(handleSimulationMetrics))
 	mux.HandleFunc("/api/simulation/devices", requireAuth(handleSimulationDevices))
 	mux.HandleFunc("/api/health", handleHealth)
+	mux.HandleFunc("/api/system/smtp-config", requireAuth(handleSMTPConfig))
+	mux.HandleFunc("/api/system/test-email", requireAuth(handleTestEmail))
 	mux.HandleFunc("/api/organizations", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListOrganizations(w, r)

@@ -194,4 +194,65 @@ export function initSettingsTab() {
             btn.innerHTML = oldText;
         });
     }
+
+    // 6. SMTP Email Reporting Status & Connection Test
+    fetchSMTPConfig();
+
+    const btnTestSmtp = $("#btn-test-smtp");
+    const testStatus = $("#smtp-test-status");
+
+    if (btnTestSmtp && testStatus) {
+        btnTestSmtp.addEventListener("click", async function() {
+            const isTr = state.language === "tr";
+            btnTestSmtp.disabled = true;
+            testStatus.style.color = "var(--accent)";
+            testStatus.textContent = isTr ? "Gönderiliyor..." : "Sending...";
+
+            const r = await api("POST", "/api/system/test-email");
+            btnTestSmtp.disabled = false;
+
+            if (r.ok) {
+                testStatus.style.color = "#28a745";
+                testStatus.textContent = isTr ? "Başarılı! Test e-postası teslim edildi." : "Success! Test email delivered.";
+                logEntry("SMTP test email sent successfully.", "success");
+            } else {
+                const errMsg = (r.data && r.data.error) || "SMTP error";
+                testStatus.style.color = "#dc3545";
+                testStatus.textContent = (isTr ? "Hata: " : "Error: ") + errMsg;
+                logEntry("SMTP test email failed: " + errMsg, "error");
+            }
+        });
+    }
+}
+
+export async function fetchSMTPConfig() {
+    const badge = $("#smtp-enabled-badge");
+    const serverInput = $("#smtp-server-display");
+    const targetInput = $("#smtp-target-display");
+
+    if (!badge || !serverInput || !targetInput) return;
+
+    badge.className = "badge";
+    badge.style.backgroundColor = "var(--text-dim)";
+    badge.textContent = state.language === "tr" ? "Yükleniyor..." : "Loading...";
+
+    const r = await api("GET", "/api/system/smtp-config");
+    if (r.ok && r.data) {
+        const data = r.data;
+        if (data.enabled) {
+            badge.className = "badge badge-success";
+            badge.style.backgroundColor = "#28a745";
+            badge.textContent = state.language === "tr" ? "Aktif" : "Enabled";
+        } else {
+            badge.className = "badge badge-secondary";
+            badge.style.backgroundColor = "#6c757d";
+            badge.textContent = state.language === "tr" ? "Pasif" : "Disabled";
+        }
+        serverInput.value = (data.host && data.port) ? `${data.host}:${data.port}` : "";
+        targetInput.value = data.report_email || "";
+    } else {
+        badge.className = "badge badge-danger";
+        badge.style.backgroundColor = "#dc3545";
+        badge.textContent = state.language === "tr" ? "Hata" : "Error";
+    }
 }

@@ -7,31 +7,31 @@
                     <span class="landing-logo-icon">⚡</span>
                     <span class="landing-logo-text">ChirpStack Simulator</span>
                 </div>
-                <h1 class="landing-title">LoRaWAN Simülasyonunu Yeniden Keşfedin</h1>
-                <p class="landing-subtitle">
+                <h1 class="landing-title" data-i18n="landing_title">LoRaWAN Simülasyonunu Yeniden Keşfedin</h1>
+                <p class="landing-subtitle" data-i18n="landing_subtitle">
                     ChirpStack entegrasyonu ile cihaz ve ağ geçidi simülasyonu yapın, canlı veri akışını izleyin.
                 </p>
                 
                 <div class="landing-features">
                     <div class="landing-feature-card">
-                        <span class="feat-icon">📊</span>
+                        <span class="feat-icon">⚙️</span>
                         <div class="feat-content">
-                            <h4>Canlı Metrik Takibi</h4>
-                            <p>Cihaz durumlarını ve canlı log akışını izleyin.</p>
+                            <h4 data-i18n="login_feat1_title">Dinamik Telemetri</h4>
+                            <p data-i18n="login_feat1_desc">Zaman serisi sensör verileri ve dinamik JS motoru ile gerçekçi payload üretimi.</p>
                         </div>
                     </div>
                     <div class="landing-feature-card">
-                        <span class="feat-icon">📁</span>
+                        <span class="feat-icon">⚠️</span>
                         <div class="feat-content">
-                            <h4>SQLite & Kalıcı Veri</h4>
-                            <p>Simülasyon ayarlarını veritabanında saklayın.</p>
+                            <h4 data-i18n="login_feat2_title">Hata & Anomali Enjeksiyonu</h4>
+                            <p data-i18n="login_feat2_desc">Spike, Flatline, Dropout ve Drift anomalilerini manuel veya olasılıksal simüle edin.</p>
                         </div>
                     </div>
                     <div class="landing-feature-card">
-                        <span class="feat-icon">⚡</span>
+                        <span class="feat-icon">✉️</span>
                         <div class="feat-content">
-                            <h4>Yüksek Performans</h4>
-                            <p>Binlerce mesajı kesintisiz ve hızlıca iletin.</p>
+                            <h4 data-i18n="login_feat3_title">Sistem Sağlığı & Raporlama</h4>
+                            <p data-i18n="login_feat3_desc">Detaylı çalışma metriklerini SMTP e-posta raporları ve VM bağlantı testleri ile izleyin.</p>
                         </div>
                     </div>
                 </div>
@@ -41,20 +41,20 @@
             <div class="landing-login-panel">
                 <div class="login-card">
                     <div class="login-header">
-                        <h2>Giriş Yapın</h2>
-                        <p>Simülatör paneline erişmek için bilgilerinizi girin.</p>
+                        <h2 data-i18n="login_card_title">Giriş Yapın</h2>
+                        <p data-i18n="login_card_subtitle">Simülatör paneline erişmek için bilgilerinizi girin.</p>
                     </div>
                     <form id="login-form">
                         <div class="form-group">
-                            <label for="login-username">Kullanıcı Adı</label>
+                            <label for="login-username" data-i18n="login_lbl_username">Kullanıcı Adı</label>
                             <input type="text" id="login-username" placeholder="admin@falt.com" required autofocus autocomplete="username">
                         </div>
                         <div class="form-group">
-                            <label for="login-password">Şifre</label>
+                            <label for="login-password" data-i18n="login_lbl_password">Şifre</label>
                             <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
                         </div>
                         <div id="login-error" class="login-error-msg" style="display:none;"></div>
-                        <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit">Giriş Yap</button>
+                        <button type="submit" class="btn btn-primary login-submit-btn" id="btn-login-submit" data-i18n="btn_login_submit">Giriş Yap</button>
                     </form>
                 </div>
             </div>
