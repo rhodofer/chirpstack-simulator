@@ -12,6 +12,8 @@
 8. [Güvenlik ve Sınırlamalar](#8-güvenlik-ve-sınırlamalar)
 9. [Sık Sorulan Sorular](#9-sık-sorulan-sorular)
 10. [Shell Entegrasyonu (Windows)](#10-shell-entegrasyonu-windows)
+11. [Web UI (Arayüz) Kullanımı](#11-web-ui-arayüz-kullanımı)
+12. [Ek: Hızlı Başlangıç](#12-ek-hızlı-başlangıç)
 
 ---
 
@@ -290,7 +292,40 @@ level=info msg="simulator: send uplink" dev_eui=ccf35effc5a1d8e6 f_cnt=1 f_port=
 
 ---
 
-## Ek: Hızlı Başlangıç
+## 11. Web UI (Arayüz) Kullanımı
+
+ChirpStack Simulator, simülasyonları izlemek ve yönetmek için modern bir web arayüzü (Web UI) sunar.
+
+### 11.1. Web Sunucusunu Başlatma
+Web arayüzü varsayılan olarak **`9002`** portundan yayın yapar. Konfigürasyon dosyasındaki (`simulator.toml`) `[http] bind` seçeneği ile bu port değiştirilebilir:
+
+```toml
+[http]
+bind="0.0.0.0:9002"
+```
+
+Simülatör çalıştırıldığında web sunucusu otomatik olarak aktif olur:
+- Tarayıcınızdan şu adrese erişebilirsiniz: `http://localhost:9002`
+
+### 11.2. Önemli Özellikler ve Sekmeler
+
+1. **Dashboard (Gösterge Paneli):**
+   - Canlı Leaflet harita entegrasyonu ile cihazların konumları ve durumları (çevrimiçi/çevrimdışı/veri gönderen) haritada izlenir.
+   - Grafik paneli üzerinden simülasyon metrikleri (uplink, join, başarı oranları) anlık çizilir.
+   
+2. **Organizasyon Yönetimi:**
+   - Her organizasyon bazında simülasyon parametreleri (Cihaz Sayısı, Gateway Sayısı, Cihaz Öneki, Transform Betiği, Paket Kaybı vb.) sunucu SQLite veritabanında (`simulator.db`) kalıcı saklanır.
+   - Simülasyon aktifken verilerin bozulmaması için giriş alanları kilitlenir.
+
+3. **Log Merkezi (Log Center):**
+   - **Sistem Olayları:** Tarayıcı tarafındaki tüm operasyonel loglar yerel **IndexedDB** (`SimLogDB`) üzerinde saklanır.
+   - **Otomatik Rotasyon:** Disk doluluğunu önlemek için her Pazartesi 00:00'da eski loglar boot esnasında otomatik silinir.
+   - **Hata Teşhis Paneli (Diagnostics):** Başarısız olan API isteklerinin tüm detayları (metot, yol, status ve yanıt gövdeleri) collapsible bölmede görüntülenebilir.
+   - **Canlı Konsol:** Go backend'inden akan SSE logları anlık takip edilebilir, kaynak bazlı filtrelenebilir.
+
+---
+
+## 12. Ek: Hızlı Başlangıç
 
 ```bash
 # 1. Konfigürasyon şablonu

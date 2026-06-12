@@ -28,16 +28,15 @@ Bu yol haritası, simülatörün **5.000 cihaz ölçeğine çıkarılması**, **
 Cihazların gerçekçi testler sunabilmesi için statik payload'lar yerine zaman serisi halinde değişen fiziksel sensör verileri (Sıcaklık, Nem, Basınç, Batarya vb.) üretilmelidir.
 
 ### 1. Matematiksel Modellerle Telemetri Üretimi
-Simülatörün Go backend tarafındaki JavaScript motoru (`goja`) kullanılarak veya konfigürasyondan seçilerek sensör verileri modellenecektir:
+Simülatörün Go backend tarafındaki JavaScript motoru (`goja`) entegrasyonu tamamlanmıştır ve çalışmaktadır:
+- [x] **Goja JS Engine Entegrasyonu (Tamamlandı):** Go backend tarafında JavaScript betikleri çalıştırılarak dinamik veri üretimi gerçekleştirilmektedir.
 - [ ] **Rastgele Yürüyüş (Random Walk):** Sensörün bir önceki değere bağlı olarak hafifçe artıp azalması (örn: oda sıcaklığı).
 - [ ] **Periyodik Dalgalanma (Sine/Cosine):** Gece-gündüz sıcaklık değişimleri veya periyodik çalışan makinelerin titreşim modelleri.
 - [ ] **Doğrusal Aşınma/Eğilim (Linear Drift):** Pil seviyesinin yavaşça tükenmesi veya filtre kirliliği gibi sürekli artan/azalan değerler.
 
 ### 2. UI / Config Entegrasyonu
-- [ ] **UI Payload Editor:** Çekmece (Drawer) içine cihaz profili veya uygulama bazında dinamik veri üretim formüllerini seçecek alanlar eklenmesi.
-- [ ] **Önceden Tanımlı Şablonlar (Templates):**
-  - *Sıcaklık/Nem Sensörü:* 15°C ile 25°C arası sinüs dalgası + batarya tüketimi.
-  - *Su Sayacı:* Her uplink'te kümülatif olarak artan indeks değeri.
+- [x] **UI Payload Editor (Tamamlandı):** Çekmece (Drawer) içine dinamik veri üretim formülü yazılabilen "Dinamik Payload Betiği" editörü eklendi.
+- [ ] **Önceden Tanımlı Şablonlar (Templates):** Arayüzde tek tıkla seçilebilen şablon formüller (Sıcaklık, Su Sayacı vb.) eklenmesi.
 
 ---
 
