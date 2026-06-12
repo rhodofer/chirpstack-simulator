@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { $, $$, escapeHtml, showToast, logEntry } from "../utils.js";
+import { $, $$, escapeHtml, showToast, logEntry, openDetailsDrawer, closeDetailsDrawer } from "../utils.js";
 import { api } from "../api.js";
 import { t } from "../translate.js";
 import { getOrgName, applyFiltersAndRender as applyOrgFiltersAndRender } from "./orgs.js";
@@ -261,6 +261,8 @@ export function renderDevTable() {
             `</td>` +
             `<td>` +
                 `<div class="row-actions">` +
+                    `<button class="row-action-btn view-btn" data-id="${dev.dev_eui}" title="Görüntüle">👁</button>` +
+                    `<button class="row-action-btn edit-btn" data-id="${dev.dev_eui}" title="Düzenle">✏</button>` +
                     `<button class="row-action-btn danger delete-btn" data-id="${dev.dev_eui}" title="Sil">🗑</button>` +
                 `</div>` +
             `</td>`;
@@ -270,6 +272,16 @@ export function renderDevTable() {
                 if (e.target.closest(".delete-btn")) {
                     e.stopPropagation();
                     deleteDevice(devEui);
+                    return;
+                }
+                if (e.target.closest(".edit-btn")) {
+                    e.stopPropagation();
+                    openDevDrawer(devEui);
+                    return;
+                }
+                if (e.target.closest(".view-btn")) {
+                    e.stopPropagation();
+                    viewDevice(devEui);
                     return;
                 }
             };
@@ -606,6 +618,226 @@ export function generateRandomDevEUI() {
     return res;
 }
 
+export function populateDevEditAppSelect(selectedAppId) {
+    const devEditApp = $("#dev_edit_app");
+    if (!devEditApp) return;
+    devEditApp.innerHTML = "";
+    if (state.applications.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = state.language === "tr" ? "Önce ağ oluşturun" : "Create a network first";
+        opt.disabled = true;
+        devEditApp.appendChild(opt);
+        return;
+    }
+    for (let i = 0; i < state.applications.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = state.applications[i].id;
+        opt.textContent = state.applications[i].name;
+        devEditApp.appendChild(opt);
+    }
+    if (selectedAppId) {
+        devEditApp.value = selectedAppId;
+    }
+}
+
+export function onDevEditAppChange(selectedDpId) {
+    const devEditApp = $("#dev_edit_app");
+    const devEditProfile = $("#dev_edit_profile");
+    if (!devEditApp || !devEditProfile) return;
+
+    const appId = devEditApp.value;
+    devEditProfile.innerHTML = "";
+    const app = findNet(appId);
+    if (!app) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = state.language === "tr" ? "Ağ bulunamadı" : "Network not found";
+        opt.disabled = true;
+        devEditProfile.appendChild(opt);
+        return;
+    }
+    const tenantId = app.tenant_id;
+    const filteredDps = state.dpList.filter(dp => dp.tenant_id === tenantId);
+
+    if (filteredDps.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Bu tenant için device profile yok";
+        opt.disabled = true;
+        devEditProfile.appendChild(opt);
+        return;
+    }
+
+    for (let i = 0; i < filteredDps.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = filteredDps[i].id;
+        opt.textContent = filteredDps[i].name;
+        devEditProfile.appendChild(opt);
+    }
+    if (selectedDpId) {
+        devEditProfile.value = selectedDpId;
+    }
+}
+
+export async function openDevDrawer(devEui) {
+    const r = await api("GET", "/api/devices/" + devEui);
+    if (!r.ok) {
+        showToast(state.language === "tr" ? "Cihaz detayları yüklenemedi" : "Failed to load device details", "error");
+        return;
+    }
+    const dev = r.data;
+
+    state.activeDevEui = devEui;
+
+    const devEditName = $("#dev_edit_name");
+    const devEditEui = $("#dev_edit_eui");
+    const devEditDescription = $("#dev_edit_description");
+    const devEditIsDisabled = $("#dev_edit_is_disabled");
+
+    if (devEditName) devEditName.value = dev.name || "";
+    if (devEditEui) devEditEui.value = dev.dev_eui || "";
+    if (devEditDescription) devEditDescription.value = dev.description || "";
+    if (devEditIsDisabled) devEditIsDisabled.checked = !!dev.is_disabled;
+
+    populateDevEditAppSelect(dev.application_id);
+    onDevEditAppChange(dev.device_profile_id);
+
+    const drawer = $("#dev-drawer");
+    const overlay = $("#dev-drawer-overlay");
+    if (drawer) drawer.classList.add("open");
+    if (overlay) overlay.classList.add("open");
+
+    logEntry("Device selected for edit: " + dev.name, "info");
+}
+
+export function closeDevDrawer() {
+    const drawer = $("#dev-drawer");
+    const overlay = $("#dev-drawer-overlay");
+    if (drawer) drawer.classList.remove("open");
+    if (overlay) overlay.classList.remove("open");
+    state.activeDevEui = null;
+}
+
+export async function saveDevice() {
+    const devEui = state.activeDevEui;
+    if (!devEui) return;
+
+    const devEditName = $("#dev_edit_name");
+    const devEditApp = $("#dev_edit_app");
+    const devEditProfile = $("#dev_edit_profile");
+    const devEditDescription = $("#dev_edit_description");
+    const devEditIsDisabled = $("#dev_edit_is_disabled");
+
+    const name = devEditName ? devEditName.value.trim() : "";
+    if (!name) {
+        showToast(state.language === "tr" ? "Cihaz adı boş olamaz!" : "Device name cannot be empty!", "error");
+        return;
+    }
+    const appId = devEditApp ? devEditApp.value : "";
+    if (!appId) {
+        showToast(state.language === "tr" ? "Ağ seçimi zorunludur!" : "Network selection is required!", "error");
+        return;
+    }
+    const dpId = devEditProfile ? devEditProfile.value : "";
+    if (!dpId) {
+        showToast(state.language === "tr" ? "Device profile seçimi zorunludur!" : "Device profile selection is required!", "error");
+        return;
+    }
+
+    const data = {
+        dev_eui: devEui,
+        name: name,
+        application_id: appId,
+        device_profile_id: dpId,
+        description: devEditDescription ? devEditDescription.value.trim() : "",
+        is_disabled: devEditIsDisabled ? devEditIsDisabled.checked : false
+    };
+
+    const btnSave = $("#btn-save-dev-config");
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = state.language === "tr" ? "Kaydediliyor..." : "Saving...";
+    }
+
+    const r = await api("PUT", "/api/devices/" + devEui, data);
+
+    if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = "✓ " + (t("btn_save_changes") || "Değişiklikleri Kaydet");
+    }
+
+    if (r.ok) {
+        logEntry("Device updated successfully: " + name, "success");
+        showToast(state.language === "tr" ? "Cihaz güncellendi." : "Device updated.", "success");
+        closeDevDrawer();
+        await fetchDevices(state.devTenantFilter);
+    } else {
+        const errMsg = (r.data && r.data.error) || "Güncelleme hatası";
+        logEntry("Failed to update device: " + errMsg, "error");
+        showToast(errMsg, "error");
+    }
+}
+
+function getAppName(appId) {
+    if (!appId) return "—";
+    const app = findNet(appId);
+    return app ? app.name : appId;
+}
+
+export async function viewDevice(devEui) {
+    const r = await api("GET", "/api/devices/" + devEui);
+    if (!r.ok) {
+        showToast(state.language === "tr" ? "Cihaz detayları yüklenemedi" : "Failed to load device details", "error");
+        return;
+    }
+    const dev = r.data;
+
+    const isTr = state.language === "tr";
+    const yesText = isTr ? "Evet" : "Yes";
+    const noText = isTr ? "Hayır" : "No";
+
+    const statusPill = dev.is_disabled 
+        ? '<span class="status-pill inactive">' + (isTr ? 'DEVRE DIŞI' : 'DISABLED') + '</span>'
+        : '<span class="status-pill active">' + (isTr ? 'AKTİF' : 'ACTIVE') + '</span>';
+
+    const html = 
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + (isTr ? 'Cihaz Adı' : 'Device Name') + '</div>' +
+            '<div class="detail-value" style="font-weight: 600; color: var(--accent);">' + escapeHtml(dev.name) + '</div>' +
+        '</div>' +
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + 'DevEUI' + '</div>' +
+            '<div class="detail-value id-cell">' + escapeHtml(dev.dev_eui) + '</div>' +
+        '</div>' +
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + (isTr ? 'Ağ (Application)' : 'Network (Application)') + '</div>' +
+            '<div class="detail-value">' +
+                '<span style="font-weight: 600;">' + escapeHtml(getAppName(dev.application_id)) + '</span><br>' +
+                '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(dev.application_id || "—") + '</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + (isTr ? 'Cihaz Profili' : 'Device Profile') + '</div>' +
+            '<div class="detail-value">' +
+                '<span style="font-weight: 600;">' + escapeHtml(getDpName(dev.device_profile_id)) + '</span><br>' +
+                '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(dev.device_profile_id || "—") + '</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + (isTr ? 'Açıklama' : 'Description') + '</div>' +
+            '<div class="detail-value">' + escapeHtml(dev.description || "—") + '</div>' +
+        '</div>' +
+        '<div class="detail-item">' +
+            '<div class="detail-label">' + (isTr ? 'Cihaz Durumu' : 'Device Status') + '</div>' +
+            '<div class="detail-value" style="margin-top: 4px;">' + statusPill + '</div>' +
+        '</div>';
+
+    const title = isTr ? "Cihaz Detayları" : "Device Details";
+    const subtitle = isTr ? "Cihazın yapılandırma bilgileri" : "Configuration info of the device";
+    openDetailsDrawer(title, subtitle, html);
+}
+
 export function initDeviceListTab() {
     const devTenantFilter = $("#dev-tenant-select");
     const devSearchInput = $("#dev-search-input");
@@ -760,6 +992,31 @@ export function initDeviceListTab() {
             sortDevBy(th.getAttribute("data-sort"));
         });
     });
+
+    const devDrawerClose = $("#dev-drawer-close");
+    const devDrawerOverlay = $("#dev-drawer-overlay");
+    const btnSaveDevConfig = $("#btn-save-dev-config");
+    const devEditApp = $("#dev_edit_app");
+
+    if (devDrawerClose) {
+        devDrawerClose.addEventListener("click", closeDevDrawer);
+    }
+    if (devDrawerOverlay) {
+        devDrawerOverlay.addEventListener("click", (e) => {
+            if (e.target === devDrawerOverlay) closeDevDrawer();
+        });
+    }
+    if (btnSaveDevConfig) {
+        btnSaveDevConfig.addEventListener("click", (e) => {
+            e.preventDefault();
+            saveDevice();
+        });
+    }
+    if (devEditApp) {
+        devEditApp.addEventListener("change", () => {
+            onDevEditAppChange();
+        });
+    }
 
     $$("#content-device-intervals thead th.sortable").forEach((th) => {
         th.addEventListener("click", () => {

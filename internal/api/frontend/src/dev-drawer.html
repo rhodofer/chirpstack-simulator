@@ -1,0 +1,49 @@
+    <!-- ═══ DEVICE EDIT DRAWER ════════════════════════════════ -->
+    <div class="drawer-overlay" id="dev-drawer-overlay"></div>
+    <aside class="drawer" id="dev-drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <div class="drawer-title" id="dev-drawer-title" data-i18n="dev_drawer_title">Cihaz Düzenle</div>
+                <div class="drawer-subtitle" id="dev-drawer-subtitle" data-i18n="dev_drawer_subtitle">Cihazın yapılandırma bilgilerini güncelleyin</div>
+            </div>
+            <button class="drawer-close" id="dev-drawer-close">✕</button>
+        </div>
+        <div class="drawer-body">
+            <form id="dev-edit-form" autocomplete="off" onsubmit="return false;">
+                <fieldset>
+                    <legend>Cihaz Bilgileri</legend>
+                    <div class="form-group">
+                        <label for="dev_edit_name" data-i18n="table_dev_name">Cihaz Adı *</label>
+                        <input type="text" id="dev_edit_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dev_edit_eui">DevEUI *</label>
+                        <input type="text" id="dev_edit_eui" readonly style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="dev_edit_app" data-i18n="modal_add_dev_app">Ağ *</label>
+                        <select id="dev_edit_app" style="width: 100%;"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dev_edit_profile" data-i18n="table_dev_profile">Device Profile *</label>
+                        <select id="dev_edit_profile" style="width: 100%;"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dev_edit_description" data-i18n="modal_add_dev_desc">Açıklama</label>
+                        <input type="text" id="dev_edit_description">
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="dev_edit_is_disabled">
+                            <span data-i18n="modal_add_dev_disabled_check">Cihazı devre dışı bırak</span>
+                        </label>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn btn-secondary btn-sm" id="btn-save-dev-config" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                <span data-i18n="btn_save_changes">Değişiklikleri Kaydet</span>
+            </button>
+        </div>
+    </aside>

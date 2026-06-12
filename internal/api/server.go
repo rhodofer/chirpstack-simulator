@@ -163,7 +163,7 @@ func New(bind string) *Server {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 			return
 		}
-		handleDeleteDevice(w, r, devEUI)
+		handleDeviceByID(w, r, devEUI)
 	}))
 
 	mux.HandleFunc("/api/device-intervals", requireAuth(func(w http.ResponseWriter, r *http.Request) {

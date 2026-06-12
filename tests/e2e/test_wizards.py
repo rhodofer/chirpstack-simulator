@@ -220,6 +220,52 @@ def test_edit_device_profile(page: Page):
     # Verify table row reflects the updated name
     expect(page.locator("#dp-table-body tr").filter(has_text="E2E Test Device Profile Edited").first).to_be_visible()
 
+def test_edit_device(page: Page):
+    # Navigate to Devices tab
+    page.click("[data-tab='device-list']")
+    expect(page.locator("#content-device-list")).to_be_visible()
+
+    # Find the row of the device we created in test_bootstrap_wizard (it creates devices starting with e2e-dev)
+    dev_row = page.locator("#dev-table-body tr").filter(has_text="e2e-dev-1").first
+    expect(dev_row).to_be_visible()
+
+    # 1. Test Viewing the Device
+    dev_row.locator(".view-btn").click()
+    expect(page.locator("#details-drawer")).to_have_class(re.compile(r"\bopen\b"))
+    expect(page.locator("#details-drawer-body")).to_contain_text("e2e-dev-1")
+
+    # Close Details Drawer
+    page.click("#btn-close-details")
+    expect(page.locator("#details-drawer")).not_to_have_class(re.compile(r"\bopen\b"))
+
+    # 2. Test Editing the Device
+    dev_row.locator(".edit-btn").click()
+    expect(page.locator("#dev-drawer")).to_have_class(re.compile(r"\bopen\b"))
+    expect(page.locator("#dev_edit_name")).to_have_value("E2E-Bootstrap-Org-e2e-app-1-e2e-dev-1")
+
+    # Edit fields
+    page.fill("#dev_edit_name", "E2E-Bootstrap-Org-e2e-app-1-e2e-dev-1-edited")
+    page.fill("#dev_edit_description", "E2E Device Description Edited")
+    page.check("#dev_edit_is_disabled")
+
+    # Save changes
+    page.click("#btn-save-dev-config")
+
+    # Verify success toast
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("güncellendi")
+
+    # Verify edit drawer closes automatically
+    expect(page.locator("#dev-drawer")).not_to_have_class(re.compile(r"\bopen\b"))
+
+    # Search for the edited name
+    page.fill("#dev-search-input", "E2E-Bootstrap-Org-e2e-app-1-e2e-dev-1-edited")
+    page.wait_for_timeout(300) # Wait for filtering to apply
+
+    # Verify table row reflects the updated name
+    expect(page.locator("#dev-table-body tr").filter(has_text="E2E-Bootstrap-Org-e2e-app-1-e2e-dev-1-edited").first).to_be_visible()
+
+
 
 
 

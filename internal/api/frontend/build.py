@@ -20,6 +20,7 @@ def build():
         '{{TAB_INFO}}': os.path.join(src_dir, 'tabs', 'info.html'),
         '{{DRAWER}}': os.path.join(src_dir, 'drawer.html'),
         '{{DP_DRAWER}}': os.path.join(src_dir, 'dp-drawer.html'),
+        '{{DEV_DRAWER}}': os.path.join(src_dir, 'dev-drawer.html'),
         '{{DETAILS_DRAWER}}': os.path.join(src_dir, 'details-drawer.html'),
         '{{MODALS}}': os.path.join(src_dir, 'modals.html'),
         '{{LOGIN}}': os.path.join(src_dir, 'login.html')

@@ -208,3 +208,87 @@ func handleDeleteDevice(w http.ResponseWriter, r *http.Request, devEUI string) {
 	log.WithField("dev_eui", devEUI).Info("devices: deleted")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "dev_eui": devEUI})
 }
+
+func handleDeviceByID(w http.ResponseWriter, r *http.Request, devEUI string) {
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		resp, err := as.Device().Get(context.Background(), &api.GetDeviceRequest{DevEui: devEUI})
+		if err != nil {
+			log.WithError(err).WithField("dev_eui", devEUI).Error("devices: get error")
+			writeJSON(w, http.StatusBadGateway, map[string]string{
+				"error": "Failed to connect to ChirpStack API: " + err.Error(),
+			})
+			return
+		}
+
+		d := resp.GetDevice()
+		writeJSON(w, http.StatusOK, Device{
+			DevEUI:          d.GetDevEui(),
+			Name:            d.GetName(),
+			ApplicationID:   d.GetApplicationId(),
+			DeviceProfileID: d.GetDeviceProfileId(),
+			Description:     d.GetDescription(),
+			IsDisabled:      d.GetIsDisabled(),
+		})
+	} else if r.Method == http.MethodPut {
+		var req CreateDeviceRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+			return
+		}
+
+		if req.Name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device name is required"})
+			return
+		}
+		if req.ApplicationID == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application_id is required"})
+			return
+		}
+		if req.DeviceProfileID == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device_profile_id is required"})
+			return
+		}
+
+		_, err := as.Device().Update(context.Background(), &api.UpdateDeviceRequest{
+			Device: &api.Device{
+				DevEui:          devEUI,
+				Name:            req.Name,
+				ApplicationId:   req.ApplicationID,
+				DeviceProfileId: req.DeviceProfileID,
+				Description:     req.Description,
+				IsDisabled:      req.IsDisabled,
+			},
+		})
+		if err != nil {
+			log.WithError(err).WithField("dev_eui", devEUI).Error("devices: update error")
+			writeJSON(w, http.StatusBadGateway, map[string]string{
+				"error": "Failed to connect to ChirpStack API: " + err.Error(),
+			})
+			return
+		}
+
+		log.WithFields(log.Fields{
+			"dev_eui": devEUI,
+			"name":    req.Name,
+		}).Info("devices: updated")
+
+		writeJSON(w, http.StatusOK, Device{
+			DevEUI:          devEUI,
+			Name:            req.Name,
+			ApplicationID:   req.ApplicationID,
+			DeviceProfileID: req.DeviceProfileID,
+			Description:     req.Description,
+			IsDisabled:      req.IsDisabled,
+		})
+	} else if r.Method == http.MethodDelete {
+		handleDeleteDevice(w, r, devEUI)
+	} else {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
+}
+
