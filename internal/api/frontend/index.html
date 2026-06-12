@@ -1112,6 +1112,115 @@ return payloadHex;</code></pre>
     </aside>
 
 
+    <!-- ═══ DEVICE PROFILE EDIT DRAWER ════════════════════════════════ -->
+    <div class="drawer-overlay" id="dp-drawer-overlay"></div>
+    <aside class="drawer" id="dp-drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <div class="drawer-title" id="dp-drawer-title" data-i18n="dp_drawer_title">Cihaz Profili Düzenle</div>
+                <div class="drawer-subtitle" id="dp-drawer-subtitle" data-i18n="dp_drawer_subtitle">Cihaz profilinin yapılandırma bilgilerini güncelleyin</div>
+            </div>
+            <button class="drawer-close" id="dp-drawer-close">✕</button>
+        </div>
+        <div class="drawer-body">
+            <form id="dp-edit-form" autocomplete="off" onsubmit="return false;">
+                <fieldset>
+                    <legend>Genel Bilgiler</legend>
+                    <div class="form-group">
+                        <label for="dp_edit_name" data-i18n="table_dp_name">Profil Adı *</label>
+                        <input type="text" id="dp_edit_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dp_edit_id">ID</label>
+                        <input type="text" id="dp_edit_id" readonly style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="dp_edit_tenant" data-i18n="modal_add_dp_tenant">Tenant (Organizasyon) *</label>
+                        <input type="text" id="dp_edit_tenant" readonly style="opacity: 0.7; cursor: not-allowed;">
+                        <!-- We also keep a hidden input for tenant_id -->
+                        <input type="hidden" id="dp_edit_tenant_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="dp_edit_description" data-i18n="modal_add_dp_desc">Açıklama</label>
+                        <input type="text" id="dp_edit_description">
+                    </div>
+                </fieldset>
+                
+                <fieldset style="margin-top: 16px;">
+                    <legend>Bölge & Protokol</legend>
+                    <div class="form-row" style="display: flex; gap: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="dp_edit_region" data-i18n="table_dp_region">Bölge *</label>
+                            <select id="dp_edit_region" style="width: 100%;">
+                                <option value="EU868">EU868</option>
+                                <option value="US915">US915</option>
+                                <option value="AS923">AS923</option>
+                                <option value="AU915">AU915</option>
+                                <option value="IN865">IN865</option>
+                                <option value="KR920">KR920</option>
+                                <option value="RU864">RU864</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="dp_edit_mac_version" data-i18n="table_dp_mac">MAC Versiyon *</label>
+                            <select id="dp_edit_mac_version" style="width: 100%;">
+                                <option value="LORAWAN_1_0_0">1.0.0</option>
+                                <option value="LORAWAN_1_0_1">1.0.1</option>
+                                <option value="LORAWAN_1_0_2">1.0.2</option>
+                                <option value="LORAWAN_1_0_3">1.0.3</option>
+                                <option value="LORAWAN_1_0_4">1.0.4</option>
+                                <option value="LORAWAN_1_1_0">1.1.0</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 16px; margin-top: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="dp_edit_reg_params" data-i18n="modal_add_dp_reg_params">Regional Parameters *</label>
+                            <select id="dp_edit_reg_params" style="width: 100%;">
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="dp_edit_adr_alg" data-i18n="modal_add_dp_adr">ADR Algoritması</label>
+                            <input type="text" id="dp_edit_adr_alg" placeholder="default">
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <fieldset style="margin-top: 16px;">
+                    <legend>Desteklenen Özellikler</legend>
+                    <div class="form-group">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="dp_edit_supports_otaa">
+                            <span data-i18n="modal_add_dp_otaa_check">OTAA (Over-The-Air Activation) destekler</span>
+                        </label>
+                    </div>
+                    <div class="form-row" style="margin-top: 12px; display: flex; gap: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="dp_edit_supports_class_b">
+                                <span data-i18n="modal_add_dp_class_b_check">Class B destekler</span>
+                            </label>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="dp_edit_supports_class_c">
+                                <span data-i18n="modal_add_dp_class_c_check">Class C destekler</span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn btn-secondary btn-sm" id="btn-save-dp-config" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                <span data-i18n="btn_save_changes">Değişiklikleri Kaydet</span>
+            </button>
+        </div>
+    </aside>
+
+
     <!-- ═══ DETAILS DRAWER (Detay Görüntüleme) ════════════════════════════════ -->
     <div class="drawer-overlay" id="details-drawer-overlay"></div>
     <aside class="drawer" id="details-drawer">

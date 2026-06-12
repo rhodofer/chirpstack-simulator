@@ -189,6 +189,7 @@ export function renderDpTable() {
             `<td>` +
                 `<div class="row-actions">` +
                     `<button class="row-action-btn view-btn" data-id="${dp.id}" title="Görüntüle">👁</button>` +
+                    `<button class="row-action-btn edit-btn" data-id="${dp.id}" title="Düzenle">✏</button>` +
                     `<button class="row-action-btn danger delete-btn" data-id="${dp.id}" title="Sil">🗑</button>` +
                 `</div>` +
             `</td>`;
@@ -198,6 +199,11 @@ export function renderDpTable() {
                 if (e.target.closest(".delete-btn")) {
                     e.stopPropagation();
                     deleteDeviceProfile(id);
+                    return;
+                }
+                if (e.target.closest(".edit-btn")) {
+                    e.stopPropagation();
+                    openDpDrawer(id);
                     return;
                 }
                 if (e.target.closest(".view-btn")) {
@@ -298,6 +304,113 @@ export function changeDpPageSize(n) {
     applyDpFiltersAndRender();
 }
 
+export function openDpDrawer(id) {
+    const dp = findDp(id);
+    if (!dp) return;
+
+    state.activeDpId = id;
+
+    const dpEditName = $("#dp_edit_name");
+    const dpEditId = $("#dp_edit_id");
+    const dpEditTenant = $("#dp_edit_tenant");
+    const dpEditTenantId = $("#dp_edit_tenant_id");
+    const dpEditDescription = $("#dp_edit_description");
+    const dpEditRegion = $("#dp_edit_region");
+    const dpEditMacVersion = $("#dp_edit_mac_version");
+    const dpEditRegParams = $("#dp_edit_reg_params");
+    const dpEditAdrAlg = $("#dp_edit_adr_alg");
+    const dpEditSupportsOtaa = $("#dp_edit_supports_otaa");
+    const dpEditSupportsClassB = $("#dp_edit_supports_class_b");
+    const dpEditSupportsClassC = $("#dp_edit_supports_class_c");
+
+    if (dpEditName) dpEditName.value = dp.name || "";
+    if (dpEditId) dpEditId.value = dp.id || "";
+    if (dpEditTenant) dpEditTenant.value = getOrgName(dp.tenant_id);
+    if (dpEditTenantId) dpEditTenantId.value = dp.tenant_id || "";
+    if (dpEditDescription) dpEditDescription.value = dp.description || "";
+    if (dpEditRegion) dpEditRegion.value = dp.region || "EU868";
+    if (dpEditMacVersion) dpEditMacVersion.value = dp.mac_version || "LORAWAN_1_0_3";
+    if (dpEditRegParams) dpEditRegParams.value = dp.reg_params_revision || "B";
+    if (dpEditAdrAlg) dpEditAdrAlg.value = dp.adr_algorithm_id || "default";
+    if (dpEditSupportsOtaa) dpEditSupportsOtaa.checked = !!dp.supports_otaa;
+    if (dpEditSupportsClassB) dpEditSupportsClassB.checked = !!dp.supports_class_b;
+    if (dpEditSupportsClassC) dpEditSupportsClassC.checked = !!dp.supports_class_c;
+
+    const drawer = $("#dp-drawer");
+    const overlay = $("#dp-drawer-overlay");
+    if (drawer) drawer.classList.add("open");
+    if (overlay) overlay.classList.add("open");
+
+    logEntry("Device profile selected for edit: " + dp.name, "info");
+}
+
+export function closeDpDrawer() {
+    const drawer = $("#dp-drawer");
+    const overlay = $("#dp-drawer-overlay");
+    if (drawer) drawer.classList.remove("open");
+    if (overlay) overlay.classList.remove("open");
+    state.activeDpId = null;
+}
+
+export async function saveDeviceProfile() {
+    const id = state.activeDpId;
+    if (!id) return;
+
+    const dpEditName = $("#dp_edit_name");
+    const dpEditTenantId = $("#dp_edit_tenant_id");
+    const dpEditDescription = $("#dp_edit_description");
+    const dpEditRegion = $("#dp_edit_region");
+    const dpEditMacVersion = $("#dp_edit_mac_version");
+    const dpEditRegParams = $("#dp_edit_reg_params");
+    const dpEditAdrAlg = $("#dp_edit_adr_alg");
+    const dpEditSupportsOtaa = $("#dp_edit_supports_otaa");
+    const dpEditSupportsClassB = $("#dp_edit_supports_class_b");
+    const dpEditSupportsClassC = $("#dp_edit_supports_class_c");
+
+    const name = dpEditName ? dpEditName.value.trim() : "";
+    if (!name) {
+        showToast(state.language === "tr" ? "Profil adı boş olamaz!" : "Profile name cannot be empty!", "error");
+        return;
+    }
+
+    const data = {
+        name: name,
+        tenant_id: dpEditTenantId ? dpEditTenantId.value : "",
+        description: dpEditDescription ? dpEditDescription.value.trim() : "",
+        region: dpEditRegion ? dpEditRegion.value : "EU868",
+        mac_version: dpEditMacVersion ? dpEditMacVersion.value : "LORAWAN_1_0_3",
+        reg_params_revision: dpEditRegParams ? dpEditRegParams.value : "B",
+        adr_algorithm_id: dpEditAdrAlg ? dpEditAdrAlg.value.trim() || "default" : "default",
+        supports_otaa: dpEditSupportsOtaa ? dpEditSupportsOtaa.checked : false,
+        supports_class_b: dpEditSupportsClassB ? dpEditSupportsClassB.checked : false,
+        supports_class_c: dpEditSupportsClassC ? dpEditSupportsClassC.checked : false
+    };
+
+    const btnSave = $("#btn-save-dp-config");
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = state.language === "tr" ? "Kaydediliyor..." : "Saving...";
+    }
+
+    const r = await api("PUT", "/api/device-profiles/" + id, data);
+
+    if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = "✓ " + (t("btn_save_changes") || "Değişiklikleri Kaydet");
+    }
+
+    if (r.ok) {
+        logEntry("Device profile updated successfully: " + name, "success");
+        showToast(state.language === "tr" ? "Cihaz profili güncellendi." : "Device profile updated.", "success");
+        closeDpDrawer();
+        await fetchDeviceProfiles(state.dpTenantFilter);
+    } else {
+        const errMsg = (r.data && r.data.error) || "Güncelleme hatası";
+        logEntry("Failed to update device profile: " + errMsg, "error");
+        showToast(errMsg, "error");
+    }
+}
+
 export function initDevicesTab() {
     const dpTenantFilter = $("#dp-tenant-select");
     const dpSearchInput = $("#dp-search-input");
@@ -335,4 +448,23 @@ export function initDevicesTab() {
             sortDpBy(th.getAttribute("data-sort"));
         });
     });
+
+    const dpDrawerClose = $("#dp-drawer-close");
+    const dpDrawerOverlay = $("#dp-drawer-overlay");
+    const btnSaveDpConfig = $("#btn-save-dp-config");
+
+    if (dpDrawerClose) {
+        dpDrawerClose.addEventListener("click", closeDpDrawer);
+    }
+    if (dpDrawerOverlay) {
+        dpDrawerOverlay.addEventListener("click", (e) => {
+            if (e.target === dpDrawerOverlay) closeDpDrawer();
+        });
+    }
+    if (btnSaveDpConfig) {
+        btnSaveDpConfig.addEventListener("click", (e) => {
+            e.preventDefault();
+            saveDeviceProfile();
+        });
+    }
 }

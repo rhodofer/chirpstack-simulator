@@ -240,3 +240,75 @@ func handleDeleteDeviceProfile(w http.ResponseWriter, r *http.Request, id string
 	log.WithField("id", id).Info("device-profiles: deleted")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
 }
+
+func handleUpdateDeviceProfile(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPut {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API connection not established"})
+		return
+	}
+
+	var req CreateDeviceProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		return
+	}
+
+	if req.Name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "profile name is required"})
+		return
+	}
+
+	macVersion := common.MacVersion_LORAWAN_1_0_3
+	if v, ok := common.MacVersion_value[req.MacVersion]; ok {
+		macVersion = common.MacVersion(v)
+	}
+
+	regParamsRev := common.RegParamsRevision_B
+	if v, ok := common.RegParamsRevision_value[req.RegParamsRevision]; ok {
+		regParamsRev = common.RegParamsRevision(v)
+	}
+
+	region := common.Region_EU868
+	if v, ok := common.Region_value[req.Region]; ok {
+		region = common.Region(v)
+	}
+
+	profile := &api.DeviceProfile{
+		Id:                id,
+		Name:              req.Name,
+		TenantId:          req.TenantID,
+		Description:       req.Description,
+		MacVersion:        macVersion,
+		RegParamsRevision: regParamsRev,
+		SupportsOtaa:      req.SupportsOtaa,
+		SupportsClassB:    req.SupportsClassB,
+		SupportsClassC:    req.SupportsClassC,
+		Region:            region,
+		AdrAlgorithmId:    req.AdrAlgorithmId,
+	}
+
+	if req.AdrAlgorithmId == "" {
+		profile.AdrAlgorithmId = "default"
+	}
+
+	_, err := as.DeviceProfile().Update(context.Background(), &api.UpdateDeviceProfileRequest{
+		DeviceProfile: profile,
+	})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("device-profiles: update error")
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "Failed to connect to ChirpStack API: " + err.Error(),
+		})
+		return
+	}
+
+	log.WithFields(log.Fields{"id": id, "name": req.Name}).Info("device-profiles: updated")
+
+	writeJSON(w, http.StatusOK, mapDeviceProfile(profile))
+}
+

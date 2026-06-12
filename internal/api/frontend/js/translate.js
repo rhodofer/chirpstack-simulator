@@ -10,6 +10,8 @@ export const translations = {
         subtitle_live_map: "Cihazların canlı konumlarını ve ağ paket aktivitelerini takip edin.",
         drawer_subtitle_edit: "Simülasyon ayarlarını yapılandırın",
         drawer_subtitle_view: "Simülasyon ayarlarını görüntüleyin",
+        dp_drawer_title: "Cihaz Profili Düzenle",
+        dp_drawer_subtitle: "Cihaz profilinin yapılandırma bilgilerini güncelleyin",
         metrics_uplinks: "Gönderilen Uplink",
         metrics_join_reqs: "Join İsteği",
         metrics_joins: "Başarılı Join",
@@ -179,6 +181,7 @@ export const translations = {
         modal_add_org_desc_placeholder: "Örn: Test amaçlı organizasyon",
         btn_cancel: "İptal",
         btn_save: "Kaydet",
+        btn_save_changes: "Değişiklikleri Kaydet",
         btn_prev: "Geri",
         btn_next: "İleri",
 
@@ -256,6 +259,8 @@ export const translations = {
         subtitle_live_map: "Track live device locations and network packet activity.",
         drawer_subtitle_edit: "Configure simulation settings",
         drawer_subtitle_view: "View simulation settings",
+        dp_drawer_title: "Edit Device Profile",
+        dp_drawer_subtitle: "Update configuration info of the device profile",
         metrics_uplinks: "Sent Uplink",
         metrics_join_reqs: "Join Request",
         metrics_joins: "Successful Join",
@@ -425,6 +430,7 @@ export const translations = {
         modal_add_org_desc_placeholder: "e.g. Organization for testing",
         btn_cancel: "Cancel",
         btn_save: "Save",
+        btn_save_changes: "Save Changes",
         btn_prev: "Back",
         btn_next: "Next",
 

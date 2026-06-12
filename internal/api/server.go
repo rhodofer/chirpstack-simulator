@@ -113,6 +113,8 @@ func New(bind string) *Server {
 		}
 		if r.Method == http.MethodGet {
 			handleGetDeviceProfile(w, r, id)
+		} else if r.Method == http.MethodPut {
+			handleUpdateDeviceProfile(w, r, id)
 		} else if r.Method == http.MethodDelete {
 			handleDeleteDeviceProfile(w, r, id)
 		} else {

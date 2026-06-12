@@ -183,5 +183,43 @@ def test_edit_network_application(page: Page):
     # Verify table row reflects the updated name
     expect(page.locator("#net-table-body tr").filter(has_text="E2E Test Network Application Edited").first).to_be_visible()
 
+def test_edit_device_profile(page: Page):
+    # Navigate to Device Profiles tab
+    page.click("[data-tab='devices']")
+    expect(page.locator("#content-devices")).to_be_visible()
+
+    # Find the row we created in test_device_profile_wizard and click Edit (✏)
+    dp_row = page.locator("#dp-table-body tr").filter(has_text="E2E Test Device Profile").first
+    expect(dp_row).to_be_visible()
+    dp_row.locator(".edit-btn").click()
+
+    # Verify that edit drawer is opened with correct information
+    expect(page.locator("#dp-drawer")).to_have_class(re.compile(r"\bopen\b"))
+    expect(page.locator("#dp_edit_name")).to_have_value("E2E Test Device Profile")
+
+    # Edit name, description, region, and features
+    page.fill("#dp_edit_name", "E2E Test Device Profile Edited")
+    page.fill("#dp_edit_description", "E2E Edited Description")
+    page.select_option("#dp_edit_region", value="US915")
+    page.check("#dp_edit_supports_class_b")
+
+    # Click Save Changes button
+    page.click("#btn-save-dp-config")
+
+    # Verify success toast
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("güncellendi")
+
+    # Verify edit drawer closes automatically
+    expect(page.locator("#dp-drawer")).not_to_have_class(re.compile(r"\bopen\b"))
+
+    # Search for the edited name
+    page.fill("#dp-search-input", "E2E Test Device Profile Edited")
+    page.wait_for_timeout(300) # Wait for filtering to apply
+
+    # Verify table row reflects the updated name
+    expect(page.locator("#dp-table-body tr").filter(has_text="E2E Test Device Profile Edited").first).to_be_visible()
+
+
 
 

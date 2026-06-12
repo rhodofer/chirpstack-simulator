@@ -3,6 +3,7 @@ export const state = {
     organizations: [],
     filteredOrgs: [],
     activeOrgId: null,
+    activeDpId: null,
     tableSort: { key: "name", dir: "asc" },
     tablePage: 1,
     tablePageSize: 5,
