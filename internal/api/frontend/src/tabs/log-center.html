@@ -1,0 +1,58 @@
+                <!-- ═══ TAB: LOG MERKEZİ (Log Center) ═══════════════════ -->
+                <div class="tab-content" id="content-log-center">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title" data-i18n="nav_log_center">Log Merkezi</h1>
+                            <p class="page-subtitle" data-i18n="system_logs_subtitle">Sistem olaylarını ve simülasyon veri akışını izleyin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <div class="log-tabs-toggle" style="display: flex; background: var(--bg-field); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px;">
+                                <button class="log-tab-btn active" data-log-tab="system" style="padding: 6px 12px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--text-dim); cursor: pointer; border-radius: var(--radius-xs); transition: all 0.2s;" data-i18n="tab_system_events">Sistem Olayları</button>
+                                <button class="log-tab-btn" data-log-tab="console" style="padding: 6px 12px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--text-dim); cursor: pointer; border-radius: var(--radius-xs); transition: all 0.2s;" data-i18n="tab_live_console">Canlı Konsol</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sistem Olayları Paneli -->
+                    <div class="log-panel active" id="log-panel-system" style="display: flex; flex-direction: column; flex: 1;">
+                        <div class="toolbar">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="sys-log-search-input" data-i18n-placeholder="placeholder_search_log" placeholder="Log ara...">
+                            </div>
+                            <select id="sys-log-level-select" class="page-size-select" style="max-width: 160px; margin: 0; background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">
+                                <option value="all" data-i18n="log_level_all">Tüm Seviyeler</option>
+                                <option value="success" data-i18n="log_level_success">Başarılı</option>
+                                <option value="info" data-i18n="log_level_info">Bilgi</option>
+                                <option value="warn" data-i18n="log_level_warn">Uyarı</option>
+                                <option value="error" data-i18n="log_level_error">Hata</option>
+                            </select>
+                            <button class="btn btn-outline btn-sm" id="btn-sys-log-export" style="display: inline-flex;" data-i18n="btn_export_logs">💾 Dışa Aktar</button>
+                            <button class="btn btn-outline btn-sm danger" id="btn-sys-log-clear" style="display: inline-flex;" data-i18n="btn_clear_logs">🧹 Temizle</button>
+                        </div>
+                        <div class="table-wrapper" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+                            <div class="log-container" id="log-container" style="flex: 1; padding: 16px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Canlı Konsol Paneli -->
+                    <div class="log-panel" id="log-panel-console" style="display: none; flex-direction: column; flex: 1;">
+                        <div class="toolbar">
+                            <div class="search-box" style="flex: 1;">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="console-log-filter" data-i18n-placeholder="console_filter_placeholder" placeholder="Cihaz veya log ara (örn: sim-dev-1)...">
+                            </div>
+                            <select id="console-source-select" class="page-size-select" style="max-width: 200px; margin: 0; background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">
+                                <option value="all" data-i18n="console_src_all">Tüm Günlükler</option>
+                                <option value="local" data-i18n="console_src_local">Sadece Yerel Simülatör</option>
+                                <option value="remote" data-i18n="console_src_remote">Sadece Uzak Bağlantı (ChirpStack)</option>
+                            </select>
+                            <button class="btn btn-outline btn-sm" id="btn-console-clear" style="display: inline-flex;" data-i18n="console_clear">🧹 Temizle</button>
+                        </div>
+                        <div class="table-wrapper" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+                            <div class="console-body" id="console-log-container" style="flex: 1; padding: 16px; overflow-y: auto;">
+                                <div class="console-placeholder" data-i18n="console_placeholder">Simülasyon başlatıldığında canlı loglar burada görünecektir.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>

@@ -11,6 +11,7 @@ import { initDeviceListTab, fetchDevices, populateDevFilterTenantSelect } from "
 import { initDeviceStatusTab, fetchSimulationDevices } from "./tabs/device-status.js";
 import { initSettingsTab, fetchSystemConfig } from "./tabs/settings.js";
 import { initConsoleTab, initConsoleTheme, toggleTheme, activeTheme, currentPreset } from "./tabs/console.js";
+import { initSystemLogsTab, renderSystemLogs, purgeOldIndexedDBLogs } from "./tabs/system-logs.js";
 import { initDashboard, initMap, initChart, checkHealth, stopPolling } from "./tabs/dashboard.js";
 
 // Wizard initializers
@@ -28,9 +29,8 @@ export function updatePageTitle() {
         networks: t("nav_networks"),
         "device-list": t("nav_devices"),
         "device-status": t("nav_device_status"),
-        "system-logs": t("nav_system_logs"),
+        "log-center": t("nav_log_center"),
         settings: t("nav_settings"),
-        console: t("console_title"),
         info: t("info_title")
     };
     const pageTitleBar = $("#page-title-bar");
@@ -87,6 +87,8 @@ export function switchTab(name) {
         fetchDevices(state.devTenantFilter);
     } else if (name === "device-status") {
         fetchSimulationDevices();
+    } else if (name === "log-center") {
+        renderSystemLogs();
     }
 }
 
@@ -96,6 +98,9 @@ async function checkAuthStatus() {
 }
 
 async function loadDashboardData() {
+    // Purge old IndexedDB logs
+    purgeOldIndexedDBLogs();
+
     // Start streaming console logs from SSE
     import("./tabs/console.js").then(m => m.connectLogStream());
 
@@ -293,6 +298,7 @@ async function init() {
     initDeviceStatusTab();
     initSettingsTab();
     initConsoleTab();
+    initSystemLogsTab();
     initDashboard();
 
     initDpWizard();

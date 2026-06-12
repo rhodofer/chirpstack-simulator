@@ -2111,4 +2111,86 @@ body.light-theme .metric-icon {
     color: var(--green);
 }
 
+/* ─── Log Center Styles ───────────────────────────────────────────── */
+.log-tabs-toggle button.active {
+    background: var(--accent) !important;
+    color: var(--bg-deepest) !important;
+}
+.log-tabs-toggle button:not(.active):hover {
+    color: var(--text) !important;
+}
+.log-panel {
+    display: none;
+}
+.log-panel.active {
+    display: flex !important;
+}
+.log-container {
+    background: var(--bg-deepest);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: #e2e8f0;
+    overflow-y: auto;
+}
+body.light-theme .log-container {
+    background: #fafafa;
+    color: #1e293b;
+}
+.log-entry {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-xs);
+    margin-bottom: 4px;
+    transition: background 0.15s;
+}
+body.light-theme .log-entry {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+.log-entry.has-details {
+    cursor: pointer;
+}
+.log-entry.has-details:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+body.light-theme .log-entry.has-details:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+.log-main-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+.log-toggle-icon {
+    font-size: 8px;
+    display: inline-block;
+    transition: transform 0.2s;
+    color: var(--text-dim);
+}
+.log-entry.open .log-toggle-icon {
+    transform: rotate(90deg);
+}
+.log-details {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.25);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-xs);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: inherit;
+}
+body.light-theme .log-details {
+    background: rgba(0, 0, 0, 0.03);
+}
+.log-entry.log-success .log-main-line { color: var(--green); }
+.log-entry.log-error .log-main-line { color: var(--red); }
+.log-entry.log-warn .log-main-line { color: var(--yellow); }
+.log-entry.log-info .log-main-line { color: var(--text); }
+
 

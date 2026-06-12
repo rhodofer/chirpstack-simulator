@@ -299,6 +299,10 @@ Geliştirilen modern arayüz ve simülatör altyapısında aşağıdaki özellik
 - **Simülasyon Esnasında Arayüz Kilitleme (Input Lock):** Simülasyon aktifken (`running` veya `starting` durumunda) hatalı çalışma yapılandırmasını önlemek adına hem çekmecedeki ayarlar hem de genel ayarlar sayfasındaki tüm giriş alanları kilitlenir.
 - **Genişletilebilir Canlı Log Konsolu:** Alt panelde yer alan log terminali sürükle-bırak ile dikey olarak yeniden boyutlandırılabilir, daraltılıp genişletilebilir.
 - **Detaylı Cihaz ve Uygulama Logları:** Canlı log akışında hangi cihazın (`device_name` ve `dev_eui`) hangi uygulamaya (`app_name`) veri veya OTAA isteği gönderdiği JSON parametreleriyle açıkça listelenir.
+- **Birleşik Log Merkezi (Log Center):** Sistem Olayları (istemci operasyonları) ile Canlı Konsol (backend SSE log akışı) tek bir panelde birleştirilerek yan menüden hızlı geçişe imkan tanır.
+- **IndexedDB ile Sistem Olayları Kalıcılığı:** Sistem logları tarayıcı belleği yerine **IndexedDB** üzerinde kalıcı olarak saklanır ve pazartesi günleri 00:00'da otomatik olarak rotasyona tabi tutularak temizlenir.
+- **Arama, Seviye Filtreleme ve Dışa Aktarma:** Sistem logları içinde arama yapma, seviyeye göre (Hata, Uyarı, Bilgi, Başarılı) filtreleme ve `.txt` olarak dışa aktarıp indirme özellikleri barındırır.
+- **Hata Teşhis Paneli (API Diagnostics):** Başarısız API çağrılarında istek ve yanıt JSON gövdeleri otomatik olarak log detayına kaydedilir ve tıklanarak genişletilen teşhis panelinde görüntülenebilir.
 
 
 ## License

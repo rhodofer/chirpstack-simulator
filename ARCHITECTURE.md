@@ -41,6 +41,7 @@ graph TD
         *   `networks.js` & `devices.js` & `device-list.js`: LoRaWAN uygulama, profil ve cihaz tabloları, arama ve filtreleme.
         *   `device-status.js`: Çalışan simülasyon cihazlarının anlık durum takibi.
         *   `settings.js` & `console.js`: Bağlantı ayarları, JS transform betikleri ve SSE üzerinden akan konsol logları.
+        *   `system-logs.js`: Log Merkezi (Log Center) arayüz yönetimi, IndexedDB kalıcılığı, arama/filtreleme, export ve otomatik pazartesi temizliği iş mantıkları.
     *   **`wizards/`:** Çok adımlı sihirbaz modalları (Bootstrap, Cihaz Profili ve Uygulama ekleme akışları).
 
 ### 2. Arka Yüz (Backend) Dizin Yapısı (`internal/api/` & `simulator/`)

@@ -25,25 +25,14 @@ export function showToast(msg, type = "error") {
     }, 4000);
 }
 
-export function logEntry(msg, level = "info") {
-    const logContainer = $("#log-container");
-    if (!logContainer) return;
-    const now = new Date();
-    const ts = [
-        now.getHours().toString().padStart(2, "0"),
-        now.getMinutes().toString().padStart(2, "0"),
-        now.getSeconds().toString().padStart(2, "0")
-    ].join(":");
-
-    const el = document.createElement("div");
-    el.className = `log-entry log-${level}`;
-    el.textContent = `[${ts}] ${msg}`;
-    logContainer.appendChild(el);
-
-    while (logContainer.children.length > 100) {
-        logContainer.removeChild(logContainer.firstChild);
-    }
-    logContainer.scrollTop = logContainer.scrollHeight;
+export function logEntry(msg, level = "info", details = null) {
+    import("./tabs/system-logs.js").then((m) => {
+        m.addIndexedDBLog(msg, level, details).then(() => {
+            if (state.currentTab === "log-center") {
+                m.renderSystemLogs();
+            }
+        });
+    });
 }
 
 // Drawers (Main Org Config and Detailed Views)
