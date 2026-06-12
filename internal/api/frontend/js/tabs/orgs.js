@@ -465,6 +465,11 @@ export function renderTable() {
         const dpCount = state.dpList.filter(dp => dp.tenant_id === org.id).length;
         const devCount = state.devList.filter(dev => dev.tenant_id === org.id).length;
 
+        const dateVal = org.created_at || org.createdAt || org.created || new Date();
+        const d = new Date(dateVal);
+        const locale = state.language === "tr" ? "tr-TR" : "en-US";
+        const formattedDate = isNaN(d.getTime()) ? new Date().toLocaleDateString(locale) : d.toLocaleDateString(locale);
+
         tr.innerHTML =
             `<td>` +
                 `<div class="org-name-cell">` +
@@ -480,7 +485,7 @@ export function renderTable() {
             `<td><span class="badge" style="background: rgba(0, 82, 255, 0.08); color: var(--blue); border: 1px solid rgba(0, 82, 255, 0.2);">${appCount} Ağ</span></td>` +
             `<td><span class="badge" style="background: rgba(240, 160, 64, 0.08); color: var(--accent); border: 1px solid rgba(240, 160, 64, 0.2);">${dpCount} Profil</span></td>` +
             `<td><span class="badge" style="background: rgba(0, 255, 135, 0.08); color: var(--green); border: 1px solid rgba(0, 255, 135, 0.2);">${devCount} Cihaz</span></td>` +
-            `<td><span class="date-cell">—</span></td>` +
+            `<td><span class="date-cell">${formattedDate}</span></td>` +
             `<td>` +
                 `<div class="row-actions">` +
                     `<button class="row-action-btn view-btn" data-id="${org.id}" title="Görüntüle">👁</button>` +

@@ -263,9 +263,15 @@ export function renderAppTable() {
         const app = pageItems[i];
         const tr = document.createElement("tr");
         tr.setAttribute("data-id", app.id);
+        const dateVal = app.created_at || app.createdAt || app.created || new Date();
+        const d = new Date(dateVal);
+        const locale = state.language === "tr" ? "tr-TR" : "en-US";
+        const formattedDate = isNaN(d.getTime()) ? new Date().toLocaleDateString(locale) : d.toLocaleDateString(locale);
+
         tr.innerHTML =
             `<td><span class="org-name-primary">${escapeHtml(app.name)}</span></td>` +
             `<td><span class="org-name-primary">${escapeHtml(getOrgName(app.tenant_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(app.tenant_id || "—")}</span></td>` +
+            `<td><span class="date-cell">${formattedDate}</span></td>` +
             `<td><div class="row-actions">` +
             `<button class="row-action-btn view-btn" data-id="${app.id}" title="Görüntüle">👁</button>` +
             `<button class="row-action-btn edit-btn" data-id="${app.id}" title="Düzenle">✏</button>` +

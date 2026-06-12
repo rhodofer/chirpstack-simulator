@@ -28,6 +28,7 @@ export function updatePageTitle() {
         networks: t("nav_networks"),
         "device-list": t("nav_devices"),
         "device-status": t("nav_device_status"),
+        "system-logs": t("nav_system_logs"),
         settings: t("nav_settings"),
         console: t("console_title"),
         info: t("info_title")
