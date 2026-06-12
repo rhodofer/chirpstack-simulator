@@ -526,7 +526,7 @@ export function populateDevAppSelect() {
     if (state.applications.length === 0) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Önce uygulama oluşturun";
+        opt.textContent = state.language === "tr" ? "Önce ağ oluşturun" : "Create a network first";
         opt.disabled = true;
         devApp.appendChild(opt);
         return;
@@ -572,7 +572,7 @@ export function onDevAppChange() {
     if (!app) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Uygulama bulunamadı";
+        opt.textContent = state.language === "tr" ? "Ağ bulunamadı" : "Network not found";
         opt.disabled = true;
         devProfile.appendChild(opt);
         return;
@@ -678,20 +678,20 @@ export function initDeviceListTab() {
             const dpId = devProfileSelect ? devProfileSelect.value : "";
 
             if (!eui || eui.length !== 16) {
-                showToast("DevEUI 16 hex karakter olmalıdır!", "error");
+                showToast(state.language === "tr" ? "DevEUI 16 hex karakter olmalıdır!" : "DevEUI must be 16 hex characters!", "error");
                 if (devEui) devEui.focus();
                 return;
             }
             if (!name) {
-                showToast("Cihaz adı zorunludur!", "error");
+                showToast(state.language === "tr" ? "Cihaz adı zorunludur!" : "Device name is required!", "error");
                 if (devName) devName.focus();
                 return;
             }
-            if (!appId) { showToast("Uygulama seçimi zorunludur!", "error"); return; }
-            if (!dpId) { showToast("Device profile seçimi zorunludur!", "error"); return; }
+            if (!appId) { showToast(state.language === "tr" ? "Ağ seçimi zorunludur!" : "Network selection is required!", "error"); return; }
+            if (!dpId) { showToast(state.language === "tr" ? "Device profile seçimi zorunludur!" : "Device profile selection is required!", "error"); return; }
 
             devModalSave.disabled = true;
-            devModalSave.textContent = "Oluşturuluyor...";
+            devModalSave.textContent = state.language === "tr" ? "Oluşturuluyor..." : "Creating...";
             const ok = await createDevice({
                 dev_eui: eui,
                 name: name,
@@ -700,7 +700,7 @@ export function initDeviceListTab() {
                 description: devDescription ? devDescription.value.trim() : ""
             });
             devModalSave.disabled = false;
-            devModalSave.textContent = "Kaydet";
+            devModalSave.textContent = state.language === "tr" ? "Kaydet" : "Save";
             if (ok) hideDevModal();
         });
     }
@@ -755,7 +755,7 @@ export function initDeviceListTab() {
         });
     }
 
-    $$("#content-devices thead th.sortable").forEach((th) => {
+    $$("#content-device-list thead th.sortable").forEach((th) => {
         th.addEventListener("click", () => {
             sortDevBy(th.getAttribute("data-sort"));
         });

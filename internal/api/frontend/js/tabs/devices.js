@@ -330,7 +330,7 @@ export function initDevicesTab() {
         });
     }
 
-    $$("#content-device-profiles thead th.sortable").forEach((th) => {
+    $$("#content-devices thead th.sortable").forEach((th) => {
         th.addEventListener("click", () => {
             sortDpBy(th.getAttribute("data-sort"));
         });

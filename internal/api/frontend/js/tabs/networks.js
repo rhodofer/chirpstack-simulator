@@ -29,47 +29,151 @@ export async function fetchApplications(tenantId) {
 export async function deleteApplication(id) {
     const app = findNet(id);
     if (!app) return;
-    if (!confirm("'" + app.name + "' uygulamasını silmek istediğinize emin misiniz?")) return;
+    const isTr = state.language === "tr";
+    if (!confirm("'" + app.name + "' " + (isTr ? "ağını silmek istediğinize emin misiniz?" : "are you sure you want to delete this network?"))) return;
     const r = await api("DELETE", "/api/applications/" + id);
     if (r.ok) {
-        logEntry("Application deleted: " + app.name, "success");
-        showToast("'" + app.name + "' silindi.", "success");
+        logEntry("Network deleted: " + app.name, "success");
+        showToast("'" + app.name + "' " + (isTr ? "silindi." : "deleted."), "success");
         await fetchApplications(state.netTenantFilter);
     } else {
-        const errMsg = (r.data && r.data.error) || "Silme hatası";
-        logEntry("Failed to delete application: " + errMsg, "error");
+        const errMsg = (r.data && r.data.error) || (isTr ? "Silme hatası" : "Delete error");
+        logEntry("Failed to delete network: " + errMsg, "error");
         showToast(errMsg, "error");
     }
 }
 
-export function viewApplication(id) {
+export function viewApplication(id, mode = "view") {
     const app = findNet(id);
-    if (!app) return;
+    if (!app) {
+        console.log("viewApplication: app NOT FOUND for id =", id);
+        return;
+    }
 
     const isTr = state.language === "tr";
 
-    const html = 
-        '<div class="detail-item">' +
-            '<div class="detail-label">' + (isTr ? 'Uygulama Adı' : 'Application Name') + '</div>' +
-            '<div class="detail-value" style="font-weight: 600; color: var(--accent);">' + escapeHtml(app.name) + '</div>' +
-        '</div>' +
-        '<div class="detail-item">' +
-            '<div class="detail-label">' + 'ID' + '</div>' +
-            '<div class="detail-value id-cell">' + escapeHtml(app.id) + '</div>' +
-        '</div>' +
-        '<div class="detail-item">' +
-            '<div class="detail-label">' + (isTr ? 'Organizasyon (Tenant)' : 'Organization (Tenant)') + '</div>' +
-            '<div class="detail-value">' +
-                '<span style="font-weight: 600;">' + escapeHtml(getOrgName(app.tenant_id)) + '</span><br>' +
-                '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(app.tenant_id || "—") + '</span>' +
+    let html = "";
+    if (mode === "edit") {
+        html = 
+            '<div class="detail-item">' +
+                '<div class="form-group">' +
+                    '<label style="display: block; font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 6px;">' + (isTr ? 'Ağ Adı' : 'Network Name') + '</label>' +
+                    '<input type="text" id="edit-app-name-input" class="settings-input" style="width: 100%; font-weight: 600; padding: 8px 10px; font-size: 0.85rem; background: var(--bg-field); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); outline: none;" value="' + escapeHtml(app.name) + '">' +
+                '</div>' +
             '</div>' +
-        '</div>' +
-        '<div class="detail-item">' +
-            '<div class="detail-label">' + (isTr ? 'Açıklama' : 'Description') + '</div>' +
-            '<div class="detail-value">' + escapeHtml(app.description || "—") + '</div>' +
-        '</div>';
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + 'ID' + '</div>' +
+                '<div class="detail-value id-cell">' + escapeHtml(app.id) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Organizasyon (Tenant)' : 'Organization (Tenant)') + '</div>' +
+                '<div class="detail-value">' +
+                    '<span style="font-weight: 600;">' + escapeHtml(getOrgName(app.tenant_id)) + '</span><br>' +
+                    '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(app.tenant_id || "—") + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="form-group">' +
+                    '<label style="display: block; font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 6px;">' + (isTr ? 'Açıklama' : 'Description') + '</label>' +
+                    '<textarea id="edit-app-desc-input" class="settings-input" style="width: 100%; min-height: 70px; font-size: 0.85rem; padding: 8px 10px; background: var(--bg-field); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); outline: none; resize: vertical; font-family: inherit;">' + escapeHtml(app.description || "") + '</textarea>' +
+                '</div>' +
+            '</div>';
+    } else {
+        html = 
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Ağ Adı' : 'Network Name') + '</div>' +
+                '<div class="detail-value" style="font-weight: 600; font-size: 0.95rem; color: var(--text);">' + escapeHtml(app.name) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + 'ID' + '</div>' +
+                '<div class="detail-value id-cell">' + escapeHtml(app.id) + '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Organizasyon (Tenant)' : 'Organization (Tenant)') + '</div>' +
+                '<div class="detail-value">' +
+                    '<span style="font-weight: 600;">' + escapeHtml(getOrgName(app.tenant_id)) + '</span><br>' +
+                    '<span class="id-cell" style="font-size: 11px; opacity: 0.7;">' + escapeHtml(app.tenant_id || "—") + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="detail-item">' +
+                '<div class="detail-label">' + (isTr ? 'Açıklama' : 'Description') + '</div>' +
+                '<div class="detail-value" style="font-size: 0.85rem; color: var(--text); white-space: pre-wrap; line-height: 1.4;">' + escapeHtml(app.description || "—") + '</div>' +
+            '</div>';
+    }
 
-    openDetailsDrawer(app.name, isTr ? "Ağ Uygulaması Detayları" : "Network Application Details", html);
+    const drawerSubtitle = mode === "edit"
+        ? (isTr ? "Ağı Düzenle" : "Edit Network")
+        : (isTr ? "Ağ Detayları" : "Network Details");
+
+    openDetailsDrawer(app.name, drawerSubtitle, html);
+
+    // Dynamically update the footer of the details drawer
+    const footer = $("#details-drawer .drawer-footer");
+    if (footer) {
+        if (mode === "edit") {
+            footer.innerHTML = '<button class="btn btn-secondary btn-sm" id="btn-save-app-name" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px;">✓ ' + (isTr ? 'Ayarları Kaydet' : 'Save Settings') + '</button>';
+        } else {
+            footer.innerHTML = '<button class="btn btn-secondary btn-sm" id="btn-close-details" style="width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px;" data-i18n="btn_close">' + (isTr ? 'Kapat' : 'Close') + '</button>';
+            const btnClose = $("#btn-close-details");
+            if (btnClose) {
+                btnClose.addEventListener("click", closeDetailsDrawer);
+            }
+        }
+    }
+
+    const btnSave = $("#btn-save-app-name");
+    if (btnSave && mode === "edit") {
+        btnSave.addEventListener("click", async () => {
+            const newNameInput = $("#edit-app-name-input");
+            const newDescInput = $("#edit-app-desc-input");
+            if (!newNameInput) return;
+            const newName = newNameInput.value.trim();
+            const newDesc = newDescInput ? newDescInput.value.trim() : "";
+
+            if (!newName) {
+                showToast(isTr ? "Ağ adı boş olamaz!" : "Network name cannot be empty!", "error");
+                newNameInput.focus();
+                return;
+            }
+
+            btnSave.disabled = true;
+            btnSave.textContent = isTr ? "Kaydediliyor..." : "Saving...";
+
+            const r = await api("PUT", "/api/applications/" + app.id, {
+                name: newName,
+                description: newDesc
+            });
+
+            btnSave.disabled = false;
+            btnSave.textContent = "✓ " + (isTr ? "Ayarları Kaydet" : "Save Settings");
+
+            if (r.ok) {
+                showToast(isTr ? "Ağ başarıyla güncellendi." : "Network updated successfully.", "success");
+                logEntry("Network updated: " + newName, "success");
+                
+                app.name = newName;
+                app.description = newDesc;
+
+                const currentApp = findNet(app.id);
+                if (currentApp) {
+                    currentApp.name = newName;
+                    currentApp.description = newDesc;
+                }
+
+                const detailsDrawerTitle = $("#details-drawer-title");
+                if (detailsDrawerTitle) detailsDrawerTitle.textContent = newName;
+
+                applyAppFiltersAndRender();
+                
+                // Close the modal/drawer after successful save
+                closeDetailsDrawer();
+            } else {
+                const errMsg = (r.data && r.data.error) || "Güncelleme hatası";
+                showToast(errMsg, "error");
+                logEntry("Failed to update application: " + errMsg, "error");
+            }
+        });
+    }
 }
 
 export function populateNetFilterTenantSelect() {
@@ -106,10 +210,10 @@ export function applyAppFiltersAndRender() {
     }
 
     if (q) {
-        state.appFiltered = filtered.filter(app =>
-            (app.name && app.name.toLowerCase().includes(q)) ||
-            (app.tenant_id && app.tenant_id.toLowerCase().includes(q))
-        );
+        state.appFiltered = filtered.filter(app => {
+            return (app.name && app.name.toLowerCase().includes(q)) ||
+                   (app.tenant_id && app.tenant_id.toLowerCase().includes(q));
+        });
     } else {
         state.appFiltered = filtered.slice();
     }
@@ -162,8 +266,11 @@ export function renderAppTable() {
         tr.innerHTML =
             `<td><span class="org-name-primary">${escapeHtml(app.name)}</span></td>` +
             `<td><span class="org-name-primary">${escapeHtml(getOrgName(app.tenant_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(app.tenant_id || "—")}</span></td>` +
-            `<td><div class="row-actions"><button class="row-action-btn view-btn" data-id="${app.id}" title="Görüntüle">👁</button>` +
-            `<button class="row-action-btn danger delete-btn" data-id="${app.id}" title="Sil">🗑</button></div></td>`;
+            `<td><div class="row-actions">` +
+            `<button class="row-action-btn view-btn" data-id="${app.id}" title="Görüntüle">👁</button>` +
+            `<button class="row-action-btn edit-btn" data-id="${app.id}" title="Düzenle">✏</button>` +
+            `<button class="row-action-btn danger delete-btn" data-id="${app.id}" title="Sil">🗑</button>` +
+            `</div></td>`;
         
         tr.addEventListener("click", (e) => {
             if (e.target.closest(".delete-btn")) {
@@ -171,11 +278,17 @@ export function renderAppTable() {
                 deleteApplication(app.id);
                 return;
             }
-            if (e.target.closest(".view-btn")) {
+            if (e.target.closest(".edit-btn")) {
                 e.stopPropagation();
-                viewApplication(app.id);
+                viewApplication(app.id, "edit");
                 return;
             }
+            if (e.target.closest(".view-btn")) {
+                e.stopPropagation();
+                viewApplication(app.id, "view");
+                return;
+            }
+            viewApplication(app.id, "view");
         });
         netTableBody.appendChild(tr);
     }

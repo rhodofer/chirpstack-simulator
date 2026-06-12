@@ -1,8 +1,12 @@
+import re
 import pytest
 from playwright.sync_api import Page, expect
 
 @pytest.fixture(autouse=True)
 def login_and_setup(page: Page):
+    # Capture and print browser console logs for debugging
+    page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
+    
     # Standard login flow
     page.goto("http://localhost:9002")
     page.fill("#login-username", "admin@falt.com")
@@ -143,3 +147,41 @@ def test_bootstrap_wizard(page: Page):
     # Close wizard
     page.click("#wiz-btn-next")
     expect(page.locator("#bootstrap-modal-overlay")).not_to_be_visible()
+
+def test_edit_network_application(page: Page):
+    # Navigate to Network Applications tab
+    page.click("[data-tab='networks']")
+    expect(page.locator("#content-networks")).to_be_visible()
+
+    # Find the row we created in test_network_application_wizard and click Edit (✏)
+    app_row = page.locator("#net-table-body tr").filter(has_text="E2E Test Network Application").first
+    expect(app_row).to_be_visible()
+    app_row.locator(".edit-btn").click()
+
+    # Verify that details drawer is opened with correct information
+    expect(page.locator("#details-drawer")).to_have_class(re.compile(r"\bopen\b"))
+    expect(page.locator("#edit-app-name-input")).to_have_value("E2E Test Network Application")
+
+    # Edit name and description
+    page.fill("#edit-app-name-input", "E2E Test Network Application Edited")
+    page.fill("#edit-app-desc-input", "E2E Edited Description")
+
+    # Click Update button
+    page.click("#btn-save-app-name")
+
+    # Verify success toast
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("güncellendi")
+
+    # Verify details drawer closes automatically
+    expect(page.locator("#details-drawer")).not_to_have_class(re.compile(r"\bopen\b"))
+
+    # Search for the edited name to handle pagination/sorting shifts
+    page.fill("#net-search-input", "E2E Test Network Application Edited")
+    page.wait_for_timeout(300) # Wait for filtering to apply
+
+    # Verify table row reflects the updated name
+    expect(page.locator("#net-table-body tr").filter(has_text="E2E Test Network Application Edited").first).to_be_visible()
+
+
+

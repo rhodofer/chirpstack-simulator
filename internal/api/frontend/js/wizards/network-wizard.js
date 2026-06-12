@@ -84,7 +84,7 @@ export function renderNetWizStep() {
     }
 
     if (netWizBtnNext) {
-        netWizBtnNext.textContent = (netWizCurrentStep === 3) ? "Onayla ve Oluştur" : "İleri";
+        netWizBtnNext.textContent = (netWizCurrentStep === 3) ? t("wiz_btn_confirm") : t("btn_next");
     }
 
     if (netWizCurrentStep === 3) {
@@ -138,13 +138,13 @@ export async function createApplication(name, tenantId, description) {
     });
     if (r.ok) {
         const app = r.data;
-        logEntry("New application created: " + app.name + " (ID: " + app.id + ")", "success");
-        showToast("'" + app.name + "' uygulaması oluşturuldu.", "success");
+        logEntry("New network created: " + app.name + " (ID: " + app.id + ")", "success");
+        showToast("'" + app.name + "' " + (state.language === "tr" ? "ağı oluşturuldu." : "network created."), "success");
         await fetchApplications(state.netTenantFilter);
         return true;
     } else {
-        const errMsg = (r.data && r.data.error) || "Bilinmeyen hata";
-        logEntry("Failed to create application: " + errMsg, "error");
+        const errMsg = (r.data && r.data.error) || (state.language === "tr" ? "Bilinmeyen hata" : "Unknown error");
+        logEntry("Failed to create network: " + errMsg, "error");
         showToast(errMsg, "error");
         return false;
     }
@@ -163,13 +163,13 @@ export async function submitNetWiz() {
 
     if (netWizBtnNext) {
         netWizBtnNext.disabled = true;
-        netWizBtnNext.textContent = "Oluşturuluyor...";
+        netWizBtnNext.textContent = t("wiz_btn_creating");
     }
 
     const ok = await createApplication(name, tenantId, description);
     if (netWizBtnNext) {
         netWizBtnNext.disabled = false;
-        netWizBtnNext.textContent = "Onayla ve Oluştur";
+        netWizBtnNext.textContent = t("wiz_btn_confirm");
     }
     if (ok) hideNetModal();
 }

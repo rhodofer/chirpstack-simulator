@@ -57,7 +57,7 @@
                         </div>
                         <div class="secondary-nav-link" data-tab="networks">
                             <span class="nav-icon">•</span>
-                            <span data-i18n="nav_networks">Ağ Uygulamaları</span>
+                            <span data-i18n="nav_networks">Ağlar</span>
                         </div>
                         <div class="secondary-nav-link" data-tab="devices">
                             <span class="nav-icon">•</span>
@@ -366,18 +366,18 @@
                 </div>
 
 
-                <div class="tab-content" id="content-networks">
+                 <div class="tab-content" id="content-networks">
                     <div class="page-header">
                         <div class="page-header-left">
-                            <h1 class="page-title" data-i18n="title_networks">Ağ Uygulamaları</h1>
-                            <p class="page-subtitle" data-i18n="subtitle_networks">ChirpStack tenant'larına ait LoRaWAN uygulamalarını yönetin.</p>
+                            <h1 class="page-title" data-i18n="title_networks">Ağlar</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_networks">ChirpStack tenant'larına ait LoRaWAN ağlarını yönetin.</p>
                         </div>
                         <div class="page-header-right">
                             <select class="page-size-select" id="net-tenant-select" style="max-width: 240px;">
                                 <option value="" data-i18n="select_all_tenants">Tüm Tenant'lar</option>
                             </select>
                             <button class="btn btn-primary btn-sm" id="btn-add-net" style="display:inline-flex;" data-i18n="btn_add_net">
-                                <span class="btn-icon">+</span> Yeni Uygulama
+                                <span class="btn-icon">+</span> Yeni Ağ
                             </button>
                         </div>
                     </div>
@@ -385,7 +385,7 @@
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="net-search-input" data-i18n-placeholder="placeholder_search_net" placeholder="Uygulama ara...">
+                            <input type="text" id="net-search-input" data-i18n-placeholder="placeholder_search_net" placeholder="Ağ ara...">
                         </div>
                         <button class="btn-refresh" id="btn-net-refresh" title="Yenile">🔄</button>
                     </div>
@@ -395,7 +395,7 @@
                             <thead>
                                 <tr>
                                     <th class="sortable" data-sort="name">
-                                        <span data-i18n="table_net_name">Uygulama Adı</span> <span class="sort-icon" id="net-sort-icon-name">▲</span>
+                                        <span data-i18n="table_net_name">Ağ Adı</span> <span class="sort-icon" id="net-sort-icon-name">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="tenant_id">
                                         <span data-i18n="table_net_org">Organizasyon</span> <span class="sort-icon" id="net-sort-icon-tenant_id">▲</span>
@@ -408,7 +408,7 @@
 
                         <div class="empty-state" id="net-empty-state" style="display:none;">
                             <div class="empty-state-icon">📡</div>
-                            <div class="empty-state-title" data-i18n="empty_state_net_title">Henüz uygulama yok</div>
+                            <div class="empty-state-title" data-i18n="empty_state_net_title">Henüz ağ yok</div>
                             <div class="empty-state-text" data-i18n="empty_state_net_text">Üst bardaki "Yeni Oluştur" butonuyla hızlı kurulum yapabilirsiniz.</div>
                         </div>
                     </div>
@@ -424,7 +424,7 @@
                                 </select>
                             </div>
                             <span class="total-count" id="net-total-count">
-                                Toplam: <strong>0</strong> Uygulama
+                                Toplam: <strong>0</strong> Ağ
                             </span>
                         </div>
                         <div class="pagination" id="net-pagination"></div>
@@ -436,7 +436,7 @@
                     <div class="page-header">
                         <div class="page-header-left">
                             <h1 class="page-title" data-i18n="title_dev">Cihazlar</h1>
-                            <p class="page-subtitle" data-i18n="subtitle_dev">ChirpStack uygulamalarına ait LoRaWAN cihazlarını yönetin.</p>
+                            <p class="page-subtitle" data-i18n="subtitle_dev">ChirpStack ağlarına ait LoRaWAN cihazlarını yönetin.</p>
                         </div>
                         <div class="page-header-right">
                             <select class="page-size-select" id="dev-tenant-select" style="max-width: 240px;">
@@ -532,7 +532,7 @@
                                         <span data-i18n="table_dev_deveui">DevEUI</span> <span class="sort-icon" id="dev-status-sort-icon-dev_eui">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="app_name">
-                                        <span data-i18n="table_dev_app">Uygulama</span> <span class="sort-icon" id="dev-status-sort-icon-app_name">▲</span>
+                                        <span data-i18n="table_dev_app">Ağ</span> <span class="sort-icon" id="dev-status-sort-icon-app_name">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="state">
                                         <span data-i18n="table_dev_status">Durum</span> <span class="sort-icon" id="dev-status-sort-icon-state">▲</span>
@@ -1092,7 +1092,7 @@ return payloadHex;</code></pre>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="app_name">Uygulama Adı</label>
+                            <label for="app_name">Ağ Adı</label>
                             <input type="text" id="app_name" name="app_name" placeholder="simulasyon">
                         </div>
                         <div class="form-group">
@@ -1289,15 +1289,15 @@ return payloadHex;</code></pre>
     <div class="modal-overlay" id="net-modal-overlay" style="display:none;">
         <div class="modal" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 id="net-modal-title">Yeni Ağ Uygulaması Ekle</h3>
+                <h3 id="net-modal-title" data-i18n="modal_add_net_title">Yeni Ağ Ekle</h3>
                 <button class="modal-close-btn" id="net-modal-close">✕</button>
             </div>
             <div class="modal-body">
                 <!-- Step Indicator -->
                 <div class="wizard-steps" style="display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-                    <span class="net-wiz-step active" id="net-wiz-step-1" style="color: var(--accent);">1. Organizasyon</span>
-                    <span class="net-wiz-step" id="net-wiz-step-2">2. Ağ Detayları</span>
-                    <span class="net-wiz-step" id="net-wiz-step-3">3. Özet & Onay</span>
+                    <span class="net-wiz-step active" id="net-wiz-step-1" style="color: var(--accent);" data-i18n="net_wiz_step_1">1. Organizasyon</span>
+                    <span class="net-wiz-step" id="net-wiz-step-2" data-i18n="net_wiz_step_2">2. Ağ Detayları</span>
+                    <span class="net-wiz-step" id="net-wiz-step-3" data-i18n="net_wiz_step_3">3. Özet & Onay</span>
                 </div>
 
                 <!-- Wizard Content Panes -->
@@ -1306,20 +1306,20 @@ return payloadHex;</code></pre>
                     <div class="form-group">
                         <label for="net-wiz-tenant">Tenant (Organizasyon) *</label>
                         <select id="net-wiz-tenant" style="width: 100%;"></select>
-                        <span class="form-hint">Uygulamanın oluşturulacağı ChirpStack organizasyonunu seçin.</span>
+                        <span class="form-hint">Ağın oluşturulacağı ChirpStack organizasyonunu seçin.</span>
                     </div>
                 </div>
 
                 <!-- Step 2: Network App details -->
                 <div class="net-wiz-pane" id="net-wiz-pane-2" style="display:none;">
                     <div class="form-group">
-                        <label for="net-wiz-name">Ağ Uygulaması Adı *</label>
+                        <label for="net-wiz-name">Ağ Adı *</label>
                         <input type="text" id="net-wiz-name" placeholder="Örn: Sensor Ağı" autofocus>
                     </div>
                     <div class="form-group" style="margin-top: 16px;">
                         <label for="net-wiz-prefix">Açıklama (Ön Ek)</label>
                         <input type="text" id="net-wiz-prefix" placeholder="Örn: sensor-ag-prefix">
-                        <span class="form-hint">Uygulamayı tanımlamak için açıklama veya ön ek girin.</span>
+                        <span class="form-hint">Ağı tanımlamak için açıklama veya ön ek girin.</span>
                     </div>
                 </div>
 
@@ -1331,10 +1331,10 @@ return payloadHex;</code></pre>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.6;">
                         <p style="margin: 0 0 6px 0;">🏢 <strong>Organizasyon:</strong> <span id="net-summary-org-name"></span> <br><span id="net-summary-org-id" class="id-cell" style="font-size:11px; opacity:0.6;"></span></p>
-                        <p style="margin: 0 0 6px 0;">📡 <strong>Ağ Uygulaması Adı:</strong> <span id="net-summary-app-name"></span></p>
+                        <p style="margin: 0 0 6px 0;">📡 <strong>Ağ Adı:</strong> <span id="net-summary-app-name"></span></p>
                         <p style="margin: 0;">📝 <strong>Açıklama (Ön Ek):</strong> <span id="net-summary-prefix"></span></p>
                     </div>
-                    <p style="font-size: 12px; color: var(--accent); font-weight: 600; margin: 16px 0 0 0; text-align: center;">Bu ağ uygulamasını oluşturmayı onaylıyor musunuz?</p>
+                    <p style="font-size: 12px; color: var(--accent); font-weight: 600; margin: 16px 0 0 0; text-align: center;">Bu ağı oluşturmayı onaylıyor musunuz?</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1366,13 +1366,13 @@ return payloadHex;</code></pre>
                     <input type="text" id="dev-name" data-i18n-placeholder="modal_add_dev_name_placeholder" placeholder="Örn: Sensor-001">
                 </div>
                 <div class="form-group">
-                    <label for="dev-app" data-i18n="modal_add_dev_app">Uygulama *</label>
+                    <label for="dev-app" data-i18n="modal_add_dev_app">Ağ *</label>
                     <select id="dev-app"></select>
                 </div>
                 <div class="form-group">
                     <label for="dev-profile" data-i18n="table_dev_profile">Device Profile *</label>
                     <select id="dev-profile">
-                        <option value="" data-i18n="modal_add_dev_select_app_first">Önce uygulama seçin</option>
+                        <option value="" data-i18n="modal_add_dev_select_app_first">Önce ağ seçin</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1425,7 +1425,7 @@ return payloadHex;</code></pre>
                 <!-- Step 2: Networks -->
                 <div class="wizard-pane" id="wiz-pane-2" style="display:none;">
                     <div class="form-group">
-                        <label for="wiz-app-prefix" data-i18n="wiz_app_prefix">Ağ Uygulaması Prefix *</label>
+                        <label for="wiz-app-prefix" data-i18n="wiz_app_prefix">Ağ Öneki *</label>
                         <input type="text" id="wiz-app-prefix" placeholder="Örn: ag" value="ag">
                     </div>
                     <div class="form-group">
@@ -1457,7 +1457,7 @@ return payloadHex;</code></pre>
                     <div class="form-group">
                         <label for="wiz-dev-count" data-i18n="wiz_dev_count">Her Ağdaki Cihaz Sayısı *</label>
                         <input type="number" id="wiz-dev-count" value="5" min="1" max="100">
-                        <span class="form-hint" data-i18n="wiz_dev_count_hint">Her bir ağ uygulamasında oluşturulacak cihaz adedi.</span>
+                        <span class="form-hint" data-i18n="wiz_dev_count_hint">Her bir ağda oluşturulacak cihaz adedi.</span>
                     </div>
                 </div>
 
@@ -1501,7 +1501,7 @@ return payloadHex;</code></pre>
                         <p style="margin: 0 0 6px 0;"><strong data-i18n="wiz_success_org_lbl">Organizasyon:</strong> <span id="wiz-success-org"></span> <br><span id="wiz-success-org-id" class="id-cell" style="font-size:11px; opacity:0.6;"></span></p>
                         <p style="margin: 0 0 6px 0;"><strong data-i18n="wiz_success_total_dev_lbl">Toplam Cihaz:</strong> <span id="wiz-success-dev-count"></span> <span data-i18n="wiz_success_dev_created_unit">adet cihaz oluşturuldu.</span></p>
                         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0;">
-                        <p style="margin: 0 0 4px 0; font-weight:600;" data-i18n="wiz_success_net_created_lbl">Oluşturulan Ağ Uygulamaları:</p>
+                        <p style="margin: 0 0 4px 0; font-weight:600;" data-i18n="wiz_success_net_created_lbl">Oluşturulan Ağlar:</p>
                         <ul id="wiz-success-apps-list" style="margin: 0 0 10px 0; padding-left: 16px; list-style-type: square; opacity: 0.9; font-size: 12px; line-height: 1.4;"></ul>
                         <p style="margin: 0 0 4px 0; font-weight:600;" data-i18n="wiz_success_dp_created_lbl">Oluşturulan Cihaz Profilleri:</p>
                         <ul id="wiz-success-profiles-list" style="margin: 0; padding-left: 16px; list-style-type: square; opacity: 0.9; font-size: 12px; line-height: 1.4;"></ul>

@@ -136,7 +136,13 @@ func New(bind string) *Server {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application id is required"})
 			return
 		}
-		handleDeleteApplication(w, r, id)
+		if r.Method == http.MethodDelete {
+			handleDeleteApplication(w, r, id)
+		} else if r.Method == http.MethodPut {
+			handleUpdateApplication(w, r, id)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
 	}))
 
 	mux.HandleFunc("/api/devices", requireAuth(func(w http.ResponseWriter, r *http.Request) {

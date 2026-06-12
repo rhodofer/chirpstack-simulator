@@ -1,15 +1,15 @@
-                <div class="tab-content" id="content-networks">
+                 <div class="tab-content" id="content-networks">
                     <div class="page-header">
                         <div class="page-header-left">
-                            <h1 class="page-title" data-i18n="title_networks">Ağ Uygulamaları</h1>
-                            <p class="page-subtitle" data-i18n="subtitle_networks">ChirpStack tenant'larına ait LoRaWAN uygulamalarını yönetin.</p>
+                            <h1 class="page-title" data-i18n="title_networks">Ağlar</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_networks">ChirpStack tenant'larına ait LoRaWAN ağlarını yönetin.</p>
                         </div>
                         <div class="page-header-right">
                             <select class="page-size-select" id="net-tenant-select" style="max-width: 240px;">
                                 <option value="" data-i18n="select_all_tenants">Tüm Tenant'lar</option>
                             </select>
                             <button class="btn btn-primary btn-sm" id="btn-add-net" style="display:inline-flex;" data-i18n="btn_add_net">
-                                <span class="btn-icon">+</span> Yeni Uygulama
+                                <span class="btn-icon">+</span> Yeni Ağ
                             </button>
                         </div>
                     </div>
@@ -17,7 +17,7 @@
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="net-search-input" data-i18n-placeholder="placeholder_search_net" placeholder="Uygulama ara...">
+                            <input type="text" id="net-search-input" data-i18n-placeholder="placeholder_search_net" placeholder="Ağ ara...">
                         </div>
                         <button class="btn-refresh" id="btn-net-refresh" title="Yenile">🔄</button>
                     </div>
@@ -27,7 +27,7 @@
                             <thead>
                                 <tr>
                                     <th class="sortable" data-sort="name">
-                                        <span data-i18n="table_net_name">Uygulama Adı</span> <span class="sort-icon" id="net-sort-icon-name">▲</span>
+                                        <span data-i18n="table_net_name">Ağ Adı</span> <span class="sort-icon" id="net-sort-icon-name">▲</span>
                                     </th>
                                     <th class="sortable" data-sort="tenant_id">
                                         <span data-i18n="table_net_org">Organizasyon</span> <span class="sort-icon" id="net-sort-icon-tenant_id">▲</span>
@@ -40,7 +40,7 @@
 
                         <div class="empty-state" id="net-empty-state" style="display:none;">
                             <div class="empty-state-icon">📡</div>
-                            <div class="empty-state-title" data-i18n="empty_state_net_title">Henüz uygulama yok</div>
+                            <div class="empty-state-title" data-i18n="empty_state_net_title">Henüz ağ yok</div>
                             <div class="empty-state-text" data-i18n="empty_state_net_text">Üst bardaki "Yeni Oluştur" butonuyla hızlı kurulum yapabilirsiniz.</div>
                         </div>
                     </div>
@@ -56,7 +56,7 @@
                                 </select>
                             </div>
                             <span class="total-count" id="net-total-count">
-                                Toplam: <strong>0</strong> Uygulama
+                                Toplam: <strong>0</strong> Ağ
                             </span>
                         </div>
                         <div class="pagination" id="net-pagination"></div>

@@ -206,12 +206,12 @@ export async function nextBootstrapStep() {
         const appPref = wizAppPrefix ? wizAppPrefix.value.trim() : "";
         const appCnt = parseInt(wizAppCount ? wizAppCount.value : "0", 10);
         if (!appPref) {
-            showToast("Uygulama prefix'i zorunludur!", "error");
+            showToast(state.language === "tr" ? "Ağ öneki zorunludur!" : "Network prefix is required!", "error");
             if (wizAppPrefix) wizAppPrefix.focus();
             return;
         }
         if (isNaN(appCnt) || appCnt < 1 || appCnt > 50) {
-            showToast("Geçerli bir ağ sayısı girin (1-50)!", "error");
+            showToast(state.language === "tr" ? "Geçerli bir ağ sayısı girin (1-50)!" : "Enter a valid network count (1-50)!", "error");
             if (wizAppCount) wizAppCount.focus();
             return;
         }

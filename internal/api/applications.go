@@ -155,3 +155,68 @@ func handleDeleteApplication(w http.ResponseWriter, r *http.Request, id string) 
 	log.WithField("id", id).Info("applications: deleted")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
 }
+
+// UpdateApplicationRequest is the HTTP request body for updating an application.
+type UpdateApplicationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// handleUpdateApplication updates an application in ChirpStack.
+func handleUpdateApplication(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPut {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	if !as.IsConnected() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ChirpStack API bağlantısı kurulmadı"})
+		return
+	}
+
+	var req UpdateApplicationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "geçersiz JSON: " + err.Error()})
+		return
+	}
+
+	if req.Name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "uygulama adı zorunludur"})
+		return
+	}
+
+	// Fetch existing application from ChirpStack to retain tenant ID and other parameters.
+	getResp, err := as.Application().Get(context.Background(), &api.GetApplicationRequest{Id: id})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("applications: get error for update")
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "ChirpStack API'den uygulama bilgisi alınamadı: " + err.Error(),
+		})
+		return
+	}
+
+	app := getResp.GetApplication()
+	app.Name = req.Name
+	app.Description = req.Description
+
+	_, err = as.Application().Update(context.Background(), &api.UpdateApplicationRequest{
+		Application: app,
+	})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("applications: update error")
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "ChirpStack API'ye bağlanılamadı: " + err.Error(),
+		})
+		return
+	}
+
+	log.WithFields(log.Fields{"id": id, "name": req.Name}).Info("applications: updated")
+
+	writeJSON(w, http.StatusOK, Application{
+		ID:          id,
+		Name:        req.Name,
+		TenantID:    app.TenantId,
+		Description: req.Description,
+	})
+}
+
