@@ -107,6 +107,10 @@ func TestDatabaseOperations(t *testing.T) {
 			DevicePrefix:         "test-dev",
 			FPort:                10,
 			Payload:              "abcdef",
+			PayloadScript:        "return payload;",
+			PacketLoss:           15.5,
+			SimulatePacketLoss:   true,
+			LatencyMs:            200,
 			Frequency:            868100000,
 			Bandwidth:            125000,
 			SpreadingFactor:      7,
@@ -128,7 +132,9 @@ func TestDatabaseOperations(t *testing.T) {
 			t.Fatal("expected config to be returned, got nil")
 		}
 
-		if retCfg.TenantID != "tenant-xyz" || retCfg.DeviceCount != 10 || retCfg.AppName != "test-app" {
+		if retCfg.TenantID != "tenant-xyz" || retCfg.DeviceCount != 10 || retCfg.AppName != "test-app" ||
+			retCfg.PayloadScript != "return payload;" || retCfg.PacketLoss != 15.5 ||
+			retCfg.SimulatePacketLoss != true || retCfg.LatencyMs != 200 {
 			t.Errorf("config values mismatch: %+v", retCfg)
 		}
 

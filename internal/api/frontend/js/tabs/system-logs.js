@@ -236,9 +236,9 @@ export function initSystemLogsTab() {
             btn.classList.add("active");
             
             // Toggle active panels
-            $$(".log-panel").forEach(p => p.style.display = "none");
+            $$(".log-panel").forEach(p => p.classList.remove("active"));
             const panel = $(`#log-panel-${tabName}`);
-            if (panel) panel.style.display = "flex";
+            if (panel) panel.classList.add("active");
             
             // If active panel is console, let it scroll to bottom
             if (tabName === "console") {

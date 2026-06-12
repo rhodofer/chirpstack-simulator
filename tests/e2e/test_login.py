@@ -5,6 +5,7 @@ from playwright.sync_api import Page, expect
 def run_around_tests(page: Page):
     # Ensure session cookies are cleared before each test
     page.context.clear_cookies()
+    page.on("console", lambda msg: print(f"CONSOLE [{msg.type}]: {msg.text}"))
     page.goto("http://localhost:9002")
     yield
 

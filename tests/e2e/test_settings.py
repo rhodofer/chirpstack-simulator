@@ -32,6 +32,7 @@ def test_settings_validation_limits(page: Page):
     page.click("[data-settings-tab='general']")
     
     # Input boundary/exceeded values
+    page.check("#simulate_packet_loss")
     page.fill("#packet_loss", "150")  # Capped at 100%
     page.fill("#latency_ms", "7000")  # Capped at 5000ms
     
