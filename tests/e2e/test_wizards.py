@@ -14,8 +14,11 @@ def login_and_setup(page: Page):
     page.goto("http://localhost:9002")
     page.fill("#login-username", "admin@falt.com")
     page.fill("#login-password", "admin123")
-    page.click("#btn-login-submit")
-    expect(page.locator("#login-overlay")).not_to_be_visible()
+    with page.expect_response("**/api/applications*") as response_apps, \
+         page.expect_response("**/api/device-profiles*") as response_dps, \
+         page.expect_response("**/api/organizations*") as response_orgs:
+        page.click("#btn-login-submit")
+        expect(page.locator("#login-overlay")).not_to_be_visible()
     yield
 
 def test_network_application_wizard(page: Page):
@@ -330,6 +333,134 @@ def test_device_wizard(page: Page):
     expect(page.locator("#toast")).to_be_visible()
     expect(page.locator("#toast")).to_contain_text("oluşturuldu")
     expect(page.locator("#dev-modal-overlay")).not_to_be_visible()
+
+def test_dynamic_telemetry_page(page: Page):
+    # Navigate to Dynamic Telemetry tab
+    page.click("[data-tab='dynamic-telemetry']")
+    expect(page.locator("#content-dynamic-telemetry")).to_be_visible()
+
+    # Ensure elements are present
+    expect(page.locator("#telemetry-org-select")).to_be_visible()
+    expect(page.locator("#telemetry-template-select")).to_be_disabled()
+    expect(page.locator("#telemetry-script-editor")).to_be_disabled()
+    expect(page.locator("#btn-telemetry-test")).to_be_disabled()
+    expect(page.locator("#btn-telemetry-save")).to_be_disabled()
+
+    # Select organization (tenant)
+    page.select_option("#telemetry-org-select", index=1)
+
+    # Elements should now be enabled
+    expect(page.locator("#telemetry-template-select")).to_be_enabled()
+    expect(page.locator("#telemetry-script-editor")).to_be_enabled()
+    expect(page.locator("#btn-telemetry-test")).to_be_enabled()
+    expect(page.locator("#btn-telemetry-save")).to_be_enabled()
+
+    # Select Temperature template
+    page.select_option("#telemetry-template-select", value="temperature")
+
+    # Script editor should update
+    expect(page.locator("#telemetry-script-editor")).to_have_value(re.compile(r"Sicaklik"))
+
+    # Run the test/simulation
+    page.click("#btn-telemetry-test")
+
+    # Verify 24 rows are generated in logs
+    expect(page.locator("#telemetry-log-body tr")).to_have_count(24)
+
+    # Save settings
+    page.click("#btn-telemetry-save")
+
+    # Verify success toast
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("kaydedildi")
+
+def test_probabilistic_anomaly_config(page: Page):
+    # Go to settings tab
+    page.click("[data-tab='settings']")
+    page.click("[data-settings-tab='general']")
+    
+    # Configure anomaly settings
+    page.fill("#anomaly_probability", "12.5")
+    page.fill("#anomaly_duration", "7")
+    
+    # Check Spike and Flatline checkboxes
+    page.check("input.anomaly-type-checkbox[value='spike']")
+    page.check("input.anomaly-type-checkbox[value='flatline']")
+    page.uncheck("input.anomaly-type-checkbox[value='dropout']")
+    page.uncheck("input.anomaly-type-checkbox[value='drift']")
+    
+    # Save settings
+    page.click("#btn-save-general-settings")
+    
+    # Wait for success toast
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("Ayarlar başarıyla kaydedildi")
+    
+    # Reload page to verify persistence from SQLite database
+    page.reload()
+    
+    page.click("[data-tab='settings']")
+    page.click("[data-settings-tab='general']")
+    
+    expect(page.locator("#anomaly_probability")).to_have_value("12.5")
+    expect(page.locator("#anomaly_duration")).to_have_value("7")
+    expect(page.locator("input.anomaly-type-checkbox[value='spike']")).to_be_checked()
+    expect(page.locator("input.anomaly-type-checkbox[value='flatline']")).to_be_checked()
+    expect(page.locator("input.anomaly-type-checkbox[value='dropout']")).not_to_be_checked()
+    expect(page.locator("input.anomaly-type-checkbox[value='drift']")).not_to_be_checked()
+
+def test_manual_anomaly_trigger(page: Page):
+    # 1. Run Bootstrap Wizard to ensure a device is registered
+    page.click("#btn-top-bootstrap")
+    expect(page.locator("#bootstrap-modal-overlay")).to_be_visible()
+    page.fill("#wiz-org-name", "E2E-Anomaly-Trigger-Org")
+    page.click("#wiz-btn-next")
+    page.wait_for_timeout(200)
+    page.fill("#wiz-app-prefix", "anom-app")
+    page.fill("#wiz-app-count", "1")
+    page.click("#wiz-btn-next")
+    page.wait_for_timeout(200)
+    page.fill("#wiz-dp-prefix", "anom-dp")
+    page.fill("#wiz-dp-count", "1")
+    page.click("#wiz-btn-next")
+    page.wait_for_timeout(200)
+    page.fill("#wiz-dev-prefix", "anom-dev")
+    page.fill("#wiz-dev-count", "1")
+    page.click("#wiz-btn-next")
+    page.click("#wiz-btn-next")
+    page.click("#wiz-btn-next")
+    expect(page.locator("#bootstrap-modal-overlay")).not_to_be_visible()
+
+    # 2. Start simulation
+    page.click("#btn-top-start")
+    expect(page.locator("#status-badge")).to_contain_text("RUNNING", timeout=10000)
+
+    # 3. Navigate to Device Status tab
+    page.click("[data-tab='device-status']")
+    expect(page.locator("#content-device-status")).to_be_visible()
+
+    # 4. Wait for the active device row to appear and click it
+    device_row = page.locator("#dev-status-table-body tr").filter(has_text="anom-dev-1").first
+    expect(device_row).to_be_visible(timeout=10000)
+    device_row.click()
+
+    # 5. Verify details drawer is open
+    expect(page.locator("#details-drawer")).to_have_class(re.compile(r"\bopen\b"))
+    expect(page.locator("#btn-manual-spike")).to_be_visible()
+
+    # 6. Click "Trigger Spike"
+    page.click("#btn-manual-spike")
+
+    # 7. Expect toast indicating success and drawer is closed
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("komutu uygulandı")
+    expect(page.locator("#details-drawer")).not_to_have_class(re.compile(r"\bopen\b"))
+
+    # 8. Stop simulation
+    page.click("#btn-top-stop")
+    expect(page.locator("#status-badge")).to_contain_text("IDLE", timeout=10000)
+
+
 
 
 

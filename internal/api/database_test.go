@@ -56,6 +56,9 @@ func TestDatabaseOperations(t *testing.T) {
 		spreading_factor INTEGER,
 		event_topic_template TEXT,
 		command_topic_template TEXT,
+		anomaly_probability REAL DEFAULT 0,
+		anomaly_types TEXT DEFAULT '',
+		anomaly_duration INTEGER DEFAULT 0,
 		updated_at DATETIME
 	);`
 	if _, err := db.Exec(queryOrgs); err != nil {
@@ -116,6 +119,9 @@ func TestDatabaseOperations(t *testing.T) {
 			SpreadingFactor:      7,
 			EventTopicTemplate:   "event",
 			CommandTopicTemplate: "command",
+			AnomalyProbability:  5.5,
+			AnomalyTypes:        "spike,flatline",
+			AnomalyDuration:     10,
 		}
 
 		err := SaveOrgConfig("org-1", &cfg)
@@ -134,7 +140,9 @@ func TestDatabaseOperations(t *testing.T) {
 
 		if retCfg.TenantID != "tenant-xyz" || retCfg.DeviceCount != 10 || retCfg.AppName != "test-app" ||
 			retCfg.PayloadScript != "return payload;" || retCfg.PacketLoss != 15.5 ||
-			retCfg.SimulatePacketLoss != true || retCfg.LatencyMs != 200 {
+			retCfg.SimulatePacketLoss != true || retCfg.LatencyMs != 200 ||
+			retCfg.AnomalyProbability != 5.5 || retCfg.AnomalyTypes != "spike,flatline" ||
+			retCfg.AnomalyDuration != 10 {
 			t.Errorf("config values mismatch: %+v", retCfg)
 		}
 

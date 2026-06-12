@@ -8,6 +8,7 @@ import (
 	mrand "math/rand"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -72,6 +73,9 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			payloadScript:        c.PayloadScript,
 			packetLoss:           c.PacketLoss,
 			latencyMs:            c.LatencyMs,
+			anomalyProbability:   c.AnomalyProbability,
+			anomalyTypes:         c.AnomalyTypes,
+			anomalyDuration:      c.AnomalyDuration,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
@@ -107,6 +111,9 @@ type simulation struct {
 	payloadScript    string
 	packetLoss       float64
 	latencyMs        int
+	anomalyProbability float64
+	anomalyTypes       string
+	anomalyDuration    int
 
 	tenant               *api.Tenant
 	deviceProfileID      uuid.UUID
@@ -243,6 +250,16 @@ func (s *simulation) runSimulation() error {
 			}
 		}
 
+		var anomalyTypes []string
+		if s.anomalyTypes != "" {
+			for _, t := range strings.Split(s.anomalyTypes, ",") {
+				trimmed := strings.TrimSpace(t)
+				if trimmed != "" {
+					anomalyTypes = append(anomalyTypes, trimmed)
+				}
+			}
+		}
+
 		d, err := simulator.NewDevice(ctx, &wg,
 			simulator.WithDevEUI(devEUI),
 			simulator.WithAppName(s.appName),
@@ -254,6 +271,9 @@ func (s *simulation) runSimulation() error {
 			simulator.WithPayloadScript(s.payloadScript),
 			simulator.WithPacketLoss(s.packetLoss),
 			simulator.WithLatencyMs(s.latencyMs),
+			simulator.WithAnomalyProbability(s.anomalyProbability),
+			simulator.WithAnomalyTypes(anomalyTypes),
+			simulator.WithAnomalyDuration(s.anomalyDuration),
 			simulator.WithGateways(gws),
 			simulator.WithDeviceTenantID(s.tenantID),
 			simulator.WithUplinkTXInfo(gw.UplinkTxInfo{
@@ -471,22 +491,37 @@ func (s *simulation) tearDownApplication() error {
 func (s *simulation) setupDevices() error {
 	log.Info(fmt.Sprintf("[%s] simulator: init devices (deterministik isimler, upsert)", s.appName))
 
-	// Uygulamaya kayıtlı mevcut device'ları çek.
-	listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
-		ApplicationId: s.applicationID,
-		Limit:         1000,
-	})
-	if err != nil {
-		return errors.Wrap(err, "list devices error")
-	}
-
-	// Mevcut device'ları isimle indeksle.
+	// Uygulamaya kayıtlı mevcut device'ları çek (sayfalı olarak).
 	existingByName := make(map[string]*api.DeviceListItem)
-	for _, d := range listResp.GetResult() {
-		existingByName[d.GetName()] = d
+	var offset uint32 = 0
+	for {
+		listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
+			ApplicationId: s.applicationID,
+			Limit:         1000,
+			Offset:        offset,
+		})
+		if err != nil {
+			return errors.Wrap(err, "list devices error")
+		}
+
+		results := listResp.GetResult()
+		if len(results) == 0 {
+			break
+		}
+
+		for _, d := range results {
+			existingByName[d.GetName()] = d
+		}
+
+		if len(results) < 1000 {
+			break
+		}
+		offset += 1000
 	}
 
 	var wg sync.WaitGroup
+
+	sem := make(chan struct{}, 20) // max 20 concurrent goroutines
 
 	for i := 0; i < s.deviceCount; i++ {
 		devName := fmt.Sprintf("%s-%d", s.deviceNamePrefix, i+1)
@@ -526,7 +561,11 @@ func (s *simulation) setupDevices() error {
 		// Yeni device oluştur.
 		wg.Add(1)
 		go func(devName string) {
-			defer wg.Done()
+			sem <- struct{}{}
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
 
 			var devEUI lorawan.EUI64
 			var appKey lorawan.AES128Key

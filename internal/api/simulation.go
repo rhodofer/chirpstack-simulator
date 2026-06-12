@@ -12,6 +12,7 @@ import (
 	"github.com/brocaar/chirpstack-simulator/internal/config"
 	"github.com/brocaar/chirpstack-simulator/internal/simulator"
 	sim_pkg "github.com/brocaar/chirpstack-simulator/simulator"
+	"github.com/brocaar/lorawan"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -447,6 +448,9 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 			PacketLoss:         packetLossRate,
 			SimulatePacketLoss: req.SimulatePacketLoss,
 			LatencyMs:          req.LatencyMs,
+			AnomalyProbability: req.AnomalyProbability,
+			AnomalyTypes:       req.AnomalyTypes,
+			AnomalyDuration:    req.AnomalyDuration,
 		}
 
 		simCfg.Device.Count = req.DeviceCount
@@ -512,4 +516,53 @@ func handleSimulationMetrics(w http.ResponseWriter, r *http.Request) {
 func handleSimulationDevices(w http.ResponseWriter, r *http.Request) {
 	devices := sim_pkg.ActiveDevices.GetStatuses()
 	writeJSON(w, http.StatusOK, map[string]interface{}{"devices": devices})
+}
+
+func handleDeviceAnomaly(w http.ResponseWriter, r *http.Request, devEUIStr string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	var req struct {
+		Type   string `json:"type"`   // "spike", "flatline", "dropout", "drift"
+		Action string `json:"action"` // "trigger", "start", "stop"
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		return
+	}
+
+	var devEUI lorawan.EUI64
+	if err := devEUI.UnmarshalText([]byte(devEUIStr)); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid dev_eui"})
+		return
+	}
+
+	// Look up in ActiveDevices
+	d := sim_pkg.ActiveDevices.GetDevice(devEUI)
+	if d == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "device not actively simulated"})
+		return
+	}
+
+	d.Lock()
+	defer d.Unlock()
+
+	if req.Action == "stop" {
+		d.SetManualAnomaly("", false)
+	} else if req.Action == "start" || req.Action == "trigger" {
+		d.SetManualAnomaly(req.Type, true)
+	} else {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid action"})
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"dev_eui": devEUIStr,
+		"type":    req.Type,
+		"action":  req.Action,
+	}).Info("anomaly: manual command applied")
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "applied"})
 }

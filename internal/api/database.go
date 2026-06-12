@@ -19,6 +19,17 @@ func SetupDB() error {
 		return fmt.Errorf("sqlite open error: %w", err)
 	}
 
+	// Enable WAL mode and other optimizations
+	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+		return fmt.Errorf("failed to set WAL mode: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA synchronous=NORMAL;"); err != nil {
+		return fmt.Errorf("failed to set synchronous: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA busy_timeout=5000;"); err != nil {
+		return fmt.Errorf("failed to set busy_timeout: %w", err)
+	}
+
 	// Create configurations table
 	query := `
 	CREATE TABLE IF NOT EXISTS org_configs (
@@ -42,6 +53,9 @@ func SetupDB() error {
 		spreading_factor INTEGER,
 		event_topic_template TEXT,
 		command_topic_template TEXT,
+		anomaly_probability REAL DEFAULT 0,
+		anomaly_types TEXT DEFAULT '',
+		anomaly_duration INTEGER DEFAULT 0,
 		updated_at DATETIME
 	);`
 
@@ -54,6 +68,9 @@ func SetupDB() error {
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN packet_loss REAL DEFAULT 0;")
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN simulate_packet_loss INTEGER DEFAULT 0;")
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN latency_ms INTEGER DEFAULT 0;")
+	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN anomaly_probability REAL DEFAULT 0;")
+	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN anomaly_types TEXT DEFAULT '';")
+	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN anomaly_duration INTEGER DEFAULT 0;")
 
 	queryIntervals := `
 	CREATE TABLE IF NOT EXISTS device_intervals (
@@ -79,7 +96,8 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	SELECT 
 		tenant_id, device_count, gateway_count, duration, activation_time, 
 		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
-		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template
+		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template,
+		anomaly_probability, anomaly_types, anomaly_duration
 	FROM org_configs 
 	WHERE org_id = ?;`
 
@@ -89,11 +107,15 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	var fPort int
 	var payloadScript sql.NullString
 	var simulatePacketLoss sql.NullInt64
+	var anomalyProbability sql.NullFloat64
+	var anomalyTypes sql.NullString
+	var anomalyDuration sql.NullInt64
 
 	err := row.Scan(
 		&cfg.TenantID, &cfg.DeviceCount, &cfg.GatewayCount, &cfg.Duration, &cfg.ActivationTime,
 		&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &simulatePacketLoss, &cfg.LatencyMs,
 		&cfg.Frequency, &cfg.Bandwidth, &cfg.SpreadingFactor, &cfg.EventTopicTemplate, &cfg.CommandTopicTemplate,
+		&anomalyProbability, &anomalyTypes, &anomalyDuration,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -105,6 +127,9 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	cfg.PayloadScript = payloadScript.String
 	cfg.SimulatePacketLoss = simulatePacketLoss.Int64 != 0
 	cfg.FPort = uint8(fPort)
+	cfg.AnomalyProbability = anomalyProbability.Float64
+	cfg.AnomalyTypes = anomalyTypes.String
+	cfg.AnomalyDuration = int(anomalyDuration.Int64)
 	return &cfg, nil
 }
 
@@ -130,8 +155,9 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 	INSERT INTO org_configs (
 		org_id, tenant_id, device_count, gateway_count, duration, activation_time, 
 		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
-		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template, updated_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template,
+		anomaly_probability, anomaly_types, anomaly_duration, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(org_id) DO UPDATE SET
 		tenant_id = excluded.tenant_id,
 		device_count = excluded.device_count,
@@ -152,6 +178,9 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 		spreading_factor = excluded.spreading_factor,
 		event_topic_template = excluded.event_topic_template,
 		command_topic_template = excluded.command_topic_template,
+		anomaly_probability = excluded.anomaly_probability,
+		anomaly_types = excluded.anomaly_types,
+		anomaly_duration = excluded.anomaly_duration,
 		updated_at = excluded.updated_at;`
 
 	simulatePacketLossVal := 0
@@ -164,6 +193,7 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 		orgID, cfg.TenantID, cfg.DeviceCount, cfg.GatewayCount, cfg.Duration, cfg.ActivationTime,
 		cfg.UplinkInterval, cfg.AppName, cfg.DevicePrefix, int(cfg.FPort), cfg.Payload, cfg.PayloadScript, cfg.PacketLoss, simulatePacketLossVal, cfg.LatencyMs,
 		cfg.Frequency, cfg.Bandwidth, cfg.SpreadingFactor, cfg.EventTopicTemplate, cfg.CommandTopicTemplate,
+		cfg.AnomalyProbability, cfg.AnomalyTypes, cfg.AnomalyDuration,
 		time.Now(),
 	)
 	return err
@@ -179,7 +209,8 @@ func GetActiveOrgConfigs() ([]StartRequest, error) {
 	SELECT 
 		tenant_id, device_count, gateway_count, duration, activation_time, 
 		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
-		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template
+		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template,
+		anomaly_probability, anomaly_types, anomaly_duration
 	FROM org_configs;`
 
 	rows, err := db.Query(query)
@@ -194,10 +225,14 @@ func GetActiveOrgConfigs() ([]StartRequest, error) {
 		var fPort int
 		var payloadScript sql.NullString
 		var simulatePacketLoss sql.NullInt64
+		var anomalyProbability sql.NullFloat64
+		var anomalyTypes sql.NullString
+		var anomalyDuration sql.NullInt64
 		err := rows.Scan(
 			&cfg.TenantID, &cfg.DeviceCount, &cfg.GatewayCount, &cfg.Duration, &cfg.ActivationTime,
 			&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &simulatePacketLoss, &cfg.LatencyMs,
 			&cfg.Frequency, &cfg.Bandwidth, &cfg.SpreadingFactor, &cfg.EventTopicTemplate, &cfg.CommandTopicTemplate,
+			&anomalyProbability, &anomalyTypes, &anomalyDuration,
 		)
 		if err != nil {
 			return nil, err
@@ -205,6 +240,9 @@ func GetActiveOrgConfigs() ([]StartRequest, error) {
 		cfg.PayloadScript = payloadScript.String
 		cfg.SimulatePacketLoss = simulatePacketLoss.Int64 != 0
 		cfg.FPort = uint8(fPort)
+		cfg.AnomalyProbability = anomalyProbability.Float64
+		cfg.AnomalyTypes = anomalyTypes.String
+		cfg.AnomalyDuration = int(anomalyDuration.Int64)
 		configs = append(configs, cfg)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/brocaar/chirpstack-simulator/internal/config"
 	log "github.com/sirupsen/logrus"
@@ -158,12 +159,19 @@ func New(bind string) *Server {
 	}))
 
 	mux.HandleFunc("/api/devices/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		devEUI := r.URL.Path[len("/api/devices/"):]
-		if devEUI == "" {
+		path := r.URL.Path[len("/api/devices/"):]
+		if path == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 			return
 		}
-		handleDeviceByID(w, r, devEUI)
+		
+		if strings.HasSuffix(path, "/anomaly") {
+			devEUI := path[:len(path)-len("/anomaly")]
+			handleDeviceAnomaly(w, r, devEUI)
+			return
+		}
+		
+		handleDeviceByID(w, r, path)
 	}))
 
 	mux.HandleFunc("/api/device-intervals", requireAuth(func(w http.ResponseWriter, r *http.Request) {

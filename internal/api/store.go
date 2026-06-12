@@ -37,6 +37,9 @@ type StartRequest struct {
 	SpreadingFactor     int    `json:"spreading_factor"`
 	EventTopicTemplate  string `json:"event_topic_template"`
 	CommandTopicTemplate string `json:"command_topic_template"`
+	AnomalyProbability  float64 `json:"anomaly_probability"`
+	AnomalyTypes        string `json:"anomaly_types"`
+	AnomalyDuration     int    `json:"anomaly_duration"`
 }
 
 // SimState holds the singleton simulation state.

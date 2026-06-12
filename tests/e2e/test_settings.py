@@ -3,6 +3,9 @@ from playwright.sync_api import Page, expect
 
 @pytest.fixture(autouse=True)
 def login_and_setup(page: Page):
+    # Ensure session cookies are cleared before each test
+    page.context.clear_cookies()
+    
     # Standard login flow before settings test
     page.goto("http://localhost:9002")
     page.fill("#login-username", "admin@falt.com")

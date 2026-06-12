@@ -119,6 +119,14 @@ export async function saveOrgConfig(orgId) {
     const simulatePacketLossEl = document.getElementById("simulate_packet_loss");
     const latencyMsEl = document.getElementById("latency_ms");
     const payloadScriptEl = document.getElementById("payload_script");
+    const anomalyProbabilityEl = document.getElementById("anomaly_probability");
+    const anomalyDurationEl = document.getElementById("anomaly_duration");
+    const anomalyTypesCheckboxes = document.querySelectorAll(".anomaly-type-checkbox");
+    const chosenTypes = [];
+    anomalyTypesCheckboxes.forEach(cb => {
+        if (cb.checked) chosenTypes.push(cb.value);
+    });
+    const anomalyTypesVal = chosenTypes.join(",");
 
     const uplinkIntervalVal = uplinkEl ? uplinkEl.value.trim() : "5m";
     const durationVal = durationEl ? durationEl.value.trim() : "5m";
@@ -180,7 +188,10 @@ export async function saveOrgConfig(orgId) {
         packet_loss: parseFloat(packetLossEl ? packetLossEl.value : "0.0") || 0.0,
         simulate_packet_loss: simulatePacketLossEl ? simulatePacketLossEl.checked : false,
         latency_ms: parseInt(latencyMsEl ? latencyMsEl.value : "0", 10) || 0,
-        payload_script: payloadScriptEl ? payloadScriptEl.value : ""
+        payload_script: payloadScriptEl ? payloadScriptEl.value : "",
+        anomaly_probability: anomalyProbabilityEl ? parseFloat(anomalyProbabilityEl.value) || 0.0 : 0.0,
+        anomaly_duration: anomalyDurationEl ? parseInt(anomalyDurationEl.value, 10) || 5 : 5,
+        anomaly_types: anomalyTypesVal
     };
 
     const btnSave = document.getElementById("btn-save-org-config");
@@ -233,6 +244,8 @@ export async function loadOrgConfig(orgId, orgName) {
     const simulatePacketLossField = document.getElementById("simulate_packet_loss");
     const latencyMsField = document.getElementById("latency_ms");
     const payloadScriptField = document.getElementById("payload_script");
+    const anomalyProbabilityField = document.getElementById("anomaly_probability");
+    const anomalyDurationField = document.getElementById("anomaly_duration");
 
     const r = await api("GET", "/api/org-configs/" + orgId);
     if (r.ok && r.data && r.data.tenant_id) {
@@ -262,6 +275,14 @@ export async function loadOrgConfig(orgId, orgName) {
         }
         if (latencyMsField) latencyMsField.value = data.latency_ms !== undefined ? data.latency_ms : "0";
         if (payloadScriptField) payloadScriptField.value = data.payload_script || "";
+        if (anomalyProbabilityField) anomalyProbabilityField.value = data.anomaly_probability !== undefined ? data.anomaly_probability : "0.0";
+        if (anomalyDurationField) anomalyDurationField.value = data.anomaly_duration !== undefined ? data.anomaly_duration : "5";
+
+        const types = (data.anomaly_types || "").split(",");
+        const anomalyTypesCheckboxes = document.querySelectorAll(".anomaly-type-checkbox");
+        anomalyTypesCheckboxes.forEach(cb => {
+            cb.checked = types.includes(cb.value);
+        });
         
         updateMap();
         return;
@@ -293,11 +314,14 @@ export async function loadOrgConfig(orgId, orgName) {
         packet_loss: 0.0,
         simulate_packet_loss: false,
         latency_ms: 0,
-        payload_script: ""
+        payload_script: "",
+        anomaly_probability: 0.0,
+        anomaly_duration: 5,
+        anomaly_types: ""
     };
     state.activeOrgConfig = fallbackData;
 
-    const generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script"];
+    const generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script", "anomaly_probability", "anomaly_duration"];
     generalFields.forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
@@ -315,15 +339,20 @@ export async function loadOrgConfig(orgId, orgName) {
                 el.value = localVal !== null ? localVal : el.defaultValue || "";
                 
                 const val = el.value.trim();
-                if (id === "f_port" || id === "frequency" || id === "bandwidth" || id === "spreading_factor" || id === "latency_ms") {
+                if (id === "f_port" || id === "frequency" || id === "bandwidth" || id === "spreading_factor" || id === "latency_ms" || id === "anomaly_duration") {
                     state.activeOrgConfig[id] = parseInt(val, 10) || 0;
-                } else if (id === "packet_loss") {
+                } else if (id === "packet_loss" || id === "anomaly_probability") {
                     state.activeOrgConfig[id] = parseFloat(val) || 0.0;
                 } else {
                     state.activeOrgConfig[id] = val;
                 }
             }
         }
+    });
+
+    const anomalyTypesCheckboxes = document.querySelectorAll(".anomaly-type-checkbox");
+    anomalyTypesCheckboxes.forEach(cb => {
+        cb.checked = false;
     });
     updateMap();
 }
@@ -343,7 +372,8 @@ export function updateFormInputsState() {
     const settingsInputs = [
         "duration", "activation_time", "frequency", "bandwidth", "spreading_factor",
         "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload",
-        "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script"
+        "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script",
+        "anomaly_probability", "anomaly_duration"
     ];
     settingsInputs.forEach((id) => {
         const el = document.getElementById(id);
@@ -355,6 +385,11 @@ export function updateFormInputsState() {
                 el.disabled = isSimRunning;
             }
         }
+    });
+
+    const anomalyTypesCheckboxes = document.querySelectorAll(".anomaly-type-checkbox");
+    anomalyTypesCheckboxes.forEach(cb => {
+        cb.disabled = isSimRunning;
     });
 
     const btnSaveOrgConfig = $("#btn-save-org-config");

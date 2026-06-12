@@ -123,6 +123,17 @@ type Device struct {
 
 	// Tenant ID.
 	tenantID string
+
+	// Anomaly parameters
+	anomalyProbability     float64
+	anomalyTypes           []string
+	anomalyDuration        int
+	activeAnomalyType      string
+	activeAnomalyRemaining int
+	driftAccumulated       float64
+	lastPayload            []byte
+	manualAnomalyType      string
+	manualAnomalyActive    bool
 }
 
 // WithAppKey sets the AppKey.
@@ -267,6 +278,39 @@ func WithDeviceTenantID(tenantID string) DeviceOption {
 	return func(d *Device) error {
 		d.tenantID = tenantID
 		return nil
+	}
+}
+
+// WithAnomalyProbability sets the probabilistic anomaly chance.
+func WithAnomalyProbability(prob float64) DeviceOption {
+	return func(d *Device) error {
+		d.anomalyProbability = prob
+		return nil
+	}
+}
+
+// WithAnomalyTypes sets the anomaly types list.
+func WithAnomalyTypes(types []string) DeviceOption {
+	return func(d *Device) error {
+		d.anomalyTypes = types
+		return nil
+	}
+}
+
+// WithAnomalyDuration sets the anomaly duration.
+func WithAnomalyDuration(duration int) DeviceOption {
+	return func(d *Device) error {
+		d.anomalyDuration = duration
+		return nil
+	}
+}
+
+// SetManualAnomaly sets or clears manual anomaly config on the device.
+func (d *Device) SetManualAnomaly(anomalyType string, active bool) {
+	d.manualAnomalyType = anomalyType
+	d.manualAnomalyActive = active
+	if !active {
+		d.driftAccumulated = 0
 	}
 }
 
@@ -435,14 +479,101 @@ func (d *Device) joinRequest() {
 
 // dataUp sends an data uplink.
 func (d *Device) dataUp() {
-	// Dynamic JS payload script evaluation
-	if d.payloadScript != "" {
+	// 1. Determine active anomaly (either manual or probabilistic)
+	d.Lock()
+	var currentAnomalyType string
+	var isManual bool
+
+	if d.manualAnomalyActive {
+		currentAnomalyType = d.manualAnomalyType
+		isManual = true
+	} else if d.activeAnomalyType != "" {
+		currentAnomalyType = d.activeAnomalyType
+	} else {
+		// Roll for probabilistic anomaly
+		if d.anomalyProbability > 0 && len(d.anomalyTypes) > 0 && mrand.Float64() < d.anomalyProbability {
+			// pick random type
+			n := mrand.Intn(len(d.anomalyTypes))
+			d.activeAnomalyType = d.anomalyTypes[n]
+			d.activeAnomalyRemaining = d.anomalyDuration
+			if d.activeAnomalyRemaining <= 0 {
+				d.activeAnomalyRemaining = 5 // default duration
+			}
+			d.driftAccumulated = 0
+			currentAnomalyType = d.activeAnomalyType
+		}
+	}
+	d.Unlock()
+
+	if currentAnomalyType != "" {
+		log.WithFields(log.Fields{
+			"dev_eui":      d.devEUI,
+			"device_name":  d.deviceName,
+			"anomaly_type": currentAnomalyType,
+			"is_manual":    isManual,
+		}).Warn(fmt.Sprintf("[%s] simulator: injecting anomaly", d.appName))
+
+		if currentAnomalyType == "dropout" {
+			// Veri Kaybı: Skip uplink transmission completely, increment fCnt
+			d.Lock()
+			d.fCntUp++
+			if isManual {
+				// one-shot manual anomalies clear immediately
+				d.manualAnomalyActive = false
+				d.manualAnomalyType = ""
+			} else {
+				d.activeAnomalyRemaining--
+				if d.activeAnomalyRemaining <= 0 {
+					d.activeAnomalyType = ""
+				}
+			}
+			d.Unlock()
+			
+			// Increment metric to show it attempted sending
+			DeviceUplinkCounter(d.tenantID).Inc()
+			return
+		}
+	}
+
+	// 2. Build payload (respecting flatline)
+	isFlatlineApplied := false
+	d.Lock()
+	if currentAnomalyType == "flatline" && len(d.lastPayload) > 0 {
+		d.payload = make([]byte, len(d.lastPayload))
+		copy(d.payload, d.lastPayload)
+		isFlatlineApplied = true
+	}
+	d.Unlock()
+
+	if isFlatlineApplied {
+		log.WithFields(log.Fields{
+			"dev_eui":     d.devEUI,
+			"app_name":    d.appName,
+			"device_name": d.deviceName,
+			"payload":     hex.EncodeToString(d.payload),
+		}).Info(fmt.Sprintf("[%s] simulator: flatline anomaly applied, repeated last payload", d.appName))
+	} else if d.payloadScript != "" {
 		err := func() error {
 			vm := goja.New()
 			vm.Set("fPort", d.fPort)
 			vm.Set("fCnt", d.fCntUp)
 			vm.Set("devEUI", d.devEUI.String())
 			vm.Set("deviceName", d.deviceName)
+
+			// Inject anomaly state into the script
+			anomalyMap := map[string]interface{}{
+				"active":     false,
+				"type":       "",
+				"driftValue": 0.0,
+			}
+			if currentAnomalyType == "spike" || currentAnomalyType == "drift" {
+				d.RLock()
+				anomalyMap["active"] = true
+				anomalyMap["type"] = currentAnomalyType
+				anomalyMap["driftValue"] = d.driftAccumulated
+				d.RUnlock()
+			}
+			vm.Set("anomaly", anomalyMap)
 
 			// Set up execution timeout interrupt (2s limit)
 			timeLimit := 2 * time.Second
@@ -473,7 +604,9 @@ func (d *Device) dataUp() {
 							return fmt.Errorf("invalid byte type at index %d: %T", i, x)
 						}
 					}
+					d.Lock()
 					d.payload = pl
+					d.Unlock()
 					log.WithFields(log.Fields{
 						"dev_eui":     d.devEUI,
 						"app_name":    d.appName,
@@ -485,7 +618,9 @@ func (d *Device) dataUp() {
 					if err != nil {
 						return err
 					}
+					d.Lock()
 					d.payload = b
+					d.Unlock()
 					log.WithFields(log.Fields{
 						"dev_eui":     d.devEUI,
 						"app_name":    d.appName,
@@ -507,11 +642,22 @@ func (d *Device) dataUp() {
 		pressVal := uint16(980 + ((nowNs >> 4) % 46)) // 980 to 1025
 		voltVal := uint8(28 + ((nowNs >> 8) % 9)) // 28 to 36
 
+		// Apply anomalies to default 5-byte payload values
+		if currentAnomalyType == "spike" {
+			tempVal += 15
+		} else if currentAnomalyType == "drift" {
+			d.RLock()
+			tempVal += int16(d.driftAccumulated)
+			d.RUnlock()
+		}
+
+		d.Lock()
 		d.payload[0] = byte(tempVal >> 8)
 		d.payload[1] = byte(tempVal)
 		d.payload[2] = byte(pressVal >> 8)
 		d.payload[3] = byte(pressVal)
 		d.payload[4] = voltVal
+		d.Unlock()
 
 		log.WithFields(log.Fields{
 			"dev_eui":     d.devEUI,
@@ -536,6 +682,11 @@ func (d *Device) dataUp() {
 		mType = lorawan.ConfirmedDataUp
 	}
 
+	d.RLock()
+	payloadBytes := make([]byte, len(d.payload))
+	copy(payloadBytes, d.payload)
+	d.RUnlock()
+
 	phy := lorawan.PHYPayload{
 		MHDR: lorawan.MHDR{
 			MType: mType,
@@ -552,7 +703,7 @@ func (d *Device) dataUp() {
 			FPort: &d.fPort,
 			FRMPayload: []lorawan.Payload{
 				&lorawan.DataPayload{
-					Bytes: d.payload,
+					Bytes: payloadBytes,
 				},
 			},
 		},
@@ -568,7 +719,36 @@ func (d *Device) dataUp() {
 		return
 	}
 
+	// 3. Clean up/Update anomaly state & Frame counters
+	d.Lock()
 	d.fCntUp++
+
+	// Keep copy of last payload
+	d.lastPayload = make([]byte, len(d.payload))
+	copy(d.lastPayload, d.payload)
+
+	if currentAnomalyType != "" {
+		if isManual {
+			// One-shot manual anomalies clear immediately
+			if currentAnomalyType == "spike" || currentAnomalyType == "dropout" {
+				d.manualAnomalyActive = false
+				d.manualAnomalyType = ""
+			} else if currentAnomalyType == "drift" {
+				d.driftAccumulated += 0.5
+			}
+		} else {
+			// Probabilistic anomalies decrement duration
+			if currentAnomalyType == "drift" {
+				d.driftAccumulated += 0.5
+			}
+			d.activeAnomalyRemaining--
+			if d.activeAnomalyRemaining <= 0 {
+				d.activeAnomalyType = ""
+				d.driftAccumulated = 0
+			}
+		}
+	}
+	d.Unlock()
 
 	d.sendUplink(phy)
 

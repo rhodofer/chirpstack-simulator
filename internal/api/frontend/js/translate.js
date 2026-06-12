@@ -291,7 +291,24 @@ export const translations = {
         wiz_btn_creating: "Oluşturuluyor...",
         btn_close: "Kapat",
         prev_page: "Geri",
-        next_page: "İleri"
+        next_page: "İleri",
+        nav_dynamic_telemetry: "Dinamik Telemetri",
+        title_dynamic_telemetry: "Zamanla Değişen Dinamik Telemetri Simülasyonu",
+        subtitle_dynamic_telemetry: "Cihazların statik veri göndermesi yerine zaman serisi halinde değişen fiziksel sensör verileri üretin.",
+        telemetry_select_org: "Organizasyon Seçin",
+        telemetry_choose_template: "Hazır Veri Şablonu Seçin",
+        telemetry_template_temp: "Sıcaklık Sensörü (Sine Wave + Gürültü)",
+        telemetry_template_hum: "Nem Sensörü (Random Walk)",
+        telemetry_template_meter: "Su Sayacı (Linear Drift/Artış)",
+        telemetry_template_battery: "Pil Seviyesi (Decay/Azalış)",
+        telemetry_template_custom: "Özel Betik (Custom JS)",
+        telemetry_test_btn: "Betikleri Dene / Simüle Et",
+        telemetry_save_btn: "Ayarları Kaydet",
+        anomaly_section_title: "Olasılıksal Anomali Enjeksiyonu",
+        anomaly_probability: "Anomali Olasılığı (%)",
+        anomaly_types: "Anomali Türleri",
+        anomaly_duration: "Anomali Süresi (Paket)",
+        table_active_anomaly: "Aktif Anomali"
     },
     en: {
         app_title: "ChirpStack Simulator",
@@ -583,7 +600,24 @@ export const translations = {
         wiz_btn_creating: "Creating...",
         btn_close: "Close",
         prev_page: "Prev",
-        next_page: "Next"
+        next_page: "Next",
+        nav_dynamic_telemetry: "Dynamic Telemetry",
+        title_dynamic_telemetry: "Time-Varying Dynamic Telemetry Simulation",
+        subtitle_dynamic_telemetry: "Generate time-varying physical sensor values instead of static device payloads.",
+        telemetry_select_org: "Select Organization",
+        telemetry_choose_template: "Choose Predefined Template",
+        telemetry_template_temp: "Temperature Sensor (Sine Wave + Noise)",
+        telemetry_template_hum: "Humidity Sensor (Random Walk)",
+        telemetry_template_meter: "Water Meter (Linear Drift/Increment)",
+        telemetry_template_battery: "Battery Level (Decay/Decrement)",
+        telemetry_template_custom: "Custom Script (Custom JS)",
+        telemetry_test_btn: "Try / Simulate Script",
+        telemetry_save_btn: "Save Settings",
+        anomaly_section_title: "Probabilistic Anomaly Injection",
+        anomaly_probability: "Anomaly Probability (%)",
+        anomaly_types: "Anomaly Types",
+        anomaly_duration: "Anomaly Duration (Packets)",
+        table_active_anomaly: "Active Anomaly"
     }
 };
 

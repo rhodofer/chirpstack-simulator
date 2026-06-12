@@ -75,6 +75,10 @@
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_devices">Cihazlar</span>
                         </div>
+                        <div class="secondary-nav-link" data-tab="dynamic-telemetry">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_dynamic_telemetry">Dinamik Telemetri</span>
+                        </div>
                     </div>
                 </div>
 
@@ -549,6 +553,9 @@
                                     <th class="sortable" data-sort="uplink_count">
                                         <span data-i18n="table_dev_uplink_cnt">Paket Sayısı</span> <span class="sort-icon" id="dev-status-sort-icon-uplink_count">▲</span>
                                     </th>
+                                    <th class="sortable" data-sort="active_anomaly">
+                                        <span data-i18n="table_active_anomaly">Aktif Anomali</span> <span class="sort-icon" id="dev-status-sort-icon-active_anomaly">▲</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="dev-status-table-body"></tbody>
@@ -579,6 +586,244 @@
                         <div class="pagination" id="dev-status-pagination"></div>
                     </div>
                 </div>
+
+
+<!-- ═══ TAB: DINAMİK TELEMETRİ (Dynamic Telemetry) ═══════════════════ -->
+<div class="tab-content" id="content-dynamic-telemetry">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title" data-i18n="title_dynamic_telemetry">Dinamik Telemetri</h1>
+            <p class="page-subtitle" data-i18n="subtitle_dynamic_telemetry">Cihazların statik veri göndermesi yerine zaman serisi halinde değişen fiziksel sensör verileri üretin.</p>
+        </div>
+    </div>
+
+    <style>
+        .telemetry-layout {
+            display: flex;
+            gap: 24px;
+            height: calc(100vh - 190px);
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .telemetry-left-panel {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .telemetry-right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .telemetry-form-row {
+            display: flex;
+            gap: 16px;
+        }
+        .telemetry-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+        .telemetry-form-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .telemetry-select {
+            background: var(--bg-field);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            padding: 10px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .telemetry-select:focus {
+            border-color: var(--accent);
+        }
+        .telemetry-textarea {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            background: var(--bg-field);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            padding: 12px;
+            outline: none;
+            resize: none;
+            flex: 1;
+            min-height: 280px;
+            tab-size: 4;
+            transition: border-color 0.2s;
+        }
+        .telemetry-textarea:focus {
+            border-color: var(--accent);
+        }
+        .telemetry-btn-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+        }
+        .telemetry-doc-box {
+            background: rgba(var(--accent-rgb), 0.03);
+            border-left: 3px solid var(--accent);
+            padding: 12px;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+        .telemetry-doc-box p {
+            margin: 0 0 6px 0;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .telemetry-doc-box ul {
+            margin: 0;
+            padding-left: 16px;
+        }
+        .telemetry-doc-box code {
+            background: rgba(120, 120, 120, 0.15);
+            padding: 1px 4px;
+            border-radius: var(--radius-xs);
+            font-family: monospace;
+            color: var(--text);
+            font-size: 0.76rem;
+        }
+        .telemetry-chart-container {
+            background: var(--bg-field);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            height: 220px;
+            position: relative;
+        }
+        .telemetry-log-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-field);
+            min-height: 180px;
+        }
+        .telemetry-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.72rem;
+            font-family: monospace;
+        }
+        .telemetry-log-table th, .telemetry-log-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        .telemetry-log-table th {
+            background: rgba(120, 120, 120, 0.05);
+            color: var(--text-dim);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .telemetry-log-table td {
+            color: var(--text);
+        }
+        .telemetry-log-table tr:hover {
+            background: rgba(120, 120, 120, 0.02);
+        }
+    </style>
+
+    <div class="telemetry-layout">
+        <!-- Sol Panel: Konfigürasyon ve Editör -->
+        <div class="telemetry-left-panel">
+            <div class="telemetry-form-row">
+                <div class="telemetry-form-group">
+                    <label class="telemetry-form-label" data-i18n="telemetry_select_org">Organizasyon Seçin</label>
+                    <select id="telemetry-org-select" class="telemetry-select">
+                        <option value="">Lütfen seçiniz...</option>
+                    </select>
+                </div>
+                <div class="telemetry-form-group">
+                    <label class="telemetry-form-label" data-i18n="telemetry_choose_template">Hazır Veri Şablonu Seçin</label>
+                    <select id="telemetry-template-select" class="telemetry-select" disabled>
+                        <option value="custom" data-i18n="telemetry_template_custom">Özel Betik (Custom JS)</option>
+                        <option value="temperature" data-i18n="telemetry_template_temp">Sıcaklık Sensörü (Sine Wave + Gürültü)</option>
+                        <option value="humidity" data-i18n="telemetry_template_hum">Nem Sensörü (Random Walk)</option>
+                        <option value="meter" data-i18n="telemetry_template_meter">Su Sayacı (Linear Drift/Artış)</option>
+                        <option value="battery" data-i18n="telemetry_template_battery">Pil Seviyesi (Decay/Azalış)</option>
+                    </select>
+                </div>
+            </div>
+
+            <textarea id="telemetry-script-editor" class="telemetry-textarea" data-i18n-placeholder="Önce organizasyon seçiniz..." placeholder="Önce organizasyon seçiniz..." disabled></textarea>
+
+            <div class="telemetry-doc-box">
+                <p>💡 Betik Çalıştırma Kılavuzu</p>
+                Betik, sunucu tarafında her veri gönderme adımında yürütülür ve <code>return [byte1, byte2, ...]</code> şeklinde bir **byte dizisi (array)** veya **hexadecimal dizgi (string)** (örn: <code>return "010203"</code>) döndürmelidir.
+                <ul>
+                    <li>Kullanılabilir Değişkenler: <code>fPort</code> (port), <code>fCnt</code> (uplink sayacı), <code>devEUI</code> (cihaz EUI), <code>deviceName</code> (isim).</li>
+                    <li>Matematiksel Fonksiyonlar: Standart JS metotları kullanılabilir: <code>Math.sin()</code>, <code>Math.random()</code>, <code>Math.round()</code>, vb.</li>
+                </ul>
+            </div>
+
+            <div class="telemetry-btn-container">
+                <button class="btn btn-outline" id="btn-telemetry-test" style="flex: 1;" disabled data-i18n="telemetry_test_btn">⚡ Betikleri Dene / Simüle Et</button>
+                <button class="btn" id="btn-telemetry-save" style="flex: 1;" disabled data-i18n="telemetry_save_btn">✓ Ayarları Kaydet</button>
+            </div>
+        </div>
+
+        <!-- Sağ Panel: Önizleme ve Grafik -->
+        <div class="telemetry-right-panel">
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--text); display: flex; align-items: center; gap: 6px;">
+                📈 <span>Telemetri Zaman Serisi Önizlemesi</span>
+            </div>
+            
+            <div class="telemetry-chart-container">
+                <canvas id="telemetry-preview-chart" style="width: 100%; height: 100%;"></canvas>
+            </div>
+
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--text); display: flex; align-items: center; gap: 6px; margin-top: 8px;">
+                📋 <span>Simüle Edilen Değer Tablosu (24 Adım)</span>
+            </div>
+
+            <div class="telemetry-log-wrapper">
+                <table class="telemetry-log-table">
+                    <thead>
+                        <tr>
+                            <th>Adım</th>
+                            <th>Frame Count (fCnt)</th>
+                            <th>Payload (Hex)</th>
+                            <th>Decoded Value (Yorumlanan Değer)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="telemetry-log-body">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Lütfen organizasyon seçip test butonuna basın.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
 
                 <!-- ═══ TAB: LOG MERKEZİ (Log Center) ═══════════════════ -->
@@ -754,6 +999,40 @@
                                                 <div class="form-group" style="margin-bottom:0;">
                                                     <label for="payload_script">Dinamik Payload Betiği (JavaScript Payload Script) - <em>Boş bırakılırsa yukarıdaki Payload kullanılır</em></label>
                                                     <textarea id="payload_script" name="payload_script" rows="6" placeholder="// Örn: var temp = 20 + Math.sin(fCnt * 0.1) * 5; return [Math.round(temp)];" style="width:100%; font-family:monospace; padding:10px 14px; font-size:12px; background:var(--bg-deepest); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); resize:vertical; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Olasılıksal Anomali Enjeksiyonu -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid var(--accent); padding-left: 8px;" data-i18n="anomaly_section_title">Olasılıksal Anomali Enjeksiyonu</h3>
+                                            <div style="display:flex; flex-direction:column; gap:16px;">
+                                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                                                    <div class="form-group" style="margin-bottom:0;">
+                                                        <label for="anomaly_probability" data-i18n="anomaly_probability">Anomali Olasılığı (%)</label>
+                                                        <input type="number" id="anomaly_probability" name="anomaly_probability" min="0" max="100" step="0.1" placeholder="0.0" value="0.0">
+                                                    </div>
+                                                    <div class="form-group" style="margin-bottom:0;">
+                                                        <label for="anomaly_duration" data-i18n="anomaly_duration">Anomali Süresi (Paket)</label>
+                                                        <input type="number" id="anomaly_duration" name="anomaly_duration" min="1" placeholder="5" value="5">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group" style="margin-bottom:0;">
+                                                    <label data-i18n="anomaly_types">Anomali Türleri</label>
+                                                    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
+                                                        <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; margin:0;">
+                                                            <input type="checkbox" class="anomaly-type-checkbox" value="spike" style="width:auto; margin:0;"> Spike
+                                                        </label>
+                                                        <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; margin:0;">
+                                                            <input type="checkbox" class="anomaly-type-checkbox" value="flatline" style="width:auto; margin:0;"> Flatline
+                                                        </label>
+                                                        <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; margin:0;">
+                                                            <input type="checkbox" class="anomaly-type-checkbox" value="dropout" style="width:auto; margin:0;"> Dropout
+                                                        </label>
+                                                        <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; margin:0;">
+                                                            <input type="checkbox" class="anomaly-type-checkbox" value="drift" style="width:auto; margin:0;"> Drift
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/brocaar/chirpstack-simulator/internal/as"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
@@ -45,6 +46,23 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 
 	applicationID := r.URL.Query().Get("application_id")
 	tenantID := r.URL.Query().Get("tenant_id")
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+	search := r.URL.Query().Get("search")
+
+	limit := 10
+	offset := 0
+	if limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+			limit = val
+		}
+	}
+	if offsetStr != "" {
+		if val, err := strconv.Atoi(offsetStr); err == nil && val >= 0 {
+			offset = val
+		}
+	}
+
 	var apps []string
 	appTenantMap := make(map[string]string)
 
@@ -86,29 +104,74 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var totalCount int = 0
 	devices := []Device{}
-	for _, appID := range apps {
-		req := &api.ListDevicesRequest{Limit: 100, ApplicationId: appID}
+
+	if len(apps) == 1 {
+		// Single application: delegate limit and offset directly to ChirpStack API
+		appID := apps[0]
+		req := &api.ListDevicesRequest{
+			Limit:         uint32(limit),
+			Offset:        uint32(offset),
+			Search:        search,
+			ApplicationId: appID,
+		}
 		resp, err := as.Device().List(context.Background(), req)
-		if err != nil {
+		if err == nil {
+			totalCount = int(resp.GetTotalCount())
+			for _, d := range resp.GetResult() {
+				devices = append(devices, Device{
+					DevEUI:          d.GetDevEui(),
+					Name:            d.GetName(),
+					ApplicationID:   appID,
+					DeviceProfileID: d.GetDeviceProfileId(),
+					Description:     d.GetDescription(),
+					TenantID:        appTenantMap[appID],
+				})
+			}
+		} else {
 			log.WithError(err).Warnf("devices: list error for application %s", appID)
-			continue
 		}
-		for _, d := range resp.GetResult() {
-			devices = append(devices, Device{
-				DevEUI:          d.GetDevEui(),
-				Name:            d.GetName(),
-				ApplicationID:   appID,
-				DeviceProfileID: d.GetDeviceProfileId(),
-				Description:     d.GetDescription(),
-				TenantID:        appTenantMap[appID],
-			})
+	} else {
+		// Multiple applications: fetch all and slice locally
+		allDevices := []Device{}
+		for _, appID := range apps {
+			req := &api.ListDevicesRequest{Limit: 5000, Search: search, ApplicationId: appID}
+			resp, err := as.Device().List(context.Background(), req)
+			if err != nil {
+				log.WithError(err).Warnf("devices: list error for application %s", appID)
+				continue
+			}
+			for _, d := range resp.GetResult() {
+				allDevices = append(allDevices, Device{
+					DevEUI:          d.GetDevEui(),
+					Name:            d.GetName(),
+					ApplicationID:   appID,
+					DeviceProfileID: d.GetDeviceProfileId(),
+					Description:     d.GetDescription(),
+					TenantID:        appTenantMap[appID],
+				})
+			}
 		}
+		totalCount = len(allDevices)
+
+		// Slice
+		start := offset
+		if start > totalCount {
+			start = totalCount
+		}
+		end := start + limit
+		if end > totalCount {
+			end = totalCount
+		}
+		devices = allDevices[start:end]
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"devices": devices,
-		"count":   len(devices),
+		"count":   totalCount,
+		"limit":   limit,
+		"offset":  offset,
 	})
 }
 

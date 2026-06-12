@@ -66,17 +66,114 @@ export function renderDevStatusTable() {
     for (let i = 0; i < pageItems.length; i++) {
         const d = pageItems[i];
         const tr = document.createElement("tr");
+        tr.style.cursor = "pointer";
         const stateClass = d.state === "Activated" ? "activated" : "otaa";
         const stateLabel = d.state === "Activated" ? "AKTİF" : "OTAA";
+        
+        let anomalyBadgeHtml = "—";
+        if (d.active_anomaly) {
+            anomalyBadgeHtml = `<span class="status-pill otaa" style="background:rgba(255, 123, 48, 0.15); color:var(--warning); border:1px solid var(--warning);">${escapeHtml(d.active_anomaly.toUpperCase())}</span>`;
+        }
         
         tr.innerHTML =
             `<td><span class="org-name-primary">${escapeHtml(d.device_name)}</span></td>` +
             `<td><span class="id-cell">${escapeHtml(d.dev_eui)}</span></td>` +
             `<td><span class="org-name-secondary">${escapeHtml(d.app_name)}</span></td>` +
             `<td><span class="status-pill ${stateClass}">${stateLabel}</span></td>` +
-            `<td><span class="org-name-primary">${d.uplink_count}</span></td>`;
+            `<td><span class="org-name-primary">${d.uplink_count}</span></td>` +
+            `<td>${anomalyBadgeHtml}</td>`;
+            
+        tr.addEventListener("click", () => {
+            openDeviceStatusDrawer(d);
+        });
         tbody.appendChild(tr);
     }
+}
+
+export function openDeviceStatusDrawer(d) {
+    const activeAnomalyText = d.active_anomaly || (state.language === "tr" ? "Yok" : "None");
+    const isFlatline = d.active_anomaly && d.active_anomaly.includes("flatline");
+    const isDrift = d.active_anomaly && d.active_anomaly.includes("drift");
+    
+    // Import dynamically to avoid circular dependency
+    import("../utils.js").then((utils) => {
+        const htmlContent = `
+            <div class="device-details-pane" style="display:flex; flex-direction:column; gap:16px;">
+                <table class="details-table" style="width:100%; border-collapse: collapse;">
+                    <tbody>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:8px 0; color:var(--text-dim);">DevEUI:</th><td class="id-cell" style="padding:8px 0; text-align:right;">${escapeHtml(d.dev_eui)}</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:8px 0; color:var(--text-dim);">Cihaz Adı:</th><td style="padding:8px 0; text-align:right;">${escapeHtml(d.device_name)}</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:8px 0; color:var(--text-dim);">Ağ Adı:</th><td style="padding:8px 0; text-align:right;">${escapeHtml(d.app_name)}</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:8px 0; color:var(--text-dim);">Durum:</th><td style="padding:8px 0; text-align:right;"><span class="status-pill ${d.state === "Activated" ? "activated" : "otaa"}">${d.state === "Activated" ? "AKTİF" : "OTAA"}</span></td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:8px 0; color:var(--text-dim);">Paket Sayısı:</th><td style="padding:8px 0; text-align:right;">${d.uplink_count}</td></tr>
+                        <tr><th style="text-align:left; padding:8px 0; color:var(--text-dim);">Aktif Anomali:</th><td style="padding:8px 0; text-align:right; font-weight:bold; color:var(--warning);">${escapeHtml(activeAnomalyText.toUpperCase())}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:16px;">
+                    <h3 style="font-size:0.85rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;" data-i18n="anomaly_types">Manuel Hata Enjeksiyonu</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <button class="btn btn-secondary btn-sm" id="btn-manual-spike" style="justify-content:center;">
+                            ⚡ Spike Tetikle
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btn-manual-dropout" style="justify-content:center;">
+                            🕳️ Dropout Tetikle
+                        </button>
+                        <button class="btn ${isFlatline ? 'btn-danger' : 'btn-secondary'} btn-sm" id="btn-manual-flatline" style="justify-content:center;">
+                            ❄️ ${isFlatline ? "Donmayı Durdur" : "Flatline Başlat"}
+                        </button>
+                        <button class="btn ${isDrift ? 'btn-danger' : 'btn-secondary'} btn-sm" id="btn-manual-drift" style="justify-content:center;">
+                            📉 ${isDrift ? "Sapmayı Durdur" : "Drift Başlat"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        utils.openDetailsDrawer(
+            state.language === "tr" ? "Cihaz Durumu & Anomali" : "Device Status & Anomaly",
+            state.language === "tr" ? "Hata enjeksiyonu ve detay izleme" : "Error injection and details view",
+            htmlContent
+        );
+
+        // Bind click events
+        const btnSpike = document.getElementById("btn-manual-spike");
+        const btnDropout = document.getElementById("btn-manual-dropout");
+        const btnFlatline = document.getElementById("btn-manual-flatline");
+        const btnDrift = document.getElementById("btn-manual-drift");
+
+        if (btnSpike) btnSpike.addEventListener("click", () => sendAnomalyCommand(d.dev_eui, "spike", "trigger"));
+        if (btnDropout) btnDropout.addEventListener("click", () => sendAnomalyCommand(d.dev_eui, "dropout", "trigger"));
+        
+        if (btnFlatline) {
+            btnFlatline.addEventListener("click", () => {
+                const action = isFlatline ? "stop" : "start";
+                sendAnomalyCommand(d.dev_eui, "flatline", action);
+            });
+        }
+        if (btnDrift) {
+            btnDrift.addEventListener("click", () => {
+                const action = isDrift ? "stop" : "start";
+                sendAnomalyCommand(d.dev_eui, "drift", action);
+            });
+        }
+    });
+}
+
+export async function sendAnomalyCommand(devEUI, type, action) {
+    const r = await api("POST", `/api/devices/${devEUI}/anomaly`, { type, action });
+    
+    // Import utils dynamically
+    import("../utils.js").then((utils) => {
+        if (r.ok) {
+            utils.showToast(state.language === "tr" ? "Hata enjeksiyon komutu uygulandı." : "Anomaly command applied successfully.", "success");
+            utils.closeDetailsDrawer();
+            fetchSimulationDevices();
+        } else {
+            const errMsg = (r.data && r.data.error) || "Hata oluştu";
+            utils.showToast(errMsg, "error");
+        }
+    });
 }
 
 export function renderDevStatusPagination() {

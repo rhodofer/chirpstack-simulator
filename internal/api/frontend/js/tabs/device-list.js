@@ -18,13 +18,20 @@ export function getDpName(dpId) {
 }
 
 export async function fetchDevices(tenantId) {
-    let url = "/api/devices";
-    if (tenantId) url += "?tenant_id=" + encodeURIComponent(tenantId);
+    const limit = state.devPageSize || 5;
+    const offset = ((state.devPage || 1) - 1) * limit;
+    const search = state.devSearchQuery || "";
+    
+    let url = `/api/devices?limit=${limit}&offset=${offset}&search=${encodeURIComponent(search)}`;
+    if (tenantId) url += "&tenant_id=" + encodeURIComponent(tenantId);
+    
     const r = await api("GET", url);
     if (r.ok && r.data.devices) {
         state.devList = r.data.devices;
+        state.devTotalCount = r.data.count || 0;
     } else {
         state.devList = [];
+        state.devTotalCount = 0;
         const errMsg = (r.data && r.data.error) || "Bağlantı hatası";
         logEntry("Failed to load devices: " + errMsg, "error");
     }
@@ -175,26 +182,11 @@ export async function fetchDeviceIntervals() {
 }
 
 export function applyDevFiltersAndRender() {
-    const q = state.devSearchQuery.toLowerCase();
-    const tFilter = state.devTenantFilter;
-
-    let filtered = state.devList;
-    if (tFilter) {
-        filtered = filtered.filter(dev => dev.tenant_id === tFilter);
-    }
-
-    if (q) {
-        state.devFiltered = filtered.filter((dev) => {
-            return (dev.name && dev.name.toLowerCase().indexOf(q) !== -1) ||
-                   (dev.dev_eui && dev.dev_eui.toLowerCase().indexOf(q) !== -1);
-        });
-    } else {
-        state.devFiltered = filtered.slice();
-    }
+    let filtered = state.devList.slice();
 
     const sk = state.devSort.key;
     const sd = state.devSort.dir === "asc" ? 1 : -1;
-    state.devFiltered.sort((a, b) => {
+    filtered.sort((a, b) => {
         let va = a[sk];
         let vb = b[sk];
         if (sk === "tenant_id") {
@@ -212,8 +204,7 @@ export function applyDevFiltersAndRender() {
         return 0;
     });
 
-    const totalPages = Math.max(1, Math.ceil(state.devFiltered.length / state.devPageSize));
-    if (state.devPage > totalPages) state.devPage = totalPages;
+    state.devFiltered = filtered;
     
     renderDevTable();
     renderDevPagination();
@@ -236,9 +227,7 @@ export function renderDevTable() {
     }
     if (devEmptyState) devEmptyState.style.display = "none";
 
-    const start = (state.devPage - 1) * state.devPageSize;
-    const end = Math.min(start + state.devPageSize, state.devFiltered.length);
-    const pageItems = state.devFiltered.slice(start, end);
+    const pageItems = state.devFiltered;
 
     for (let i = 0; i < pageItems.length; i++) {
         const dev = pageItems[i];
@@ -304,7 +293,7 @@ export function renderDevPagination() {
     const devPaginationEl = $("#dev-pagination");
     if (!devPaginationEl) return;
     devPaginationEl.innerHTML = "";
-    const total = state.devFiltered.length;
+    const total = state.devTotalCount || 0;
     const totalPages = Math.max(1, Math.ceil(total / state.devPageSize));
     const current = state.devPage;
 
@@ -340,7 +329,7 @@ export function renderDevPagination() {
 export function renderDevTotalCount() {
     const devTotalCountEl = $("#dev-total-count");
     if (devTotalCountEl) {
-        devTotalCountEl.innerHTML = t("footer_total_dev").replace("{count}", state.devFiltered.length);
+        devTotalCountEl.innerHTML = t("footer_total_dev").replace("{count}", state.devTotalCount || 0);
     }
 }
 
@@ -358,10 +347,11 @@ export function updateDevSortIcons() {
 }
 
 export function goToDevPage(n) {
-    const totalPages = Math.max(1, Math.ceil(state.devFiltered.length / state.devPageSize));
+    const total = state.devTotalCount || 0;
+    const totalPages = Math.max(1, Math.ceil(total / state.devPageSize));
     if (n < 1 || n > totalPages) return;
     state.devPage = n;
-    applyDevFiltersAndRender();
+    fetchDevices(state.devTenantFilter);
 }
 
 export function sortDevBy(key) {
@@ -378,13 +368,13 @@ export function sortDevBy(key) {
 export function searchDev(q) {
     state.devSearchQuery = q;
     state.devPage = 1;
-    applyDevFiltersAndRender();
+    fetchDevices(state.devTenantFilter);
 }
 
 export function changeDevPageSize(n) {
     state.devPageSize = parseInt(n, 10) || 5;
     state.devPage = 1;
-    applyDevFiltersAndRender();
+    fetchDevices(state.devTenantFilter);
 }
 
 // ─── Device Intervals Tab Functions ───

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/brocaar/chirpstack-simulator/internal/as"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
@@ -215,74 +216,113 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 		appDetails = append(appDetails, ResourceDetail{ID: appID, Name: appName})
 		log.Infof("bootstrap: created application %s (id: %s)", appName, appID)
 
-		// Create Devices under this application
+		// Create Devices under this application concurrently
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		sem := make(chan struct{}, 10) // Limit concurrency to 10 gRPC calls
+		var errOnce sync.Once
+		var bootstrapErr error
+
 		for j := 1; j <= req.DevCount; j++ {
-			devName := fmt.Sprintf("%s-%s-%d", appName, req.DevPrefix, j)
-
-			// Generate random DevEUI and AppKey
-			var devEUIBytes [8]byte
-			var appKeyBytes [16]byte
-			if _, err := rand.Read(devEUIBytes[:]); err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "rastgele DevEUI üretilemedi"})
-				return
+			if bootstrapErr != nil {
+				break
 			}
-			if _, err := rand.Read(appKeyBytes[:]); err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "rastgele AppKey üretilemedi"})
-				return
-			}
-			devEUIStr := hex.EncodeToString(devEUIBytes[:])
-			appKeyStr := hex.EncodeToString(appKeyBytes[:])
 
-			// Select device profile and interval based on slot index
-			dpID := dpIDs[(j-1) % len(dpIDs)]
-			interval := "2m"
+			wg.Add(1)
+			go func(j int) {
+				defer wg.Done()
 
-			for _, dCfg := range req.DevicesConfig {
-				if dCfg.DeviceIndex == j {
-					if dCfg.ProfileIndex >= 1 && dCfg.ProfileIndex <= len(dpIDs) {
-						dpID = dpIDs[dCfg.ProfileIndex - 1]
-					}
-					if dCfg.Interval != "" {
-						interval = dCfg.Interval
-					}
-					break
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				if bootstrapErr != nil {
+					return
 				}
-			}
 
-			_, err = as.Device().Create(ctx, &api.CreateDeviceRequest{
-				Device: &api.Device{
-					DevEui:          devEUIStr,
-					Name:            devName,
-					Description:     fmt.Sprintf("%s cihazı", devName),
-					ApplicationId:   appID,
-					DeviceProfileId: dpID,
-				},
-			})
-			if err != nil {
-				log.WithError(err).Errorf("bootstrap: failed to create device %s", devName)
-				writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("cihaz %s oluşturulamadı: %s", devName, err.Error())})
-				return
-			}
+				devName := fmt.Sprintf("%s-%s-%d", appName, req.DevPrefix, j)
 
-			_, err = as.Device().CreateKeys(ctx, &api.CreateDeviceKeysRequest{
-				DeviceKeys: &api.DeviceKeys{
-					DevEui: devEUIStr,
-					NwkKey: appKeyStr,
-				},
-			})
-			if err != nil {
-				log.WithError(err).Errorf("bootstrap: failed to create keys for device %s", devName)
-				writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("cihaz anahtarları %s oluşturulamadı: %s", devName, err.Error())})
-				return
-			}
+				// Generate random DevEUI and AppKey
+				var devEUIBytes [8]byte
+				var appKeyBytes [16]byte
+				if _, err := rand.Read(devEUIBytes[:]); err != nil {
+					errOnce.Do(func() {
+						bootstrapErr = fmt.Errorf("rastgele DevEUI üretilemedi: %w", err)
+					})
+					return
+				}
+				if _, err := rand.Read(appKeyBytes[:]); err != nil {
+					errOnce.Do(func() {
+						bootstrapErr = fmt.Errorf("rastgele AppKey üretilemedi: %w", err)
+					})
+					return
+				}
+				devEUIStr := hex.EncodeToString(devEUIBytes[:])
+				appKeyStr := hex.EncodeToString(appKeyBytes[:])
 
-			// Save configured interval for this device
-			if err := SaveDeviceInterval(devEUIStr, interval); err != nil {
-				log.WithError(err).Warnf("bootstrap: failed to save interval for device %s", devName)
-			}
+				// Select device profile and interval based on slot index
+				dpID := dpIDs[(j-1)%len(dpIDs)]
+				interval := "2m"
 
-			createdDevicesCount++
-			log.Infof("bootstrap: created device %s (eui: %s)", devName, devEUIStr)
+				for _, dCfg := range req.DevicesConfig {
+					if dCfg.DeviceIndex == j {
+						if dCfg.ProfileIndex >= 1 && dCfg.ProfileIndex <= len(dpIDs) {
+							dpID = dpIDs[dCfg.ProfileIndex-1]
+						}
+						if dCfg.Interval != "" {
+							interval = dCfg.Interval
+						}
+						break
+					}
+				}
+
+				_, err := as.Device().Create(ctx, &api.CreateDeviceRequest{
+					Device: &api.Device{
+						DevEui:          devEUIStr,
+						Name:            devName,
+						Description:     fmt.Sprintf("%s cihazı", devName),
+						ApplicationId:   appID,
+						DeviceProfileId: dpID,
+					},
+				})
+				if err != nil {
+					errOnce.Do(func() {
+						log.WithError(err).Errorf("bootstrap: failed to create device %s", devName)
+						bootstrapErr = fmt.Errorf("cihaz %s oluşturulamadı: %w", devName, err)
+					})
+					return
+				}
+
+				_, err = as.Device().CreateKeys(ctx, &api.CreateDeviceKeysRequest{
+					DeviceKeys: &api.DeviceKeys{
+						DevEui: devEUIStr,
+						NwkKey: appKeyStr,
+					},
+				})
+				if err != nil {
+					errOnce.Do(func() {
+						log.WithError(err).Errorf("bootstrap: failed to create keys for device %s", devName)
+						bootstrapErr = fmt.Errorf("cihaz anahtarları %s oluşturulamadı: %w", devName, err)
+					})
+					return
+				}
+
+				// Save configured interval for this device
+				if err := SaveDeviceInterval(devEUIStr, interval); err != nil {
+					log.WithError(err).Warnf("bootstrap: failed to save interval for device %s", devName)
+				}
+
+				mu.Lock()
+				createdDevicesCount++
+				mu.Unlock()
+				log.Infof("bootstrap: created device %s (eui: %s)", devName, devEUIStr)
+			}(j)
+		}
+
+		wg.Wait()
+
+		if bootstrapErr != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": bootstrapErr.Error()})
+			return
 		}
 	}
 

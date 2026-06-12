@@ -13,6 +13,7 @@ import { initSettingsTab, fetchSystemConfig } from "./tabs/settings.js";
 import { initConsoleTab, initConsoleTheme, toggleTheme, activeTheme, currentPreset } from "./tabs/console.js";
 import { initSystemLogsTab, renderSystemLogs, purgeOldIndexedDBLogs } from "./tabs/system-logs.js";
 import { initDashboard, initMap, initChart, checkHealth, stopPolling } from "./tabs/dashboard.js";
+import { initDynamicTelemetryTab, populateTelemetryOrgsSelect } from "./tabs/dynamic-telemetry.js";
 
 // Wizard initializers
 import { initDpWizard } from "./wizards/dp-wizard.js";
@@ -30,6 +31,7 @@ export function updatePageTitle() {
         "device-list": t("nav_devices"),
         "device-status": t("nav_device_status"),
         "log-center": t("nav_log_center"),
+        "dynamic-telemetry": t("nav_dynamic_telemetry"),
         settings: t("nav_settings"),
         info: t("info_title")
     };
@@ -89,6 +91,8 @@ export function switchTab(name) {
         fetchSimulationDevices();
     } else if (name === "log-center") {
         renderSystemLogs();
+    } else if (name === "dynamic-telemetry") {
+        populateTelemetryOrgsSelect();
     }
 }
 
@@ -119,6 +123,7 @@ async function loadDashboardData() {
 
     populateNetFilterTenantSelect();
     populateDevFilterTenantSelect();
+    populateTelemetryOrgsSelect();
     await fetchApplications(state.netTenantFilter);
 
     await fetchDevices("");
@@ -300,6 +305,7 @@ async function init() {
     initConsoleTab();
     initSystemLogsTab();
     initDashboard();
+    initDynamicTelemetryTab();
 
     initDpWizard();
     initNetWizard();

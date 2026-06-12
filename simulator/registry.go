@@ -8,11 +8,12 @@ import (
 
 // DeviceStatus defines the current state of a simulated device.
 type DeviceStatus struct {
-	DevEUI      string `json:"dev_eui"`
-	DeviceName  string `json:"device_name"`
-	AppName     string `json:"app_name"`
-	State       string `json:"state"` // "OTAA" or "Activated"
-	UplinkCount uint32 `json:"uplink_count"`
+	DevEUI        string `json:"dev_eui"`
+	DeviceName    string `json:"device_name"`
+	AppName       string `json:"app_name"`
+	State         string `json:"state"` // "OTAA" or "Activated"
+	UplinkCount   uint32 `json:"uplink_count"`
+	ActiveAnomaly string `json:"active_anomaly"`
 }
 
 // DeviceRegistry tracks all actively simulated devices.
@@ -47,6 +48,13 @@ func (r *DeviceRegistry) Clear() {
 	r.devices = make(map[lorawan.EUI64]*Device)
 }
 
+// GetDevice returns the Device pointer by EUI64.
+func (r *DeviceRegistry) GetDevice(devEUI lorawan.EUI64) *Device {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.devices[devEUI]
+}
+
 // GetStatuses returns a list of all active device statuses.
 func (r *DeviceRegistry) GetStatuses() []DeviceStatus {
 	r.mu.RLock()
@@ -59,12 +67,21 @@ func (r *DeviceRegistry) GetStatuses() []DeviceStatus {
 		if d.state == deviceStateActivated {
 			stateStr = "Activated"
 		}
+		
+		activeAnomaly := ""
+		if d.manualAnomalyActive {
+			activeAnomaly = d.manualAnomalyType + " (manual)"
+		} else if d.activeAnomalyType != "" {
+			activeAnomaly = d.activeAnomalyType + " (prob)"
+		}
+		
 		statuses = append(statuses, DeviceStatus{
-			DevEUI:      d.devEUI.String(),
-			DeviceName:  d.deviceName,
-			AppName:     d.appName,
-			State:       stateStr,
-			UplinkCount: d.fCntUp,
+			DevEUI:        d.devEUI.String(),
+			DeviceName:    d.deviceName,
+			AppName:       d.appName,
+			State:         stateStr,
+			UplinkCount:   d.fCntUp,
+			ActiveAnomaly: activeAnomaly,
 		})
 		d.RUnlock()
 	}

@@ -66,6 +66,9 @@ type SimulatorConfig struct {
 	PacketLoss       float64                `mapstructure:"packet_loss" toml:"packet_loss"`
 	SimulatePacketLoss bool                 `mapstructure:"simulate_packet_loss" toml:"simulate_packet_loss"`
 	LatencyMs        int                    `mapstructure:"latency_ms" toml:"latency_ms"`
+	AnomalyProbability float64              `mapstructure:"anomaly_probability" toml:"anomaly_probability"`
+	AnomalyTypes       string                 `mapstructure:"anomaly_types" toml:"anomaly_types"`
+	AnomalyDuration    int                    `mapstructure:"anomaly_duration" toml:"anomaly_duration"`
 	Device           SimulatorDeviceConfig  `mapstructure:"device" toml:"device"`
 	Gateway          SimulatorGatewayConfig `mapstructure:"gateway" toml:"gateway"`
 	DeviceIntervals  map[string]time.Duration `mapstructure:"device_intervals" toml:"device_intervals"`

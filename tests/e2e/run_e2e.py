@@ -139,8 +139,30 @@ def main():
             os.remove(db_bak_path)
         sys.exit(1)
         
+    # Wait for the HTTP server inside the container to be fully ready and serving
+    print("Waiting for HTTP server to respond on port 9002...")
+    import urllib.request
+    for i in range(15):
+        try:
+            req = urllib.request.Request(f"http://{target_host}:{target_port}/")
+            with urllib.request.urlopen(req, timeout=1) as response:
+                if response.status == 200:
+                    break
+        except Exception as e:
+            # urllib might throw HTTPError or URLError, but we just need a response
+            if "HTTPError" in type(e).__name__ or hasattr(e, 'code'):
+                break
+        time.sleep(1)
+
     # Wait another 2 seconds for gRPC connections to stabilize
     time.sleep(2)
+
+    # Clean up any leftover E2E organizations in ChirpStack before running tests
+    print("Pre-test cleanup: checking for leftover E2E organizations...")
+    try:
+        cleanup_e2e_organizations()
+    except Exception as e:
+        print(f"Warning: Pre-test cleanup failed: {e}")
 
     print("Simulator is active on a fresh test database. Running E2E tests...\n")
     
