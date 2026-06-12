@@ -342,6 +342,7 @@ async function init() {
     if (authenticated) {
         hideLoginScreen();
         await loadDashboardData();
+        switchTab("live-map");
     } else {
         showLoginScreen();
     }

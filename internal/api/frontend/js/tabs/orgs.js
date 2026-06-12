@@ -423,9 +423,32 @@ export function applyFiltersAndRender() {
     const key = state.tableSort.key;
     const dir = state.tableSort.dir === "asc" ? 1 : -1;
     state.filteredOrgs.sort((a, b) => {
-        const valA = a[key] ? a[key].toString().toLowerCase() : "";
-        const valB = b[key] ? b[key].toString().toLowerCase() : "";
-        return valA.localeCompare(valB) * dir;
+        let valA, valB;
+        if (key === "app_count") {
+            valA = state.applications.filter(app => app.tenant_id === a.id).length;
+            valB = state.applications.filter(app => app.tenant_id === b.id).length;
+            return (valA - valB) * dir;
+        } else if (key === "dp_count") {
+            valA = state.dpList.filter(dp => dp.tenant_id === a.id).length;
+            valB = state.dpList.filter(dp => dp.tenant_id === b.id).length;
+            return (valA - valB) * dir;
+        } else if (key === "dev_count") {
+            valA = state.devList.filter(dev => dev.tenant_id === a.id).length;
+            valB = state.devList.filter(dev => dev.tenant_id === b.id).length;
+            return (valA - valB) * dir;
+        } else if (key === "date") {
+            const dateValA = a.created_at || a.createdAt || a.created || 0;
+            const dateValB = b.created_at || b.createdAt || b.created || 0;
+            const dateA = new Date(dateValA);
+            const dateB = new Date(dateValB);
+            const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+            const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+            return (timeA - timeB) * dir;
+        } else {
+            valA = a[key] ? a[key].toString().toLowerCase() : "";
+            valB = b[key] ? b[key].toString().toLowerCase() : "";
+            return valA.localeCompare(valB) * dir;
+        }
     });
 
     renderTable();

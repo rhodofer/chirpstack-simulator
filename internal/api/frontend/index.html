@@ -34,7 +34,7 @@
                         <span class="secondary-nav-group-chevron">▶</span>
                     </div>
                     <div class="secondary-nav-group-items">
-                        <div class="secondary-nav-link" data-tab="live-map">
+                        <div class="secondary-nav-link active" data-tab="live-map">
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_live_map">Canlı İzleme</span>
                         </div>
@@ -59,7 +59,7 @@
                         <span class="secondary-nav-group-chevron">▶</span>
                     </div>
                     <div class="secondary-nav-group-items">
-                        <div class="secondary-nav-link active" data-tab="overview">
+                        <div class="secondary-nav-link" data-tab="overview">
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_organizations">Organizasyonlar</span>
                         </div>
@@ -135,7 +135,7 @@
             <div class="main-scroll">
 
                 <!-- ═══ TAB: GENEL BAKIŞ (Organizasyonlar) ═══════════════════ -->
-                <div class="tab-content active" id="content-overview">
+                <div class="tab-content" id="content-overview">
                     <div class="page-header">
                         <div class="page-header-left">
                             <h1 class="page-title" data-i18n="title_overview">Organizasyonlar</h1>
@@ -171,9 +171,15 @@
                                     <th class="sortable" data-sort="id">
                                         <span data-i18n="table_org_id">ID</span> <span class="sort-icon" id="sort-icon-id">▲</span>
                                     </th>
-                                    <th><span data-i18n="table_org_net_count">Ağ Sayısı</span></th>
-                                    <th><span data-i18n="table_org_dp_count">Profil Sayısı</span></th>
-                                    <th><span data-i18n="table_org_dev_count">Cihaz Sayısı</span></th>
+                                    <th class="sortable" data-sort="app_count">
+                                        <span data-i18n="table_org_net_count">Ağ Sayısı</span> <span class="sort-icon" id="sort-icon-app_count">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dp_count">
+                                        <span data-i18n="table_org_dp_count">Profil Sayısı</span> <span class="sort-icon" id="sort-icon-dp_count">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dev_count">
+                                        <span data-i18n="table_org_dev_count">Cihaz Sayısı</span> <span class="sort-icon" id="sort-icon-dev_count">▲</span>
+                                    </th>
                                     <th class="sortable" data-sort="date">
                                         <span data-i18n="table_org_date">Kayıt Tarihi</span> <span class="sort-icon" id="sort-icon-date">▲</span>
                                     </th>
@@ -217,7 +223,7 @@
 
 
 <!-- ═══ TAB: CANLI İZLEME (Harita & Grafik) ═══════════════════ -->
-<div class="tab-content" id="content-live-map">
+<div class="tab-content active" id="content-live-map">
     <div class="page-header">
         <div class="page-header-left">
             <h1 class="page-title" data-i18n="title_live_map">Canlı İzleme</h1>
@@ -404,8 +410,8 @@
                                     <th class="sortable" data-sort="tenant_id">
                                         <span data-i18n="table_net_org">Organizasyon</span> <span class="sort-icon" id="net-sort-icon-tenant_id">▲</span>
                                     </th>
-                                    <th>
-                                        <span data-i18n="table_net_created_at">Oluşturma Tarihi</span>
+                                    <th class="sortable" data-sort="created_at">
+                                        <span data-i18n="table_net_created_at">Oluşturma Tarihi</span> <span class="sort-icon" id="net-sort-icon-created_at">▲</span>
                                     </th>
                                     <th style="text-align:right;" data-i18n="table_actions">İşlemler</th>
                                 </tr>

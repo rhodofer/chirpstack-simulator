@@ -9,7 +9,7 @@ export const state = {
     tablePage: 1,
     tablePageSize: 5,
     searchQuery: "",
-    currentTab: "overview",
+    currentTab: "live-map",
     drawerOpen: false,
     drawerMode: "edit",
     currentStatus: "idle",

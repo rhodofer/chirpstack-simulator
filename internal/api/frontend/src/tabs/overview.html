@@ -1,5 +1,5 @@
                 <!-- ═══ TAB: GENEL BAKIŞ (Organizasyonlar) ═══════════════════ -->
-                <div class="tab-content active" id="content-overview">
+                <div class="tab-content" id="content-overview">
                     <div class="page-header">
                         <div class="page-header-left">
                             <h1 class="page-title" data-i18n="title_overview">Organizasyonlar</h1>
@@ -35,9 +35,15 @@
                                     <th class="sortable" data-sort="id">
                                         <span data-i18n="table_org_id">ID</span> <span class="sort-icon" id="sort-icon-id">▲</span>
                                     </th>
-                                    <th><span data-i18n="table_org_net_count">Ağ Sayısı</span></th>
-                                    <th><span data-i18n="table_org_dp_count">Profil Sayısı</span></th>
-                                    <th><span data-i18n="table_org_dev_count">Cihaz Sayısı</span></th>
+                                    <th class="sortable" data-sort="app_count">
+                                        <span data-i18n="table_org_net_count">Ağ Sayısı</span> <span class="sort-icon" id="sort-icon-app_count">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dp_count">
+                                        <span data-i18n="table_org_dp_count">Profil Sayısı</span> <span class="sort-icon" id="sort-icon-dp_count">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="dev_count">
+                                        <span data-i18n="table_org_dev_count">Cihaz Sayısı</span> <span class="sort-icon" id="sort-icon-dev_count">▲</span>
+                                    </th>
                                     <th class="sortable" data-sort="date">
                                         <span data-i18n="table_org_date">Kayıt Tarihi</span> <span class="sort-icon" id="sort-icon-date">▲</span>
                                     </th>

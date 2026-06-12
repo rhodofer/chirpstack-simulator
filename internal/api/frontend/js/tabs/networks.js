@@ -221,6 +221,15 @@ export function applyAppFiltersAndRender() {
     const sk = state.appSort.key;
     const sd = state.appSort.dir === "asc" ? 1 : -1;
     state.appFiltered.sort((a, b) => {
+        if (sk === "created_at") {
+            const dateValA = a.created_at || a.createdAt || a.created || 0;
+            const dateValB = b.created_at || b.createdAt || b.created || 0;
+            const dateA = new Date(dateValA);
+            const dateB = new Date(dateValB);
+            const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+            const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+            return (timeA - timeB) * sd;
+        }
         let va = a[sk];
         let vb = b[sk];
         if (sk === "tenant_id") {
