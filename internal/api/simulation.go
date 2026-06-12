@@ -432,15 +432,21 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 		activationTime, _ := time.ParseDuration(req.ActivationTime)
 		uplinkInterval, _ := time.ParseDuration(req.UplinkInterval)
 
+		var packetLossRate float64
+		if req.SimulatePacketLoss {
+			packetLossRate = req.PacketLoss
+		}
+
 		simCfg := config.SimulatorConfig{
-			TenantID:         req.TenantID,
-			Duration:         duration,
-			ActivationTime:   activationTime,
-			AppName:          req.AppName,
-			DeviceNamePrefix: req.DevicePrefix,
-			PayloadScript:    req.PayloadScript,
-			PacketLoss:       req.PacketLoss,
-			LatencyMs:        req.LatencyMs,
+			TenantID:           req.TenantID,
+			Duration:           duration,
+			ActivationTime:     activationTime,
+			AppName:            req.AppName,
+			DeviceNamePrefix:   req.DevicePrefix,
+			PayloadScript:      req.PayloadScript,
+			PacketLoss:         packetLossRate,
+			SimulatePacketLoss: req.SimulatePacketLoss,
+			LatencyMs:          req.LatencyMs,
 		}
 
 		simCfg.Device.Count = req.DeviceCount

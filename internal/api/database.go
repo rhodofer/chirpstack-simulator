@@ -35,6 +35,7 @@ func SetupDB() error {
 		payload TEXT,
 		payload_script TEXT,
 		packet_loss REAL,
+		simulate_packet_loss INTEGER DEFAULT 0,
 		latency_ms INTEGER,
 		frequency INTEGER,
 		bandwidth INTEGER,
@@ -51,6 +52,7 @@ func SetupDB() error {
 	// Dynamic migrations for existing databases
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN payload_script TEXT;")
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN packet_loss REAL DEFAULT 0;")
+	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN simulate_packet_loss INTEGER DEFAULT 0;")
 	_, _ = db.Exec("ALTER TABLE org_configs ADD COLUMN latency_ms INTEGER DEFAULT 0;")
 
 	queryIntervals := `
@@ -76,7 +78,7 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	query := `
 	SELECT 
 		tenant_id, device_count, gateway_count, duration, activation_time, 
-		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, latency_ms,
+		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
 		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template
 	FROM org_configs 
 	WHERE org_id = ?;`
@@ -86,10 +88,11 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	var cfg StartRequest
 	var fPort int
 	var payloadScript sql.NullString
+	var simulatePacketLoss sql.NullInt64
 
 	err := row.Scan(
 		&cfg.TenantID, &cfg.DeviceCount, &cfg.GatewayCount, &cfg.Duration, &cfg.ActivationTime,
-		&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &cfg.LatencyMs,
+		&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &simulatePacketLoss, &cfg.LatencyMs,
 		&cfg.Frequency, &cfg.Bandwidth, &cfg.SpreadingFactor, &cfg.EventTopicTemplate, &cfg.CommandTopicTemplate,
 	)
 	if err == sql.ErrNoRows {
@@ -100,6 +103,7 @@ func GetOrgConfig(orgID string) (*StartRequest, error) {
 	}
 
 	cfg.PayloadScript = payloadScript.String
+	cfg.SimulatePacketLoss = simulatePacketLoss.Int64 != 0
 	cfg.FPort = uint8(fPort)
 	return &cfg, nil
 }
@@ -125,9 +129,9 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 	query := `
 	INSERT INTO org_configs (
 		org_id, tenant_id, device_count, gateway_count, duration, activation_time, 
-		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, latency_ms,
+		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
 		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template, updated_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(org_id) DO UPDATE SET
 		tenant_id = excluded.tenant_id,
 		device_count = excluded.device_count,
@@ -141,6 +145,7 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 		payload = excluded.payload,
 		payload_script = excluded.payload_script,
 		packet_loss = excluded.packet_loss,
+		simulate_packet_loss = excluded.simulate_packet_loss,
 		latency_ms = excluded.latency_ms,
 		frequency = excluded.frequency,
 		bandwidth = excluded.bandwidth,
@@ -149,10 +154,15 @@ func SaveOrgConfig(orgID string, cfg *StartRequest) error {
 		command_topic_template = excluded.command_topic_template,
 		updated_at = excluded.updated_at;`
 
+	simulatePacketLossVal := 0
+	if cfg.SimulatePacketLoss {
+		simulatePacketLossVal = 1
+	}
+
 	_, err := db.Exec(
 		query,
 		orgID, cfg.TenantID, cfg.DeviceCount, cfg.GatewayCount, cfg.Duration, cfg.ActivationTime,
-		cfg.UplinkInterval, cfg.AppName, cfg.DevicePrefix, int(cfg.FPort), cfg.Payload, cfg.PayloadScript, cfg.PacketLoss, cfg.LatencyMs,
+		cfg.UplinkInterval, cfg.AppName, cfg.DevicePrefix, int(cfg.FPort), cfg.Payload, cfg.PayloadScript, cfg.PacketLoss, simulatePacketLossVal, cfg.LatencyMs,
 		cfg.Frequency, cfg.Bandwidth, cfg.SpreadingFactor, cfg.EventTopicTemplate, cfg.CommandTopicTemplate,
 		time.Now(),
 	)
@@ -168,7 +178,7 @@ func GetActiveOrgConfigs() ([]StartRequest, error) {
 	query := `
 	SELECT 
 		tenant_id, device_count, gateway_count, duration, activation_time, 
-		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, latency_ms,
+		uplink_interval, app_name, device_prefix, f_port, payload, payload_script, packet_loss, simulate_packet_loss, latency_ms,
 		frequency, bandwidth, spreading_factor, event_topic_template, command_topic_template
 	FROM org_configs;`
 
@@ -183,15 +193,17 @@ func GetActiveOrgConfigs() ([]StartRequest, error) {
 		var cfg StartRequest
 		var fPort int
 		var payloadScript sql.NullString
+		var simulatePacketLoss sql.NullInt64
 		err := rows.Scan(
 			&cfg.TenantID, &cfg.DeviceCount, &cfg.GatewayCount, &cfg.Duration, &cfg.ActivationTime,
-			&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &cfg.LatencyMs,
+			&cfg.UplinkInterval, &cfg.AppName, &cfg.DevicePrefix, &fPort, &cfg.Payload, &payloadScript, &cfg.PacketLoss, &simulatePacketLoss, &cfg.LatencyMs,
 			&cfg.Frequency, &cfg.Bandwidth, &cfg.SpreadingFactor, &cfg.EventTopicTemplate, &cfg.CommandTopicTemplate,
 		)
 		if err != nil {
 			return nil, err
 		}
 		cfg.PayloadScript = payloadScript.String
+		cfg.SimulatePacketLoss = simulatePacketLoss.Int64 != 0
 		cfg.FPort = uint8(fPort)
 		configs = append(configs, cfg)
 	}

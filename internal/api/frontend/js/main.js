@@ -17,6 +17,7 @@ import { initDashboard, initMap, initChart, checkHealth, stopPolling } from "./t
 import { initDpWizard } from "./wizards/dp-wizard.js";
 import { initNetWizard } from "./wizards/network-wizard.js";
 import { initBootstrapWizard } from "./wizards/bootstrap-wizard.js";
+import { initDevWizard } from "./wizards/dev-wizard.js";
 
 // Page Title update helper
 export function updatePageTitle() {
@@ -296,6 +297,7 @@ async function init() {
     initDpWizard();
     initNetWizard();
     initBootstrapWizard();
+    initDevWizard();
 
     // Register all top-level layout event listeners
     registerGlobalEvents();

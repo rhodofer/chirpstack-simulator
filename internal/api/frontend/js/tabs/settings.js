@@ -124,19 +124,29 @@ export function initSettingsTab() {
     });
 
     // 3. Local storage field listeners for startup inputs
-    const generalFieldIds = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "latency_ms", "payload_script"];
+    const generalFieldIds = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script"];
     generalFieldIds.forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
             // Load saved setting on startup
             const localVal = localStorage.getItem("setting-" + id);
             if (localVal !== null) {
-                el.value = localVal;
+                if (id === "simulate_packet_loss") {
+                    el.checked = localVal === "true";
+                } else {
+                    el.value = localVal;
+                }
             }
             // Save setting on change
-            el.addEventListener("input", function () {
-                localStorage.setItem("setting-" + id, this.value.trim());
-            });
+            if (id === "simulate_packet_loss") {
+                el.addEventListener("change", function () {
+                    localStorage.setItem("setting-" + id, this.checked ? "true" : "false");
+                });
+            } else {
+                el.addEventListener("input", function () {
+                    localStorage.setItem("setting-" + id, this.value.trim());
+                });
+            }
         }
     });
 

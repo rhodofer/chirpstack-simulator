@@ -64,6 +64,7 @@ type SimulatorConfig struct {
 	DeviceNamePrefix string                 `mapstructure:"device_name_prefix" toml:"device_name_prefix"`
 	PayloadScript    string                 `mapstructure:"payload_script" toml:"payload_script"`
 	PacketLoss       float64                `mapstructure:"packet_loss" toml:"packet_loss"`
+	SimulatePacketLoss bool                 `mapstructure:"simulate_packet_loss" toml:"simulate_packet_loss"`
 	LatencyMs        int                    `mapstructure:"latency_ms" toml:"latency_ms"`
 	Device           SimulatorDeviceConfig  `mapstructure:"device" toml:"device"`
 	Gateway          SimulatorGatewayConfig `mapstructure:"gateway" toml:"gateway"`

@@ -116,6 +116,7 @@ export async function saveOrgConfig(orgId) {
     const cmdEl = document.getElementById("command_topic_template");
 
     const packetLossEl = document.getElementById("packet_loss");
+    const simulatePacketLossEl = document.getElementById("simulate_packet_loss");
     const latencyMsEl = document.getElementById("latency_ms");
     const payloadScriptEl = document.getElementById("payload_script");
 
@@ -177,6 +178,7 @@ export async function saveOrgConfig(orgId) {
         event_topic_template: eventEl ? eventEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
         command_topic_template: cmdEl ? cmdEl.value.trim() : "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
         packet_loss: parseFloat(packetLossEl ? packetLossEl.value : "0.0") || 0.0,
+        simulate_packet_loss: simulatePacketLossEl ? simulatePacketLossEl.checked : false,
         latency_ms: parseInt(latencyMsEl ? latencyMsEl.value : "0", 10) || 0,
         payload_script: payloadScriptEl ? payloadScriptEl.value : ""
     };
@@ -228,6 +230,7 @@ export async function loadOrgConfig(orgId, orgName) {
     const cmdField = document.getElementById("command_topic_template");
 
     const packetLossField = document.getElementById("packet_loss");
+    const simulatePacketLossField = document.getElementById("simulate_packet_loss");
     const latencyMsField = document.getElementById("latency_ms");
     const payloadScriptField = document.getElementById("payload_script");
 
@@ -253,6 +256,10 @@ export async function loadOrgConfig(orgId, orgName) {
         if (cmdField) cmdField.value = data.command_topic_template || "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}";
         
         if (packetLossField) packetLossField.value = data.packet_loss !== undefined ? data.packet_loss : "0.0";
+        if (simulatePacketLossField) {
+            simulatePacketLossField.checked = data.simulate_packet_loss !== undefined ? !!data.simulate_packet_loss : false;
+            if (packetLossField) packetLossField.disabled = !simulatePacketLossField.checked;
+        }
         if (latencyMsField) latencyMsField.value = data.latency_ms !== undefined ? data.latency_ms : "0";
         if (payloadScriptField) payloadScriptField.value = data.payload_script || "";
         
@@ -284,25 +291,37 @@ export async function loadOrgConfig(orgId, orgName) {
         event_topic_template: "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
         command_topic_template: "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
         packet_loss: 0.0,
+        simulate_packet_loss: false,
         latency_ms: 0,
         payload_script: ""
     };
     state.activeOrgConfig = fallbackData;
 
-    const generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "latency_ms", "payload_script"];
+    const generalFields = ["duration", "activation_time", "frequency", "bandwidth", "spreading_factor", "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload", "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script"];
     generalFields.forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
-            const localVal = localStorage.getItem("setting-" + id);
-            el.value = localVal !== null ? localVal : el.defaultValue || "";
-            
-            const val = el.value.trim();
-            if (id === "f_port" || id === "frequency" || id === "bandwidth" || id === "spreading_factor" || id === "latency_ms") {
-                state.activeOrgConfig[id] = parseInt(val, 10) || 0;
-            } else if (id === "packet_loss") {
-                state.activeOrgConfig[id] = parseFloat(val) || 0.0;
+            if (id === "simulate_packet_loss") {
+                const localVal = localStorage.getItem("setting-" + id);
+                el.checked = localVal !== null ? (localVal === "true") : el.defaultChecked || false;
+                state.activeOrgConfig[id] = el.checked;
+                
+                const packetLossInput = document.getElementById("packet_loss");
+                if (packetLossInput) {
+                    packetLossInput.disabled = !el.checked;
+                }
             } else {
-                state.activeOrgConfig[id] = val;
+                const localVal = localStorage.getItem("setting-" + id);
+                el.value = localVal !== null ? localVal : el.defaultValue || "";
+                
+                const val = el.value.trim();
+                if (id === "f_port" || id === "frequency" || id === "bandwidth" || id === "spreading_factor" || id === "latency_ms") {
+                    state.activeOrgConfig[id] = parseInt(val, 10) || 0;
+                } else if (id === "packet_loss") {
+                    state.activeOrgConfig[id] = parseFloat(val) || 0.0;
+                } else {
+                    state.activeOrgConfig[id] = val;
+                }
             }
         }
     });
@@ -324,11 +343,18 @@ export function updateFormInputsState() {
     const settingsInputs = [
         "duration", "activation_time", "frequency", "bandwidth", "spreading_factor",
         "event_topic_template", "command_topic_template", "uplink_interval", "f_port", "payload",
-        "packet_loss", "latency_ms", "payload_script"
+        "packet_loss", "simulate_packet_loss", "latency_ms", "payload_script"
     ];
     settingsInputs.forEach((id) => {
         const el = document.getElementById(id);
-        if (el) el.disabled = isSimRunning;
+        if (el) {
+            if (id === "packet_loss") {
+                const simChk = document.getElementById("simulate_packet_loss");
+                el.disabled = isSimRunning || (simChk ? !simChk.checked : true);
+            } else {
+                el.disabled = isSimRunning;
+            }
+        }
     });
 
     const btnSaveOrgConfig = $("#btn-save-org-config");
@@ -599,6 +625,14 @@ export function goToPage(n) {
 }
 
 export function initOrgsTab() {
+    const simulatePacketLossEl = $("#simulate_packet_loss");
+    const packetLossEl = $("#packet_loss");
+    if (simulatePacketLossEl && packetLossEl) {
+        simulatePacketLossEl.addEventListener("change", () => {
+            packetLossEl.disabled = !simulatePacketLossEl.checked;
+        });
+    }
+
     const btnAddOrg = $("#btn-add-org");
     const modalOverlay = $("#modal-overlay");
     const modalClose = $("#modal-close");

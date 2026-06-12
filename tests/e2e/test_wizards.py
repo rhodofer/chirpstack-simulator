@@ -4,6 +4,9 @@ from playwright.sync_api import Page, expect
 
 @pytest.fixture(autouse=True)
 def login_and_setup(page: Page):
+    # Ensure session cookies are cleared before each test
+    page.context.clear_cookies()
+    
     # Capture and print browser console logs for debugging
     page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
     
@@ -264,6 +267,70 @@ def test_edit_device(page: Page):
 
     # Verify table row reflects the updated name
     expect(page.locator("#dev-table-body tr").filter(has_text="E2E-Bootstrap-Org-e2e-app-1-e2e-dev-1-edited").first).to_be_visible()
+
+
+def test_device_wizard(page: Page):
+    # Wait for background fetches to complete after login
+    page.wait_for_timeout(1000)
+
+    # Navigate to Devices tab
+    page.click("[data-tab='device-list']")
+    expect(page.locator("#content-device-list")).to_be_visible()
+    
+    # Click "+ Yeni Cihaz" button
+    page.click("#btn-add-dev")
+    expect(page.locator("#dev-modal-overlay")).to_be_visible()
+    
+    # Step 1: Validation checks (initially disabled because no tenant/app)
+    expect(page.locator("#dev-wiz-btn-next")).to_be_disabled()
+    
+    # Select tenant (organization)
+    page.select_option("#dev-wiz-tenant", index=1)
+    
+    # Select app (network)
+    page.select_option("#dev-wiz-app", index=1)
+    
+    # Verify validation passes for Step 1
+    expect(page.locator("#dev-wiz-btn-next")).to_be_enabled()
+    
+    # Click Next to Step 2
+    page.click("#dev-wiz-btn-next")
+    expect(page.locator("#dev-wiz-pane-2")).to_be_visible()
+    expect(page.locator("#dev-wiz-btn-next")).to_be_disabled()
+    
+    # Generate random DevEUI
+    page.click("#dev-wiz-btn-random-eui")
+    
+    # Fill device name
+    page.fill("#dev-wiz-name", "E2E Device Wizard Device")
+    
+    # Select device profile
+    page.select_option("#dev-wiz-profile", index=1)
+    
+    # Fill description
+    page.fill("#dev-wiz-desc", "E2E Device Description")
+    
+    # Verify validation passes for Step 2
+    expect(page.locator("#dev-wiz-btn-next")).to_be_enabled()
+    
+    # Click Next to Step 3 (Summary)
+    page.click("#dev-wiz-btn-next")
+    expect(page.locator("#dev-wiz-pane-3")).to_be_visible()
+    expect(page.locator("#dev-wiz-summary-tenant")).not_to_be_empty()
+    expect(page.locator("#dev-wiz-summary-app")).not_to_be_empty()
+    expect(page.locator("#dev-wiz-summary-eui")).not_to_be_empty()
+    expect(page.locator("#dev-wiz-summary-name")).to_have_text("E2E Device Wizard Device")
+    expect(page.locator("#dev-wiz-summary-profile")).not_to_be_empty()
+    expect(page.locator("#dev-wiz-summary-desc")).to_have_text("E2E Device Description")
+    
+    # Click Confirm & Create
+    page.click("#dev-wiz-btn-next")
+    
+    # Wait for success toast and modal overlay to hide
+    expect(page.locator("#toast")).to_be_visible()
+    expect(page.locator("#toast")).to_contain_text("oluşturuldu")
+    expect(page.locator("#dev-modal-overlay")).not_to_be_visible()
+
 
 
 

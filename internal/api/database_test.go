@@ -49,6 +49,7 @@ func TestDatabaseOperations(t *testing.T) {
 		payload TEXT,
 		payload_script TEXT,
 		packet_loss REAL,
+		simulate_packet_loss INTEGER DEFAULT 0,
 		latency_ms INTEGER,
 		frequency INTEGER,
 		bandwidth INTEGER,

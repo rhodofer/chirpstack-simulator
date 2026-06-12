@@ -91,7 +91,27 @@ func printStartMessage(ctx context.Context, wg *sync.WaitGroup) error {
 
 func setupASAPIClient(ctx context.Context, wg *sync.WaitGroup) error {
 	if err := as.Setup(config.C); err != nil {
-		return err
+		log.WithError(err).Warn("as: initial ChirpStack API connection failed, starting reconnect loop in background")
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					log.Info("as: attempting to reconnect to ChirpStack API...")
+					if retryErr := as.Setup(config.C); retryErr == nil {
+						log.Info("as: ChirpStack API connection established successfully!")
+						as.StartPoller(ctx)
+						return
+					} else {
+						log.WithError(retryErr).Warn("as: ChirpStack API reconnect attempt failed")
+					}
+				}
+			}
+		}()
+		return nil
 	}
 	// Start gRPC-based poller to surface ChirpStack events in the console.
 	as.StartPoller(ctx)
@@ -103,7 +123,29 @@ func setupASIntegration(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 func setupNSIntegration(ctx context.Context, wg *sync.WaitGroup) error {
-	return ns.Setup(config.C)
+	if err := ns.Setup(config.C); err != nil {
+		log.WithError(err).Warn("ns: initial MQTT connection failed, starting reconnect loop in background")
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					log.Info("ns: attempting to reconnect to MQTT broker...")
+					if retryErr := ns.Setup(config.C); retryErr == nil {
+						log.Info("ns: MQTT broker connection established successfully!")
+						return
+					} else {
+						log.WithError(retryErr).Warn("ns: MQTT reconnect attempt failed")
+					}
+				}
+			}
+		}()
+		return nil
+	}
+	return nil
 }
 
 func setupPrometheus(ctx context.Context, wg *sync.WaitGroup) error {

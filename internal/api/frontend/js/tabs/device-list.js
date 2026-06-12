@@ -531,26 +531,7 @@ export function goToDevIntPage(n) {
     applyDevIntFiltersAndRender();
 }
 
-export function populateDevAppSelect() {
-    const devApp = $("#dev-app");
-    if (!devApp) return;
-    devApp.innerHTML = "";
-    if (state.applications.length === 0) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = state.language === "tr" ? "Önce ağ oluşturun" : "Create a network first";
-        opt.disabled = true;
-        devApp.appendChild(opt);
-        return;
-    }
-    for (let i = 0; i < state.applications.length; i++) {
-        const opt = document.createElement("option");
-        opt.value = state.applications[i].id;
-        opt.textContent = state.applications[i].name;
-        devApp.appendChild(opt);
-    }
-    onDevAppChange();
-}
+
 
 export function populateDevFilterTenantSelect() {
     const devTenantFilter = $("#dev-tenant-select");
@@ -573,41 +554,7 @@ export function populateDevFilterTenantSelect() {
     }
 }
 
-export function onDevAppChange() {
-    const devApp = $("#dev-app");
-    const devProfile = $("#dev-profile");
-    if (!devApp || !devProfile) return;
 
-    const appId = devApp.value;
-    devProfile.innerHTML = "";
-    const app = findNet(appId);
-    if (!app) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = state.language === "tr" ? "Ağ bulunamadı" : "Network not found";
-        opt.disabled = true;
-        devProfile.appendChild(opt);
-        return;
-    }
-    const tenantId = app.tenant_id;
-    const filteredDps = state.dpList.filter(dp => dp.tenant_id === tenantId);
-
-    if (filteredDps.length === 0) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "Bu tenant için device profile yok";
-        opt.disabled = true;
-        devProfile.appendChild(opt);
-        return;
-    }
-
-    for (let i = 0; i < filteredDps.length; i++) {
-        const opt = document.createElement("option");
-        opt.value = filteredDps[i].id;
-        opt.textContent = filteredDps[i].name;
-        devProfile.appendChild(opt);
-    }
-}
 
 export function generateRandomDevEUI() {
     const hex = "0123456789abcdef";
@@ -848,94 +795,7 @@ export function initDeviceListTab() {
     const btnDevIntRefresh = $("#btn-dev-int-refresh");
     const devIntPageSizeSelect = $("#dev-int-page-size-select");
 
-    const btnAddDev = $("#btn-add-dev");
-    const devModalOverlay = $("#dev-modal-overlay");
-    const devModalClose = $("#dev-modal-close");
-    const devModalCancel = $("#dev-modal-cancel");
-    const devModalSave = $("#dev-modal-save");
-    const btnRandomDevEui = $("#btn-random-dev-eui");
-    const devApp = $("#dev-app");
 
-    // Modal control
-    if (btnAddDev) {
-        btnAddDev.addEventListener("click", () => {
-            const devEui = $("#dev-eui");
-            const devName = $("#dev-name");
-            const devDescription = $("#dev-description");
-            if (devEui) devEui.value = "";
-            if (devName) devName.value = "";
-            if (devDescription) devDescription.value = "";
-            populateDevAppSelect();
-            if (devModalOverlay) devModalOverlay.style.display = "flex";
-            setTimeout(() => { if (devEui) devEui.focus(); }, 100);
-        });
-    }
-
-    const hideDevModal = () => {
-        if (devModalOverlay) devModalOverlay.style.display = "none";
-    };
-
-    if (devModalClose) devModalClose.addEventListener("click", hideDevModal);
-    if (devModalCancel) devModalCancel.addEventListener("click", hideDevModal);
-    if (devModalOverlay) {
-        devModalOverlay.addEventListener("click", (e) => {
-            if (e.target === devModalOverlay) hideDevModal();
-        });
-    }
-
-    if (btnRandomDevEui) {
-        btnRandomDevEui.addEventListener("click", (e) => {
-            e.preventDefault();
-            const devEui = $("#dev-eui");
-            if (devEui) devEui.value = generateRandomDevEUI();
-        });
-    }
-
-    if (devApp) {
-        devApp.addEventListener("change", onDevAppChange);
-    }
-
-    if (devModalSave) {
-        devModalSave.addEventListener("click", async (e) => {
-            e.preventDefault();
-            const devEui = $("#dev-eui");
-            const devName = $("#dev-name");
-            const devAppSelect = $("#dev-app");
-            const devProfileSelect = $("#dev-profile");
-            const devDescription = $("#dev-description");
-
-            const eui = devEui ? devEui.value.trim() : "";
-            const name = devName ? devName.value.trim() : "";
-            const appId = devAppSelect ? devAppSelect.value : "";
-            const dpId = devProfileSelect ? devProfileSelect.value : "";
-
-            if (!eui || eui.length !== 16) {
-                showToast(state.language === "tr" ? "DevEUI 16 hex karakter olmalıdır!" : "DevEUI must be 16 hex characters!", "error");
-                if (devEui) devEui.focus();
-                return;
-            }
-            if (!name) {
-                showToast(state.language === "tr" ? "Cihaz adı zorunludur!" : "Device name is required!", "error");
-                if (devName) devName.focus();
-                return;
-            }
-            if (!appId) { showToast(state.language === "tr" ? "Ağ seçimi zorunludur!" : "Network selection is required!", "error"); return; }
-            if (!dpId) { showToast(state.language === "tr" ? "Device profile seçimi zorunludur!" : "Device profile selection is required!", "error"); return; }
-
-            devModalSave.disabled = true;
-            devModalSave.textContent = state.language === "tr" ? "Oluşturuluyor..." : "Creating...";
-            const ok = await createDevice({
-                dev_eui: eui,
-                name: name,
-                application_id: appId,
-                device_profile_id: dpId,
-                description: devDescription ? devDescription.value.trim() : ""
-            });
-            devModalSave.disabled = false;
-            devModalSave.textContent = state.language === "tr" ? "Kaydet" : "Save";
-            if (ok) hideDevModal();
-        });
-    }
 
     // Filters and sorting event bindings
     if (devTenantFilter) {

@@ -30,6 +30,7 @@ type StartRequest struct {
 	Payload             string `json:"payload"`
 	PayloadScript       string `json:"payload_script"`
 	PacketLoss          float64 `json:"packet_loss"`
+	SimulatePacketLoss  bool   `json:"simulate_packet_loss"`
 	LatencyMs           int    `json:"latency_ms"`
 	Frequency           int    `json:"frequency"`
 	Bandwidth           int    `json:"bandwidth"`
