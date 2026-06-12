@@ -2,7 +2,7 @@ import { state } from "./state.js";
 
 export const translations = {
     tr: {
-        app_title: "ChirpStack Simülatörü",
+        app_title: "ChirpStack SimulaTR",
         nav_grp_mgmt: "İzleme",
         nav_organizations: "Organizasyonlar",
         nav_live_map: "Canlı İzleme",
@@ -341,7 +341,7 @@ export const translations = {
         btn_login_submit: "Giriş Yap"
     },
     en: {
-        app_title: "ChirpStack Simulator",
+        app_title: "ChirpStack SimulaTR",
         nav_grp_mgmt: "Monitoring",
         nav_organizations: "Organizations",
         nav_live_map: "Live Monitoring",

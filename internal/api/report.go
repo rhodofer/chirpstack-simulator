@@ -112,9 +112,9 @@ func SendEmailReport(isTest bool) error {
 		return fmt.Errorf("failed to collect system metrics: %w", err)
 	}
 
-	subject := "ChirpStack Simülatörü Günlük Sağlık Raporu"
+	subject := "ChirpStack SimulaTR Günlük Sağlık Raporu"
 	if isTest {
-		subject = "ChirpStack Simülatörü SMTP Bağlantı Testi [BAŞARILI]"
+		subject = "ChirpStack SimulaTR SMTP Bağlantı Testi [BAŞARILI]"
 	}
 
 	body := buildHTMLReport(metrics)
@@ -305,7 +305,7 @@ func buildHTMLReport(metrics map[string]interface{}) string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChirpStack Simulator Sistem Sağlığı Raporu</title>
+<title>ChirpStack SimulaTR Sistem Sağlığı Raporu</title>
 <style>
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -439,7 +439,7 @@ func buildHTMLReport(metrics map[string]interface{}) string {
 <body>
 <div class="container">
   <div class="header">
-    <h1>ChirpStack Simülatör Sağlık Raporu</h1>
+    <h1>ChirpStack SimulaTR Sağlık Raporu</h1>
     <p>Sistem Durumu ve Çalışma İstatistikleri</p>
   </div>
   <div class="content">
@@ -512,7 +512,7 @@ func buildHTMLReport(metrics map[string]interface{}) string {
     </table>
   </div>
   <div class="footer">
-    <p>Bu e-posta ChirpStack Simülatörü tarafından otomatik olarak üretilmiştir.</p>
+    <p>Bu e-posta ChirpStack SimulaTR tarafından otomatik olarak üretilmiştir.</p>
     <p>Sunucu Tarihi: %s</p>
   </div>
 </div>
