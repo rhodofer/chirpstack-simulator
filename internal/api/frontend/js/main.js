@@ -316,7 +316,7 @@ async function init() {
     registerGlobalEvents();
 
     // Language selector element initialization
-    const appLanguageSelect = $("#app-language-select");
+    const appLanguageSelect = $("#app-language");
     if (appLanguageSelect) {
         appLanguageSelect.value = state.language;
         appLanguageSelect.addEventListener("change", function () {

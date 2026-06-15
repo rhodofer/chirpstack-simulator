@@ -7,6 +7,12 @@ created on starting the simulation.
 
 This project has been developed together with [TWTG](https://www.twtg.io/).
 
+## Web UI Screenshots
+
+| Devices Screen (Light / Dark Split) | Organizations Screen (Light / Dark Split) |
+| :---: | :---: |
+| ![Devices Screen](images/devices_diagonal_split.png) | ![Organizations Screen](images/organizations_diagonal_split.png) |
+
 ## Building
 
 The recommended way to compile the simulator code is using [Docker Compose](https://docs.docker.com/compose/).
