@@ -193,6 +193,10 @@ export function applyDevFiltersAndRender() {
             va = getOrgName(va);
             vb = getOrgName(vb);
         }
+        if (sk === "application_id") {
+            va = getAppName(va);
+            vb = getAppName(vb);
+        }
         if (sk === "device_profile_id") {
             va = getDpName(va);
             vb = getDpName(vb);
@@ -237,6 +241,7 @@ export function renderDevTable() {
         tr.innerHTML =
             `<td><span class="org-name-primary">${escapeHtml(dev.name)}</span></td>` +
             `<td><span class="org-name-primary">${escapeHtml(getOrgName(dev.tenant_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(dev.tenant_id || "—")}</span></td>` +
+            `<td><span class="org-name-primary">${escapeHtml(getAppName(dev.application_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(dev.application_id || "—")}</span></td>` +
             `<td><span class="id-cell">${escapeHtml(dev.dev_eui)}</span></td>` +
             `<td><span class="org-name-primary">${escapeHtml(getDpName(dev.device_profile_id))}</span><br><span class="id-cell" style="font-size:11px; opacity:0.6;">${escapeHtml(dev.device_profile_id || "—")}</span></td>` +
             `<td>` +
