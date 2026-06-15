@@ -43,6 +43,9 @@ func init() {
 	viper.SetDefault("chirpstack.gateway.backend.mqtt.server", "tcp://127.0.0.1:1883")
 	viper.SetDefault("prometheus.bind", "0.0.0.0:9001")
 	viper.SetDefault("http.bind", "0.0.0.0:9002")
+	viper.SetDefault("http.username", "admin@falt.com")
+	viper.SetDefault("http.password", "admin123")
+	viper.SetDefault("http.jwt_secret", "sim-secure-session-token-xyz")
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configCmd)

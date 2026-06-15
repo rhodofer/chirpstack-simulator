@@ -79,7 +79,10 @@ type PrometheusConfig struct {
 }
 
 type HTTPConfig struct {
-	Bind string `mapstructure:"bind" toml:"bind"`
+	Bind      string `mapstructure:"bind" toml:"bind"`
+	Username  string `mapstructure:"username" toml:"username"`
+	Password  string `mapstructure:"password" toml:"password"`
+	JWTSecret string `mapstructure:"jwt_secret" toml:"jwt_secret"`
 }
 
 type SMTPConfig struct {

@@ -182,6 +182,11 @@ bind="{{ .Prometheus.Bind }}"
 # IP:port to bind the HTTP API server to.
 bind="{{ .HTTP.Bind }}"
 
+# Web UI Admin Credentials.
+username="{{ .HTTP.Username }}"
+password="{{ .HTTP.Password }}"
+jwt_secret="{{ .HTTP.JWTSecret }}"
+
 
 # SMTP Daily Email Reporting configuration.
 [smtp]

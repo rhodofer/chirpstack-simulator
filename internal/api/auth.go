@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/brocaar/chirpstack-simulator/internal/config"
 )
 
 // LoginRequest defines credentials payload.
@@ -12,7 +14,26 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+// Keep this const for compatibility with test files compiling against package api.
 const sessionToken = "sim-secure-session-token-xyz"
+
+// getAuthCredentials returns configured credentials or fallback defaults.
+func getAuthCredentials() (string, string, string) {
+	username := config.C.HTTP.Username
+	password := config.C.HTTP.Password
+	jwtSecret := config.C.HTTP.JWTSecret
+
+	if username == "" {
+		username = "admin@falt.com"
+	}
+	if password == "" {
+		password = "admin123"
+	}
+	if jwtSecret == "" {
+		jwtSecret = sessionToken
+	}
+	return username, password, jwtSecret
+}
 
 // handleLogin validates credentials and sets session cookie.
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +48,12 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Username == "admin@falt.com" && req.Password == "admin123" {
+	expectedUser, expectedPass, secretToken := getAuthCredentials()
+
+	if req.Username == expectedUser && req.Password == expectedPass {
 		cookie := &http.Cookie{
 			Name:     "sim_session",
-			Value:    sessionToken,
+			Value:    secretToken,
 			Path:     "/",
 			Expires:  time.Now().Add(24 * time.Hour),
 			HttpOnly: true,
@@ -58,8 +81,9 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 
 // handleAuthStatus returns whether the request has a valid session.
 func handleAuthStatus(w http.ResponseWriter, r *http.Request) {
+	_, _, secretToken := getAuthCredentials()
 	cookie, err := r.Cookie("sim_session")
-	if err == nil && cookie.Value == sessionToken {
+	if err == nil && cookie.Value == secretToken {
 		writeJSON(w, http.StatusOK, map[string]bool{"authenticated": true})
 	} else {
 		writeJSON(w, http.StatusOK, map[string]bool{"authenticated": false})
@@ -69,8 +93,9 @@ func handleAuthStatus(w http.ResponseWriter, r *http.Request) {
 // requireAuth protects routes by verifying session cookie.
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		_, _, secretToken := getAuthCredentials()
 		cookie, err := r.Cookie("sim_session")
-		if err == nil && cookie.Value == sessionToken {
+		if err == nil && cookie.Value == secretToken {
 			next(w, r)
 			return
 		}
