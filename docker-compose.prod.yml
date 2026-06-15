@@ -7,7 +7,7 @@ services:
       - "9002:9002"
       - "9001:9001"
     volumes:
-      - ./simulator.toml:/app/simulator.toml:ro
+      - ./simulator.toml:/app/simulator.toml
       - ./simulator.db:/app/simulator.db
     extra_hosts:
       - "host.docker.internal:host-gateway"
