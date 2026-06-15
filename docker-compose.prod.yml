@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  chirpstack-simulator:
+    image: ghcr.io/rhodofer/chirpstack-simulator:latest
+    container_name: chirpstack-simulator
+    restart: unless-stopped
+    ports:
+      - "9002:9002"
+      - "9001:9001"
+    volumes:
+      - ./simulator.toml:/app/simulator.toml:ro
+      - ./simulator.db:/app/simulator.db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

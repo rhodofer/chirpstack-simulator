@@ -1,4 +1,4 @@
-name: Build and Push Simulator Image
+name: Build and Deploy Simulator
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # github.repository formatı: kullanıcı_adı/depo_adı
   IMAGE_NAME: ${{ github.repository }}
+  COMPOSE_DIR: /home/rhod/chirpstack-simulator
 
 jobs:
   build-and-push:
@@ -44,3 +44,29 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: chirpstack-simulator
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+
+      - name: Copy compose file
+        run: cp chirpstack-simulator/docker-compose.prod.yml ${{ env.COMPOSE_DIR }}/docker-compose.prod.yml
+
+      - name: Restart container
+        working-directory: ${{ env.COMPOSE_DIR }}
+        run: docker compose down && docker compose up -d
+
+      - name: Cleanup old images
+        run: docker image prune -f
