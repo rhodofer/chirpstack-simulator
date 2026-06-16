@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/brocaar/chirpstack-simulator/internal/as"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
@@ -70,23 +71,43 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
 
-	// 1. Create Tenant (Organization)
-	tenantResp, err := as.Tenant().Create(ctx, &api.CreateTenantRequest{
-		Tenant: &api.Tenant{
-			Name:            req.OrgName,
-			Description:     "Hızlı Kurulum Sihirbazı ile oluşturuldu",
-			CanHaveGateways: true,
-		},
+	// 1. Create or Find Tenant (Organization)
+	var tenantID string
+
+	listTenantsResp, err := as.Tenant().List(ctx, &api.ListTenantsRequest{
+		Limit: 100,
 	})
-	if err != nil {
-		log.WithError(err).Errorf("bootstrap: failed to create tenant %s", req.OrgName)
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "organizasyon oluşturulamadı: " + err.Error()})
-		return
+	if err == nil {
+		for _, t := range listTenantsResp.GetResult() {
+			if t.GetName() == req.OrgName {
+				tenantID = t.GetId()
+				log.Infof("bootstrap: tenant %s already exists (id: %s), reusing it", req.OrgName, tenantID)
+				break
+			}
+		}
+	} else {
+		log.WithError(err).Warn("bootstrap: failed to list tenants, trying to create instead")
 	}
-	tenantID := tenantResp.GetId()
-	log.Infof("bootstrap: created tenant %s (id: %s)", req.OrgName, tenantID)
+
+	if tenantID == "" {
+		tenantResp, err := as.Tenant().Create(ctx, &api.CreateTenantRequest{
+			Tenant: &api.Tenant{
+				Name:            req.OrgName,
+				Description:     "Hızlı Kurulum Sihirbazı ile oluşturuldu",
+				CanHaveGateways: true,
+			},
+		})
+		if err != nil {
+			log.WithError(err).Errorf("bootstrap: failed to create tenant %s", req.OrgName)
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": "organizasyon oluşturulamadı: " + err.Error()})
+			return
+		}
+		tenantID = tenantResp.GetId()
+		log.Infof("bootstrap: created tenant %s (id: %s)", req.OrgName, tenantID)
+	}
 
 	// Save a default simulation config for this organization so it runs in parallel simulations
 	defaultCfg := StartRequest{
@@ -160,8 +181,7 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 		log.WithError(err).Warnf("bootstrap: failed to save default simulation config for org %s", req.OrgName)
 	}
 
-
-	// 2. Create Device Profiles
+	// 2. Create or Find Device Profiles
 	type ResourceDetail struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -169,27 +189,54 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 
 	dpIDs := make([]string, 0, req.DpCount)
 	dpDetails := make([]ResourceDetail, 0, req.DpCount)
+
+	// Fetch existing device profiles for this tenant
+	var existingProfiles []*api.DeviceProfileListItem
+	listDpsResp, err := as.DeviceProfile().List(ctx, &api.ListDeviceProfilesRequest{
+		TenantId: tenantID,
+		Limit:    100,
+	})
+	if err == nil {
+		existingProfiles = listDpsResp.GetResult()
+	} else {
+		log.WithError(err).Warn("bootstrap: failed to list device profiles, trying to create instead")
+	}
+
 	for i := 1; i <= req.DpCount; i++ {
 		dpName := fmt.Sprintf("%s-%s-%d", req.OrgName, req.DpPrefix, i)
-		dpResp, err := as.DeviceProfile().Create(ctx, &api.CreateDeviceProfileRequest{
-			DeviceProfile: &api.DeviceProfile{
-				Name:              dpName,
-				TenantId:          tenantID,
-				MacVersion:        common.MacVersion_LORAWAN_1_0_3,
-				RegParamsRevision: common.RegParamsRevision_B,
-				SupportsOtaa:      true,
-				Region:            common.Region_EU868,
-				AdrAlgorithmId:    "default",
-			},
-		})
-		if err != nil {
-			log.WithError(err).Errorf("bootstrap: failed to create device profile %s", dpName)
-			writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("cihaz profili %s oluşturulamadı: %s", dpName, err.Error())})
-			return
+		var dpID string
+
+		for _, dp := range existingProfiles {
+			if dp.GetName() == dpName {
+				dpID = dp.GetId()
+				log.Infof("bootstrap: device profile %s already exists (id: %s), reusing it", dpName, dpID)
+				break
+			}
 		}
-		dpIDs = append(dpIDs, dpResp.GetId())
-		dpDetails = append(dpDetails, ResourceDetail{ID: dpResp.GetId(), Name: dpName})
-		log.Infof("bootstrap: created device profile %s (id: %s)", dpName, dpResp.GetId())
+
+		if dpID == "" {
+			dpResp, err := as.DeviceProfile().Create(ctx, &api.CreateDeviceProfileRequest{
+				DeviceProfile: &api.DeviceProfile{
+					Name:              dpName,
+					TenantId:          tenantID,
+					MacVersion:        common.MacVersion_LORAWAN_1_0_3,
+					RegParamsRevision: common.RegParamsRevision_B,
+					SupportsOtaa:      true,
+					Region:            common.Region_EU868,
+					AdrAlgorithmId:    "default",
+				},
+			})
+			if err != nil {
+				log.WithError(err).Errorf("bootstrap: failed to create device profile %s", dpName)
+				writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("cihaz profili %s oluşturulamadı: %s", dpName, err.Error())})
+				return
+			}
+			dpID = dpResp.GetId()
+			log.Infof("bootstrap: created device profile %s (id: %s)", dpName, dpID)
+		}
+
+		dpIDs = append(dpIDs, dpID)
+		dpDetails = append(dpDetails, ResourceDetail{ID: dpID, Name: dpName})
 	}
 
 	// 3. Create Network Applications and Devices
@@ -197,24 +244,61 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 	createdAppsCount := 0
 	createdDevicesCount := 0
 
+	// Fetch existing applications for this tenant
+	var existingApps []*api.ApplicationListItem
+	listAppsResp, err := as.Application().List(ctx, &api.ListApplicationsRequest{
+		TenantId: tenantID,
+		Limit:    100,
+	})
+	if err == nil {
+		existingApps = listAppsResp.GetResult()
+	} else {
+		log.WithError(err).Warn("bootstrap: failed to list applications, trying to create instead")
+	}
+
 	for i := 1; i <= req.AppCount; i++ {
 		appName := fmt.Sprintf("%s-%s-%d", req.OrgName, req.AppPrefix, i)
-		appResp, err := as.Application().Create(ctx, &api.CreateApplicationRequest{
-			Application: &api.Application{
-				Name:        appName,
-				Description: fmt.Sprintf("%s uygulaması", appName),
-				TenantId:    tenantID,
-			},
-		})
-		if err != nil {
-			log.WithError(err).Errorf("bootstrap: failed to create application %s", appName)
-			writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("uygulama %s oluşturulamadı: %s", appName, err.Error())})
-			return
+		var appID string
+
+		for _, app := range existingApps {
+			if app.GetName() == appName {
+				appID = app.GetId()
+				log.Infof("bootstrap: application %s already exists (id: %s), reusing it", appName, appID)
+				break
+			}
 		}
-		appID := appResp.GetId()
+
+		if appID == "" {
+			appResp, err := as.Application().Create(ctx, &api.CreateApplicationRequest{
+				Application: &api.Application{
+					Name:        appName,
+					Description: fmt.Sprintf("%s uygulaması", appName),
+					TenantId:    tenantID,
+				},
+			})
+			if err != nil {
+				log.WithError(err).Errorf("bootstrap: failed to create application %s", appName)
+				writeJSON(w, http.StatusBadGateway, map[string]string{"error": fmt.Sprintf("uygulama %s oluşturulamadı: %s", appName, err.Error())})
+				return
+			}
+			appID = appResp.GetId()
+			log.Infof("bootstrap: created application %s (id: %s)", appName, appID)
+		}
+
 		createdAppsCount++
 		appDetails = append(appDetails, ResourceDetail{ID: appID, Name: appName})
-		log.Infof("bootstrap: created application %s (id: %s)", appName, appID)
+
+		// Fetch existing devices for this application to avoid ALREADY_EXISTS error
+		var existingDevices []*api.DeviceListItem
+		listDevsResp, err := as.Device().List(ctx, &api.ListDevicesRequest{
+			ApplicationId: appID,
+			Limit:         100,
+		})
+		if err == nil {
+			existingDevices = listDevsResp.GetResult()
+		} else {
+			log.WithError(err).Warn("bootstrap: failed to list devices, trying to create instead")
+		}
 
 		// Create Devices under this application concurrently
 		var wg sync.WaitGroup
@@ -241,23 +325,38 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 
 				devName := fmt.Sprintf("%s-%s-%d", appName, req.DevPrefix, j)
 
-				// Generate random DevEUI and AppKey
-				var devEUIBytes [8]byte
-				var appKeyBytes [16]byte
-				if _, err := rand.Read(devEUIBytes[:]); err != nil {
-					errOnce.Do(func() {
-						bootstrapErr = fmt.Errorf("rastgele DevEUI üretilemedi: %w", err)
-					})
-					return
+				// Check if device already exists (either by name or dev_eui)
+				var devEUIStr string
+				var appKeyStr string
+
+				for _, dev := range existingDevices {
+					if dev.GetName() == devName {
+						devEUIStr = dev.GetDevEui()
+						log.Infof("bootstrap: device %s already exists (eui: %s), reusing it", devName, devEUIStr)
+						break
+					}
 				}
+
+				// If it doesn't exist, generate random DevEUI and AppKey
+				if devEUIStr == "" {
+					var devEUIBytes [8]byte
+					if _, err := rand.Read(devEUIBytes[:]); err != nil {
+						errOnce.Do(func() {
+							bootstrapErr = fmt.Errorf("rastgele DevEUI üretilemedi: %w", err)
+						})
+						return
+					}
+					devEUIStr = hex.EncodeToString(devEUIBytes[:])
+				}
+
+				var appKeyBytes [16]byte
 				if _, err := rand.Read(appKeyBytes[:]); err != nil {
 					errOnce.Do(func() {
 						bootstrapErr = fmt.Errorf("rastgele AppKey üretilemedi: %w", err)
 					})
 					return
 				}
-				devEUIStr := hex.EncodeToString(devEUIBytes[:])
-				appKeyStr := hex.EncodeToString(appKeyBytes[:])
+				appKeyStr = hex.EncodeToString(appKeyBytes[:])
 
 				// Select device profile and interval based on slot index
 				dpID := dpIDs[(j-1)%len(dpIDs)]
@@ -275,22 +374,37 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 					}
 				}
 
-				_, err := as.Device().Create(ctx, &api.CreateDeviceRequest{
-					Device: &api.Device{
-						DevEui:          devEUIStr,
-						Name:            devName,
-						Description:     fmt.Sprintf("%s cihazı", devName),
-						ApplicationId:   appID,
-						DeviceProfileId: dpID,
-					},
-				})
-				if err != nil {
-					errOnce.Do(func() {
-						log.WithError(err).Errorf("bootstrap: failed to create device %s", devName)
-						bootstrapErr = fmt.Errorf("cihaz %s oluşturulamadı: %w", devName, err)
-					})
-					return
+				// Only Create device if it was not found
+				var deviceFound bool
+				for _, dev := range existingDevices {
+					if dev.GetName() == devName {
+						deviceFound = true
+						break
+					}
 				}
+
+				if !deviceFound {
+					_, err = as.Device().Create(ctx, &api.CreateDeviceRequest{
+						Device: &api.Device{
+							DevEui:          devEUIStr,
+							Name:            devName,
+							Description:     fmt.Sprintf("%s cihazı", devName),
+							ApplicationId:   appID,
+							DeviceProfileId: dpID,
+						},
+					})
+					if err != nil {
+						errOnce.Do(func() {
+							log.WithError(err).Errorf("bootstrap: failed to create device %s", devName)
+							bootstrapErr = fmt.Errorf("cihaz %s oluşturulamadı: %w", devName, err)
+						})
+						return
+					}
+					log.Infof("bootstrap: created device %s (eui: %s)", devName, devEUIStr)
+				}
+
+				// Always recreate/update keys to ensure we match the newly generated AppKey
+				_, _ = as.Device().DeleteKeys(ctx, &api.DeleteDeviceKeysRequest{DevEui: devEUIStr})
 
 				_, err = as.Device().CreateKeys(ctx, &api.CreateDeviceKeysRequest{
 					DeviceKeys: &api.DeviceKeys{
@@ -314,7 +428,6 @@ return [bStatus, bPress1, bPress0, bFlow1, bFlow0, bTank1, bTank0, bTemp1, bTemp
 				mu.Lock()
 				createdDevicesCount++
 				mu.Unlock()
-				log.Infof("bootstrap: created device %s (eui: %s)", devName, devEUIStr)
 			}(j)
 		}
 

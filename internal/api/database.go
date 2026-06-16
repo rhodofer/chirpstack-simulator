@@ -26,7 +26,7 @@ func SetupDB() error {
 	if _, err := db.Exec("PRAGMA synchronous=NORMAL;"); err != nil {
 		return fmt.Errorf("failed to set synchronous: %w", err)
 	}
-	if _, err := db.Exec("PRAGMA busy_timeout=5000;"); err != nil {
+	if _, err := db.Exec("PRAGMA busy_timeout=10000;"); err != nil {
 		return fmt.Errorf("failed to set busy_timeout: %w", err)
 	}
 

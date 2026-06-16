@@ -25,6 +25,7 @@ type GatewayOption func(*Gateway) error
 // Gateway defines a simulated LoRa gateway.
 type Gateway struct {
 	mqtt      mqtt.Client
+	mqttOpts  *mqtt.ClientOptions
 	gatewayID lorawan.EUI64
 
 	deviceMux sync.RWMutex
@@ -61,14 +62,9 @@ func WithMQTTCredentials(server, username, password string) GatewayOption {
 
 		log.WithFields(log.Fields{
 			"server": server,
-		}).Info("simulator: connecting to mqtt broker")
+		}).Info("simulator: configuring mqtt broker connection")
 
-		client := mqtt.NewClient(opts)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			return errors.Wrap(token.Error(), "mqtt client connect error")
-		}
-
-		g.mqtt = client
+		g.mqttOpts = opts
 
 		return nil
 	}
@@ -110,14 +106,9 @@ func WithMQTTCertificates(server, caCert, tlsCert, tlsKey string) GatewayOption 
 			"ca_cert":  caCert,
 			"tls_cert": tlsCert,
 			"tls_key":  tlsKey,
-		}).Info("simulator: connecting to mqtt broker")
+		}).Info("simulator: configuring mqtt broker connection (TLS)")
 
-		client := mqtt.NewClient(opts)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			return errors.Wrap(token.Error(), "mqtt client connect error")
-		}
-
-		g.mqtt = client
+		g.mqttOpts = opts
 
 		return nil
 	}
@@ -202,21 +193,63 @@ func NewGateway(opts ...GatewayOption) (*Gateway, error) {
 		}
 	}
 
-	downlinkTopic := gw.getCommandTopic("down")
+	if gw.mqtt == nil && gw.mqttOpts != nil {
+		downlinkTopic := gw.getCommandTopic("down")
 
-	log.WithFields(log.Fields{
-		"gateway_id": gw.gatewayID,
-		"topic":      downlinkTopic,
-	}).Info("simulator: subscribing to gateway mqtt topic")
-	for {
-		if token := gw.mqtt.Subscribe(downlinkTopic, 0, gw.downlinkEventHandler); token.Wait() && token.Error() != nil {
-			log.WithError(token.Error()).WithFields(log.Fields{
+		gw.mqttOpts.SetOnConnectHandler(func(client mqtt.Client) {
+			log.WithFields(log.Fields{
 				"gateway_id": gw.gatewayID,
 				"topic":      downlinkTopic,
-			}).Error("simulator: subscribe to mqtt topic error")
-			time.Sleep(time.Second * 2)
-		} else {
-			break
+			}).Info("simulator: subscribing / resubscribing to gateway mqtt topic")
+
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				for {
+					if token := client.Subscribe(downlinkTopic, 0, gw.downlinkEventHandler); token.Wait() && token.Error() != nil {
+						log.WithError(token.Error()).WithFields(log.Fields{
+							"gateway_id": gw.gatewayID,
+							"topic":      downlinkTopic,
+						}).Error("simulator: resubscribe to mqtt topic error, retrying...")
+						time.Sleep(time.Second * 2)
+					} else {
+						log.WithFields(log.Fields{
+							"gateway_id": gw.gatewayID,
+							"topic":      downlinkTopic,
+						}).Info("simulator: successfully subscribed to gateway mqtt topic")
+						break
+					}
+				}
+			}()
+		})
+
+		log.WithFields(log.Fields{
+			"server": gw.mqttOpts.Servers,
+		}).Info("simulator: connecting to mqtt broker")
+
+		client := mqtt.NewClient(gw.mqttOpts)
+		if token := client.Connect(); token.Wait() && token.Error() != nil {
+			return nil, errors.Wrap(token.Error(), "mqtt client connect error")
+		}
+		gw.mqtt = client
+	}
+
+	// External client fallback (e.g. tests passing direct client via WithMQTTClient)
+	if gw.mqtt != nil && gw.mqttOpts == nil {
+		downlinkTopic := gw.getCommandTopic("down")
+		log.WithFields(log.Fields{
+			"gateway_id": gw.gatewayID,
+			"topic":      downlinkTopic,
+		}).Info("simulator: subscribing to gateway mqtt topic (external client)")
+		for {
+			if token := gw.mqtt.Subscribe(downlinkTopic, 0, gw.downlinkEventHandler); token.Wait() && token.Error() != nil {
+				log.WithError(token.Error()).WithFields(log.Fields{
+					"gateway_id": gw.gatewayID,
+					"topic":      downlinkTopic,
+				}).Error("simulator: subscribe to mqtt topic error")
+				time.Sleep(time.Second * 2)
+			} else {
+				break
+			}
 		}
 	}
 
@@ -341,7 +374,14 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 			"dev_eui":    devEUI,
 			"gateway_id": g.gatewayID,
 		}).Debug("simulator: forwarding downlink to device")
-		downChan <- pl
+		select {
+		case downChan <- pl:
+		default:
+			log.WithFields(log.Fields{
+				"dev_eui":    devEUI,
+				"gateway_id": g.gatewayID,
+			}).Warn("simulator: device downlink channel full, dropping frame")
+		}
 	}
 
 	time.Sleep(g.downlinkTxAckDelay)
