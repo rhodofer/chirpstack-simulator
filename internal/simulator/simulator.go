@@ -276,6 +276,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithAnomalyDuration(s.anomalyDuration),
 			simulator.WithGateways(gws),
 			simulator.WithDeviceTenantID(s.tenantID),
+			simulator.WithDeviceApplicationID(s.applicationID),
 			simulator.WithUplinkTXInfo(gw.UplinkTxInfo{
 				Frequency: uint32(s.frequency),
 				Modulation: &gw.Modulation{

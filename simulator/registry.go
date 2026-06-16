@@ -14,6 +14,8 @@ type DeviceStatus struct {
 	State         string `json:"state"` // "OTAA" or "Activated"
 	UplinkCount   uint32 `json:"uplink_count"`
 	ActiveAnomaly string `json:"active_anomaly"`
+	TenantID      string `json:"tenant_id"`
+	ApplicationID string `json:"application_id"`
 }
 
 // DeviceRegistry tracks all actively simulated devices.
@@ -82,6 +84,8 @@ func (r *DeviceRegistry) GetStatuses() []DeviceStatus {
 			State:         stateStr,
 			UplinkCount:   d.fCntUp,
 			ActiveAnomaly: activeAnomaly,
+			TenantID:      d.tenantID,
+			ApplicationID: d.applicationID,
 		})
 		d.RUnlock()
 	}

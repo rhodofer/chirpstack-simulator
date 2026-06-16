@@ -124,6 +124,9 @@ type Device struct {
 	// Tenant ID.
 	tenantID string
 
+	// Application ID.
+	applicationID string
+
 	// Anomaly parameters
 	anomalyProbability     float64
 	anomalyTypes           []string
@@ -277,6 +280,14 @@ func WithLatencyMs(ms int) DeviceOption {
 func WithDeviceTenantID(tenantID string) DeviceOption {
 	return func(d *Device) error {
 		d.tenantID = tenantID
+		return nil
+	}
+}
+
+// WithDeviceApplicationID sets the application ID.
+func WithDeviceApplicationID(applicationID string) DeviceOption {
+	return func(d *Device) error {
+		d.applicationID = applicationID
 		return nil
 	}
 }

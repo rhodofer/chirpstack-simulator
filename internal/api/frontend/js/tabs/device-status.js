@@ -25,19 +25,9 @@ export function applyDevStatusFiltersAndRender() {
             (d.app_name && d.app_name.toLowerCase().indexOf(q) !== -1);
         if (!matchesSearch) return false;
 
-        // 2. Find device details in state.devList for precise mapping (falls back to app_name lookup)
-        const devDetails = (state.devList || []).find(dev => dev.dev_eui === d.dev_eui);
-        
-        let finalTenantId = devDetails ? devDetails.tenant_id : null;
-        let finalAppId = devDetails ? devDetails.application_id : null;
-
-        if (!devDetails) {
-            const app = (state.applications || []).find(a => a.name === d.app_name);
-            if (app) {
-                finalTenantId = app.tenant_id;
-                finalAppId = app.id;
-            }
-        }
+        // 2. Use direct tenant/application mapping returned from backend
+        const finalTenantId = d.tenant_id;
+        const finalAppId = d.application_id;
 
         // 3. Org Filter
         if (orgFilter) {
