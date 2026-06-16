@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -232,10 +234,38 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate random 16-byte AppKey
+	var appKeyBytes [16]byte
+	if _, err := rand.Read(appKeyBytes[:]); err != nil {
+		log.WithError(err).Error("devices: failed to generate random AppKey")
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to generate random AppKey: " + err.Error(),
+		})
+		return
+	}
+	appKeyStr := hex.EncodeToString(appKeyBytes[:])
+
+	// Create keys in ChirpStack
+	_, err = as.Device().CreateKeys(context.Background(), &api.CreateDeviceKeysRequest{
+		DeviceKeys: &api.DeviceKeys{
+			DevEui: req.DevEUI,
+			NwkKey: appKeyStr,
+		},
+	})
+	if err != nil {
+		log.WithError(err).WithField("dev_eui", req.DevEUI).Error("devices: create keys error")
+		// Clean up the created device if keys creation fails
+		_, _ = as.Device().Delete(context.Background(), &api.DeleteDeviceRequest{DevEui: req.DevEUI})
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "Failed to create device keys in ChirpStack: " + err.Error(),
+		})
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"dev_eui": req.DevEUI,
 		"name":    req.Name,
-	}).Info("devices: created")
+	}).Info("devices: created with keys")
 
 	writeJSON(w, http.StatusCreated, Device{
 		DevEUI:          req.DevEUI,
