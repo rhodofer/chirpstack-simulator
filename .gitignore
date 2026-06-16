@@ -17,3 +17,6 @@ chirpstack-simulator
 
 # database
 *.db
+
+# documentation containing private server info
+/ARCHITECTURE.md

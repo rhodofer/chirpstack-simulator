@@ -489,10 +489,10 @@ func (s *simulation) tearDownApplication() error {
 }
 
 func (s *simulation) setupDevices() error {
-	log.Info(fmt.Sprintf("[%s] simulator: init devices (deterministik isimler, upsert)", s.appName))
+	log.Info(fmt.Sprintf("[%s] simulator: init devices (loading existing devices)", s.appName))
 
-	// Uygulamaya kayıtlı mevcut device'ları çek (sayfalı olarak).
-	existingByName := make(map[string]*api.DeviceListItem)
+	// 1. ChirpStack'te bu uygulamaya kayıtlı TÜM cihazları çekelim.
+	var allDevices []*api.DeviceListItem
 	var offset uint32 = 0
 	for {
 		listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
@@ -509,131 +509,6 @@ func (s *simulation) setupDevices() error {
 			break
 		}
 
-		for _, d := range results {
-			existingByName[d.GetName()] = d
-		}
-
-		if len(results) < 1000 {
-			break
-		}
-		offset += 1000
-	}
-
-	var wg sync.WaitGroup
-
-	sem := make(chan struct{}, 20) // max 20 concurrent goroutines
-
-	for i := 0; i < s.deviceCount; i++ {
-		devName := fmt.Sprintf("%s-%d", s.deviceNamePrefix, i+1)
-
-		// Zaten varsa EUI ve anahtarını al, oluşturma.
-		if existing, ok := existingByName[devName]; ok {
-			var devEUI lorawan.EUI64
-			if err := devEUI.UnmarshalText([]byte(existing.GetDevEui())); err != nil {
-				return errors.Wrapf(err, "parse existing dev EUI for %s", devName)
-			}
-
-			// Mevcut anahtarı çek.
-			keysResp, err := as.Device().GetKeys(context.Background(), &api.GetDeviceKeysRequest{
-				DevEui: existing.GetDevEui(),
-			})
-			if err != nil {
-				return errors.Wrapf(err, "get device keys for %s", devName)
-			}
-			var appKey lorawan.AES128Key
-			if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
-				return errors.Wrapf(err, "parse app key for %s", devName)
-			}
-
-			s.deviceAppKeysMutex.Lock()
-			s.deviceAppKeys[devEUI] = appKey
-			s.deviceNames[devEUI] = devName
-			s.deviceEUIs = append(s.deviceEUIs, devEUI)
-			s.deviceAppKeysMutex.Unlock()
-
-			log.WithFields(log.Fields{
-				"name":    devName,
-				"dev_eui": devEUI.String(),
-			}).Info(fmt.Sprintf("[%s] simulator: mevcut device bulundu, yeniden kullanılıyor", s.appName))
-			continue
-		}
-
-		// Yeni device oluştur.
-		wg.Add(1)
-		go func(devName string) {
-			sem <- struct{}{}
-			defer func() {
-				<-sem
-				wg.Done()
-			}()
-
-			var devEUI lorawan.EUI64
-			var appKey lorawan.AES128Key
-
-			if _, err := rand.Read(devEUI[:]); err != nil {
-				log.WithError(err).Fatal(fmt.Sprintf("[%s] read random dev EUI error", s.appName))
-			}
-			if _, err := rand.Read(appKey[:]); err != nil {
-				log.WithError(err).Fatal(fmt.Sprintf("[%s] read random app key error", s.appName))
-			}
-
-			_, err := as.Device().Create(context.Background(), &api.CreateDeviceRequest{
-				Device: &api.Device{
-					DevEui:          devEUI.String(),
-					Name:            devName,
-					Description:     devName,
-					ApplicationId:   s.applicationID,
-					DeviceProfileId: s.deviceProfileID.String(),
-				},
-			})
-			if err != nil {
-				log.WithError(err).Fatalf("[%s] create device %s error", s.appName, devName)
-			}
-
-			_, err = as.Device().CreateKeys(context.Background(), &api.CreateDeviceKeysRequest{
-				DeviceKeys: &api.DeviceKeys{
-					DevEui: devEUI.String(),
-					// LoRaWAN 1.0.x: NwkKey = AppKey
-					NwkKey: appKey.String(),
-				},
-			})
-			if err != nil {
-				log.WithError(err).Fatalf("[%s] create device keys %s error", s.appName, devName)
-			}
-
-			s.deviceAppKeysMutex.Lock()
-			s.deviceAppKeys[devEUI] = appKey
-			s.deviceNames[devEUI] = devName
-			s.deviceEUIs = append(s.deviceEUIs, devEUI)
-			s.deviceAppKeysMutex.Unlock()
-
-			log.WithFields(log.Fields{
-				"name":    devName,
-				"dev_eui": devEUI.String(),
-			}).Info(fmt.Sprintf("[%s] simulator: yeni device oluşturuldu", s.appName))
-		}(devName)
-	}
-
-	wg.Wait()
-
-	// 2. ChirpStack'te bu uygulamaya kayıtlı TÜM cihazları çekelim.
-	var allDevices []*api.DeviceListItem
-	offset = 0
-	for {
-		listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
-			ApplicationId: s.applicationID,
-			Limit:         1000,
-			Offset:        offset,
-		})
-		if err != nil {
-			return errors.Wrap(err, "list devices error (post-init)")
-		}
-
-		results := listResp.GetResult()
-		if len(results) == 0 {
-			break
-		}
-
 		allDevices = append(allDevices, results...)
 
 		if len(results) < 1000 {
@@ -642,7 +517,7 @@ func (s *simulation) setupDevices() error {
 		offset += 1000
 	}
 
-	// 3. s.deviceAppKeys, s.deviceNames ve s.deviceEUIs listelerini sadece aktif (is_disabled=false) olanlarla dolduralım.
+	// 2. s.deviceAppKeys, s.deviceNames ve s.deviceEUIs listelerini sadece aktif (is_disabled=false) olanlarla dolduralım.
 	s.deviceAppKeysMutex.Lock()
 	defer s.deviceAppKeysMutex.Unlock()
 
