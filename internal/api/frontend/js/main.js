@@ -88,7 +88,12 @@ export function switchTab(name) {
     } else if (name === "device-list") {
         fetchDevices(state.devTenantFilter);
     } else if (name === "device-status") {
-        fetchSimulationDevices();
+        Promise.all([
+            fetchOrganizations(),
+            fetchApplications(""),
+            fetchDevices(""),
+            fetchSimulationDevices()
+        ]);
     } else if (name === "log-center") {
         renderSystemLogs();
     } else if (name === "dynamic-telemetry") {

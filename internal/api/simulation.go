@@ -438,46 +438,68 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 			packetLossRate = req.PacketLoss
 		}
 
-		simCfg := config.SimulatorConfig{
-			TenantID:           req.TenantID,
-			Duration:           duration,
-			ActivationTime:     activationTime,
-			AppName:            req.AppName,
-			DeviceNamePrefix:   req.DevicePrefix,
-			PayloadScript:      req.PayloadScript,
-			PacketLoss:         packetLossRate,
-			SimulatePacketLoss: req.SimulatePacketLoss,
-			LatencyMs:          req.LatencyMs,
-			AnomalyProbability: req.AnomalyProbability,
-			AnomalyTypes:       req.AnomalyTypes,
-			AnomalyDuration:    req.AnomalyDuration,
-		}
-
-		simCfg.Device.Count = req.DeviceCount
-		simCfg.Device.UplinkInterval = uplinkInterval
-		simCfg.Device.FPort = req.FPort
-		simCfg.Device.Payload = req.Payload
-		simCfg.Device.Frequency = req.Frequency
-		simCfg.Device.Bandwidth = req.Bandwidth
-		simCfg.Device.SpreadingFactor = req.SpreadingFactor
-		simCfg.Gateway.MinCount = req.GatewayCount
-		simCfg.Gateway.MaxCount = req.GatewayCount
-		simCfg.Gateway.EventTopicTemplate = req.EventTopicTemplate
-		simCfg.Gateway.CommandTopicTemplate = req.CommandTopicTemplate
-
-		// Load custom intervals for this simulation
-		devIntervals, err := GetDeviceIntervals()
-		if err == nil {
-			simCfg.DeviceIntervals = make(map[string]time.Duration)
-			for devEUI, intStr := range devIntervals {
-				dur, err := time.ParseDuration(intStr)
-				if err == nil {
-					simCfg.DeviceIntervals[devEUI] = dur
+		// Query all applications (networks) under this tenant from ChirpStack.
+		var appNames []string
+		if as.IsConnected() {
+			ctx := context.Background()
+			respApps, err := as.Application().List(ctx, &api.ListApplicationsRequest{
+				Limit:    100,
+				TenantId: req.TenantID,
+			})
+			if err == nil {
+				for _, app := range respApps.GetResult() {
+					appNames = append(appNames, app.GetName())
 				}
 			}
 		}
 
-		cfg.Simulator = append(cfg.Simulator, simCfg)
+		// Fall back to the configured/default AppName if ChirpStack is not connected or returns empty
+		if len(appNames) == 0 {
+			appNames = []string{req.AppName}
+		}
+
+		for _, appName := range appNames {
+			simCfg := config.SimulatorConfig{
+				TenantID:           req.TenantID,
+				Duration:           duration,
+				ActivationTime:     activationTime,
+				AppName:            appName,
+				DeviceNamePrefix:   req.DevicePrefix,
+				PayloadScript:      req.PayloadScript,
+				PacketLoss:         packetLossRate,
+				SimulatePacketLoss: req.SimulatePacketLoss,
+				LatencyMs:          req.LatencyMs,
+				AnomalyProbability: req.AnomalyProbability,
+				AnomalyTypes:       req.AnomalyTypes,
+				AnomalyDuration:    req.AnomalyDuration,
+			}
+
+			simCfg.Device.Count = req.DeviceCount
+			simCfg.Device.UplinkInterval = uplinkInterval
+			simCfg.Device.FPort = req.FPort
+			simCfg.Device.Payload = req.Payload
+			simCfg.Device.Frequency = req.Frequency
+			simCfg.Device.Bandwidth = req.Bandwidth
+			simCfg.Device.SpreadingFactor = req.SpreadingFactor
+			simCfg.Gateway.MinCount = req.GatewayCount
+			simCfg.Gateway.MaxCount = req.GatewayCount
+			simCfg.Gateway.EventTopicTemplate = req.EventTopicTemplate
+			simCfg.Gateway.CommandTopicTemplate = req.CommandTopicTemplate
+
+			// Load custom intervals for this simulation
+			devIntervals, err := GetDeviceIntervals()
+			if err == nil {
+				simCfg.DeviceIntervals = make(map[string]time.Duration)
+				for devEUI, intStr := range devIntervals {
+					dur, err := time.ParseDuration(intStr)
+					if err == nil {
+						simCfg.DeviceIntervals[devEUI] = dur
+					}
+				}
+			}
+
+			cfg.Simulator = append(cfg.Simulator, simCfg)
+		}
 	}
 
 	return cfg

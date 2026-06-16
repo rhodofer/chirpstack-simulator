@@ -46,6 +46,18 @@ export async function createDevice(data) {
         const dev = r.data;
         logEntry("New device created: " + dev.name + " (EUI: " + dev.dev_eui + ")", "success");
         showToast("'" + dev.name + "' cihazı oluşturuldu.", "success");
+        
+        if (state.currentStatus === "running" || state.currentStatus === "starting") {
+            setTimeout(() => {
+                showToast(
+                    state.language === "tr"
+                        ? "Simülasyon çalışıyor. Yeni cihazın simüle edilmesi için simülasyonu durdurup tekrar başlatın."
+                        : "Simulation is running. Stop and restart the simulation for the new device to be simulated.",
+                    "warning"
+                );
+            }, 800);
+        }
+
         await fetchDevices(state.devTenantFilter);
         return true;
     } else {

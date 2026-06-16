@@ -17,6 +17,9 @@ chirpstack-simulator
 
 # database
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # documentation containing private server info
 /ARCHITECTURE.md

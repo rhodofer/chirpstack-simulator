@@ -140,6 +140,18 @@ export async function createApplication(name, tenantId, description) {
         const app = r.data;
         logEntry("New network created: " + app.name + " (ID: " + app.id + ")", "success");
         showToast("'" + app.name + "' " + (state.language === "tr" ? "ağı oluşturuldu." : "network created."), "success");
+        
+        if (state.currentStatus === "running" || state.currentStatus === "starting") {
+            setTimeout(() => {
+                showToast(
+                    state.language === "tr"
+                        ? "Simülasyon çalışıyor. Yeni ağın simüle edilmesi için simülasyonu durdurup tekrar başlatın."
+                        : "Simulation is running. Stop and restart the simulation for the new network to be simulated.",
+                    "warning"
+                );
+            }, 800);
+        }
+
         await fetchApplications(state.netTenantFilter);
         return true;
     } else {
