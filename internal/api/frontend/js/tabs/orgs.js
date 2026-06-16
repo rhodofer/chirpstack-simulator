@@ -468,8 +468,8 @@ export function applyFiltersAndRender() {
             valB = state.dpList.filter(dp => dp.tenant_id === b.id).length;
             return (valA - valB) * dir;
         } else if (key === "dev_count") {
-            valA = state.devList.filter(dev => dev.tenant_id === a.id).length;
-            valB = state.devList.filter(dev => dev.tenant_id === b.id).length;
+            valA = (state.allDevices || []).filter(dev => dev.tenant_id === a.id).length;
+            valB = (state.allDevices || []).filter(dev => dev.tenant_id === b.id).length;
             return (valA - valB) * dir;
         } else if (key === "date") {
             const dateValA = a.created_at || a.createdAt || a.created || 0;
@@ -521,7 +521,7 @@ export function renderTable() {
 
         const appCount = state.applications.filter(app => app.tenant_id === org.id).length;
         const dpCount = state.dpList.filter(dp => dp.tenant_id === org.id).length;
-        const devCount = state.devList.filter(dev => dev.tenant_id === org.id).length;
+        const devCount = (state.allDevices || []).filter(dev => dev.tenant_id === org.id).length;
 
         const dateVal = org.created_at || org.createdAt || org.created || new Date();
         const d = new Date(dateVal);

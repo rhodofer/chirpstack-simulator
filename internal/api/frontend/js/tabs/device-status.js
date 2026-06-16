@@ -13,9 +13,11 @@ export async function fetchSimulationDevices() {
 }
 
 export function applyDevStatusFiltersAndRender() {
-    const q = state.devStatusSearchQuery.toLowerCase();
-    const orgFilter = state.devStatusOrgFilter || "";
-    const appFilter = state.devStatusAppFilter || "";
+    const q = (state.devStatusSearchQuery || "").toLowerCase();
+    const orgSelect = document.getElementById("dev-status-org-select");
+    const appSelect = document.getElementById("dev-status-app-select");
+    const orgFilter = orgSelect ? orgSelect.value : "";
+    const appFilter = appSelect ? appSelect.value : "";
 
     state.devStatusFiltered = state.devStatusList.filter((d) => {
         // 1. Search Query Filter
@@ -322,6 +324,7 @@ export function initDeviceStatusTab() {
 
     if (orgSelect) {
         orgSelect.addEventListener("change", (e) => {
+            if (appSelect) appSelect.value = "";
             state.devStatusOrgFilter = e.target.value;
             state.devStatusAppFilter = ""; // Reset app filter when org changes
             state.devStatusPage = 1;

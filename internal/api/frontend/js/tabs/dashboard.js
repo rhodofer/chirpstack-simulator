@@ -152,7 +152,7 @@ export function updateMap() {
             gwName = "Gateway-" + (i + 1);
             seed = "gateway-" + state.activeOrgId + "-" + i;
         }
-        const coords = getDeterministicCoords(seed, 0.04);
+        const coords = getDeterministicCoords(seed, 0.15);
         gatewayCoordsList.push({
             coords: coords,
             name: gwName,
@@ -171,7 +171,7 @@ export function updateMap() {
         state.mapMarkers.push(gwMarker);
     }
 
-    const orgDevices = (state.devList || []).filter(d => !state.activeOrgId || d.tenant_id === state.activeOrgId);
+    const orgDevices = (state.allDevices || []).filter(d => !state.activeOrgId || d.tenant_id === state.activeOrgId);
     if (orgDevices.length > 0) {
         orgDevices.forEach((d) => {
             let gwIdx = -1;
@@ -184,11 +184,20 @@ export function updateMap() {
             const gw = gatewayCoordsList[gwIdx];
             if (!gw) return;
 
-            const devSeed = "device-" + d.dev_eui;
-            const devOffset = getDeterministicCoords(devSeed, 0.008);
+            const hash = getDeterministicHash("device-" + d.dev_eui);
+            const u = (hash & 0xFFFF) / 65535;
+            const r = 4.0 * Math.sqrt(u); // 4 km radius
+            const theta = (((hash >> 16) & 0xFFFF) / 65535) * 2 * Math.PI;
+
+            const dx = r * Math.cos(theta);
+            const dy = r * Math.sin(theta);
+
+            const deltaLat = dy / 110.574;
+            const deltaLng = dx / (111.320 * Math.cos(gw.coords[0] * Math.PI / 180));
+
             const devCoords = [
-                gw.coords[0] + (devOffset[0] - latCenter),
-                gw.coords[1] + (devOffset[1] - lngCenter)
+                gw.coords[0] + deltaLat,
+                gw.coords[1] + deltaLng
             ];
 
             const devMarker = L.circleMarker(devCoords, {

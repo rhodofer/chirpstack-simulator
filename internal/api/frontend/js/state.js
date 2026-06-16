@@ -28,6 +28,7 @@ export const state = {
     netSearchQuery: "",
     netTenantFilter: "",
     devList: [],
+    allDevices: [],
     devFiltered: [],
     devSort: { key: "name", dir: "asc" },
     devPage: 1,

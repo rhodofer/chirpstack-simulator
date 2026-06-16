@@ -35,6 +35,17 @@ export async function fetchDevices(tenantId) {
         const errMsg = (r.data && r.data.error) || "Bağlantı hatası";
         logEntry("Failed to load devices: " + errMsg, "error");
     }
+
+    // Fetch all devices for map rendering and tenant counters (without pagination limit)
+    let allUrl = `/api/devices?limit=5000`;
+    if (tenantId) allUrl += "&tenant_id=" + encodeURIComponent(tenantId);
+    const allR = await api("GET", allUrl);
+    if (allR.ok && allR.data.devices) {
+        state.allDevices = allR.data.devices;
+    } else {
+        state.allDevices = [];
+    }
+
     applyDevFiltersAndRender();
     updateMap();
     applyOrgFiltersAndRender();
