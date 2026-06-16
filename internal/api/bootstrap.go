@@ -96,7 +96,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		Duration:             "0s",
 		ActivationTime:       "30s",
 		UplinkInterval:       "2m",
-		AppName:              req.OrgName,
+		AppName:              fmt.Sprintf("%s-%s-1", req.OrgName, req.AppPrefix),
 		DevicePrefix:         req.DevPrefix,
 		FPort:                10,
 		Payload:              "001903F521", // 5-byte payload triggers dynamic telemetry logging

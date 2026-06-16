@@ -338,7 +338,9 @@ export const translations = {
         login_card_subtitle: "Simülatör paneline erişmek için bilgilerinizi girin.",
         login_lbl_username: "Kullanıcı Adı",
         login_lbl_password: "Şifre",
-        btn_login_submit: "Giriş Yap"
+        btn_login_submit: "Giriş Yap",
+        filter_all_orgs: "Tüm Organizasyonlar",
+        filter_all_apps: "Tüm Ağlar"
     },
     en: {
         app_title: "ChirpStack SimulaTR",
@@ -677,7 +679,9 @@ export const translations = {
         login_card_subtitle: "Enter your credentials to access the simulator panel.",
         login_lbl_username: "Username",
         login_lbl_password: "Password",
-        btn_login_submit: "Sign In"
+        btn_login_submit: "Sign In",
+        filter_all_orgs: "All Organizations",
+        filter_all_apps: "All Networks"
     }
 };
 

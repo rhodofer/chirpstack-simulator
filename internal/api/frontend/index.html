@@ -536,6 +536,16 @@
                             <span class="search-icon">🔍</span>
                             <input type="text" id="dev-status-search-input" data-i18n-placeholder="placeholder_search_dev" placeholder="Cihaz ara...">
                         </div>
+                        
+                        <div class="filter-select-group" style="display: flex; gap: 8px;">
+                            <select class="page-size-select" id="dev-status-org-select" style="min-width: 160px; max-width: 240px; margin-left: 8px;">
+                                <option value="" data-i18n="filter_all_orgs">Tüm Organizasyonlar</option>
+                            </select>
+                            <select class="page-size-select" id="dev-status-app-select" style="min-width: 160px; max-width: 240px;">
+                                <option value="" data-i18n="filter_all_apps">Tüm Ağlar</option>
+                            </select>
+                        </div>
+
                         <button class="btn-refresh" id="btn-dev-status-refresh" title="Yenile">🔄</button>
                     </div>
 

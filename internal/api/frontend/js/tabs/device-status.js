@@ -7,21 +7,50 @@ export async function fetchSimulationDevices() {
     const r = await api("GET", "/api/simulation/devices");
     if (r.ok && r.data && r.data.devices) {
         state.devStatusList = r.data.devices;
+        populateStatusFilters();
         applyDevStatusFiltersAndRender();
     }
 }
 
 export function applyDevStatusFiltersAndRender() {
     const q = state.devStatusSearchQuery.toLowerCase();
-    if (q) {
-        state.devStatusFiltered = state.devStatusList.filter((d) => {
-            return (d.device_name && d.device_name.toLowerCase().indexOf(q) !== -1) ||
-                   (d.dev_eui && d.dev_eui.toLowerCase().indexOf(q) !== -1) ||
-                   (d.app_name && d.app_name.toLowerCase().indexOf(q) !== -1);
-        });
-    } else {
-        state.devStatusFiltered = state.devStatusList.slice();
-    }
+    const orgFilter = state.devStatusOrgFilter || "";
+    const appFilter = state.devStatusAppFilter || "";
+
+    state.devStatusFiltered = state.devStatusList.filter((d) => {
+        // 1. Search Query Filter
+        const matchesSearch = !q ||
+            (d.device_name && d.device_name.toLowerCase().indexOf(q) !== -1) ||
+            (d.dev_eui && d.dev_eui.toLowerCase().indexOf(q) !== -1) ||
+            (d.app_name && d.app_name.toLowerCase().indexOf(q) !== -1);
+        if (!matchesSearch) return false;
+
+        // 2. Find device details in state.devList for precise mapping (falls back to app_name lookup)
+        const devDetails = (state.devList || []).find(dev => dev.dev_eui === d.dev_eui);
+        
+        let finalTenantId = devDetails ? devDetails.tenant_id : null;
+        let finalAppId = devDetails ? devDetails.application_id : null;
+
+        if (!devDetails) {
+            const app = (state.applications || []).find(a => a.name === d.app_name);
+            if (app) {
+                finalTenantId = app.tenant_id;
+                finalAppId = app.id;
+            }
+        }
+
+        // 3. Org Filter
+        if (orgFilter) {
+            if (finalTenantId !== orgFilter) return false;
+        }
+
+        // 4. App Filter
+        if (appFilter) {
+            if (finalAppId !== appFilter) return false;
+        }
+
+        return true;
+    });
 
     const sk = state.devStatusSort.key;
     const sd = state.devStatusSort.dir === "asc" ? 1 : -1;
@@ -238,10 +267,48 @@ export function goToDevStatusPage(n) {
     applyDevStatusFiltersAndRender();
 }
 
+export function populateStatusFilters() {
+    const orgSelect = document.getElementById("dev-status-org-select");
+    const appSelect = document.getElementById("dev-status-app-select");
+    if (!orgSelect || !appSelect) return;
+
+    // Save current selection to restore if possible
+    const prevOrg = orgSelect.value;
+    const prevApp = appSelect.value;
+
+    orgSelect.innerHTML = `<option value="">${state.language === "tr" ? "Tüm Organizasyonlar" : "All Organizations"}</option>`;
+    appSelect.innerHTML = `<option value="">${state.language === "tr" ? "Tüm Ağlar" : "All Networks"}</option>`;
+
+    // Populate Orgs
+    (state.organizations || []).forEach((org) => {
+        const opt = document.createElement("option");
+        opt.value = org.id;
+        opt.textContent = org.name;
+        if (org.id === prevOrg) opt.selected = true;
+        orgSelect.appendChild(opt);
+    });
+
+    const selectedOrgId = orgSelect.value;
+    const filteredApps = selectedOrgId
+        ? (state.applications || []).filter(app => app.tenant_id === selectedOrgId)
+        : (state.applications || []);
+
+    // Populate Apps
+    filteredApps.forEach((app) => {
+        const opt = document.createElement("option");
+        opt.value = app.id;
+        opt.textContent = app.name;
+        if (app.id === prevApp) opt.selected = true;
+        appSelect.appendChild(opt);
+    });
+}
+
 export function initDeviceStatusTab() {
     const devStatusSearchInput = $("#dev-status-search-input");
     const btnDevStatusRefresh = $("#btn-dev-status-refresh");
     const devStatusPageSizeSelect = $("#dev-status-page-size-select");
+    const orgSelect = document.getElementById("dev-status-org-select");
+    const appSelect = document.getElementById("dev-status-app-select");
 
     if (devStatusSearchInput) {
         devStatusSearchInput.addEventListener("input", (e) => {
@@ -263,6 +330,24 @@ export function initDeviceStatusTab() {
         });
     }
 
+    if (orgSelect) {
+        orgSelect.addEventListener("change", (e) => {
+            state.devStatusOrgFilter = e.target.value;
+            state.devStatusAppFilter = ""; // Reset app filter when org changes
+            state.devStatusPage = 1;
+            populateStatusFilters(); // update app options
+            applyDevStatusFiltersAndRender();
+        });
+    }
+
+    if (appSelect) {
+        appSelect.addEventListener("change", (e) => {
+            state.devStatusAppFilter = e.target.value;
+            state.devStatusPage = 1;
+            applyDevStatusFiltersAndRender();
+        });
+    }
+
     const headers = document.querySelectorAll("#dev-status-table thead th.sortable");
     headers.forEach((th) => {
         th.addEventListener("click", () => {
@@ -277,4 +362,6 @@ export function initDeviceStatusTab() {
             applyDevStatusFiltersAndRender();
         });
     });
+
+    populateStatusFilters();
 }
