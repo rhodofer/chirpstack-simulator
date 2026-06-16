@@ -203,25 +203,13 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 		return
 	}
 
-	state.mu.Lock()
-	if state.Status != StatusIdle && state.Status != StatusError {
-		state.mu.Unlock()
-		writeJSON(w, http.StatusConflict, map[string]interface{}{
-			"error":  "simulation already running",
-			"status": string(state.Status),
-		})
-		return
-	}
-
 	var req StartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		state.mu.Unlock()
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if err := validateStartRequest(&req); err != nil {
-		state.mu.Unlock()
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
@@ -305,16 +293,25 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	}
 
 	cfg := buildConfigFromList(reqs)
+
+	state.mu.Lock()
+	if state.Status != StatusIdle && state.Status != StatusError {
+		state.mu.Unlock()
+		writeJSON(w, http.StatusConflict, map[string]interface{}{
+			"error":  "simulation already running",
+			"status": string(state.Status),
+		})
+		return
+	}
+
 	state.Config = &req
 	state.Status = StatusStarting
 	state.StartedAt = time.Now().UnixMilli()
 	sim_pkg.ActiveDevices.Clear()
-	state.mu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := &sync.WaitGroup{}
 
-	state.mu.Lock()
 	state.Cancel = cancel
 	state.Wg = wg
 	state.mu.Unlock()
@@ -441,15 +438,18 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 		// Query all applications (networks) under this tenant from ChirpStack.
 		var appNames []string
 		if as.IsConnected() {
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			respApps, err := as.Application().List(ctx, &api.ListApplicationsRequest{
 				Limit:    100,
 				TenantId: req.TenantID,
 			})
+			cancel()
 			if err == nil {
 				for _, app := range respApps.GetResult() {
 					appNames = append(appNames, app.GetName())
 				}
+			} else {
+				log.WithError(err).Warnf("buildConfigFromList: failed to list applications for tenant %s, falling back to default", req.TenantID)
 			}
 		}
 
