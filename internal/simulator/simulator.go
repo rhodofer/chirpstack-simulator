@@ -615,6 +615,80 @@ func (s *simulation) setupDevices() error {
 	}
 
 	wg.Wait()
+
+	// 2. ChirpStack'te bu uygulamaya kayıtlı TÜM cihazları çekelim.
+	var allDevices []*api.DeviceListItem
+	offset = 0
+	for {
+		listResp, err := as.Device().List(context.Background(), &api.ListDevicesRequest{
+			ApplicationId: s.applicationID,
+			Limit:         1000,
+			Offset:        offset,
+		})
+		if err != nil {
+			return errors.Wrap(err, "list devices error (post-init)")
+		}
+
+		results := listResp.GetResult()
+		if len(results) == 0 {
+			break
+		}
+
+		allDevices = append(allDevices, results...)
+
+		if len(results) < 1000 {
+			break
+		}
+		offset += 1000
+	}
+
+	// 3. s.deviceAppKeys, s.deviceNames ve s.deviceEUIs listelerini sadece aktif (is_disabled=false) olanlarla dolduralım.
+	s.deviceAppKeysMutex.Lock()
+	defer s.deviceAppKeysMutex.Unlock()
+
+	s.deviceAppKeys = make(map[lorawan.EUI64]lorawan.AES128Key)
+	s.deviceNames = make(map[lorawan.EUI64]string)
+	s.deviceEUIs = []lorawan.EUI64{}
+
+	for _, devItem := range allDevices {
+		var devEUI lorawan.EUI64
+		if err := devEUI.UnmarshalText([]byte(devItem.GetDevEui())); err != nil {
+			return errors.Wrapf(err, "parse dev EUI for %s", devItem.GetName())
+		}
+
+		// Cihazın detaylarını çekip IsDisabled durumunu kontrol edelim.
+		devResp, err := as.Device().Get(context.Background(), &api.GetDeviceRequest{
+			DevEui: devItem.GetDevEui(),
+		})
+		if err != nil {
+			log.WithError(err).Warnf("[%s] get device %s error, skipping", s.appName, devItem.GetName())
+			continue
+		}
+
+		if devResp.GetDevice().GetIsDisabled() {
+			log.Infof("[%s] device %s is disabled in ChirpStack, skipping from simulation", s.appName, devItem.GetName())
+			continue
+		}
+
+		// Cihazın anahtarlarını çekelim.
+		keysResp, err := as.Device().GetKeys(context.Background(), &api.GetDeviceKeysRequest{
+			DevEui: devItem.GetDevEui(),
+		})
+		if err != nil {
+			log.WithError(err).Warnf("[%s] get device keys for %s error, skipping", s.appName, devItem.GetName())
+			continue
+		}
+		var appKey lorawan.AES128Key
+		if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
+			log.WithError(err).Warnf("[%s] parse app key for %s error, skipping", s.appName, devItem.GetName())
+			continue
+		}
+
+		s.deviceAppKeys[devEUI] = appKey
+		s.deviceNames[devEUI] = devItem.GetName()
+		s.deviceEUIs = append(s.deviceEUIs, devEUI)
+	}
+
 	return nil
 }
 
