@@ -17,6 +17,11 @@ var mqttClient mqtt.Client
 func Setup(c config.Config) error {
 	conf := c.ChirpStack.Gateway.Backend.MQTT
 
+	if mqttClient != nil && mqttClient.IsConnected() {
+		log.Info("ns: disconnecting existing MQTT client")
+		mqttClient.Disconnect(250)
+	}
+
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(conf.Server)
 	opts.SetClientID(fmt.Sprintf("chirpstack-simulator-ns-%d", time.Now().UnixNano()))

@@ -23,3 +23,6 @@ chirpstack-simulator
 
 # documentation containing private server info
 /ARCHITECTURE.md
+
+# generated report directory
+/report/
