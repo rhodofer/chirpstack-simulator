@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { $, $$, escapeHtml, showToast, logEntry, openDrawer, closeDrawer } from "../utils.js";
 import { api } from "../api.js";
 import { t } from "../translate.js";
+import { applyRowLocks } from "../passive-mode-ui.js";
 
 // Tab dependencies will be imported. Runtime handles circular dependency when function is called post-init.
 import { updateMap, populateChartOrgSelect } from "./dashboard.js";
@@ -575,6 +576,7 @@ export function renderTable() {
 
         orgTableBody.appendChild(tr);
     }
+    applyRowLocks(state.passiveMode);
 }
 
 export function openOrgDrawer(orgId, mode) {

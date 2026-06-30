@@ -18,28 +18,30 @@ const (
 
 // StartRequest defines the HTTP API simulation start parameters.
 type StartRequest struct {
-	TenantID            string `json:"tenant_id"`
-	DeviceCount         int    `json:"device_count"`
-	GatewayCount        int    `json:"gateway_count"`
-	Duration            string `json:"duration"`
-	ActivationTime      string `json:"activation_time"`
-	UplinkInterval      string `json:"uplink_interval"`
-	AppName             string `json:"app_name"`
-	DevicePrefix        string `json:"device_prefix"`
-	FPort               uint8  `json:"f_port"`
-	Payload             string `json:"payload"`
-	PayloadScript       string `json:"payload_script"`
-	PacketLoss          float64 `json:"packet_loss"`
-	SimulatePacketLoss  bool   `json:"simulate_packet_loss"`
-	LatencyMs           int    `json:"latency_ms"`
-	Frequency           int    `json:"frequency"`
-	Bandwidth           int    `json:"bandwidth"`
-	SpreadingFactor     int    `json:"spreading_factor"`
-	EventTopicTemplate  string `json:"event_topic_template"`
-	CommandTopicTemplate string `json:"command_topic_template"`
-	AnomalyProbability  float64 `json:"anomaly_probability"`
-	AnomalyTypes        string `json:"anomaly_types"`
-	AnomalyDuration     int    `json:"anomaly_duration"`
+	TenantID             string  `json:"tenant_id"`
+	DeviceCount          int     `json:"device_count"`
+	GatewayCount         int     `json:"gateway_count"`
+	Duration             string  `json:"duration"`
+	ActivationTime       string  `json:"activation_time"`
+	UplinkInterval       string  `json:"uplink_interval"`
+	AppName              string  `json:"app_name"`
+	DevicePrefix         string  `json:"device_prefix"`
+	FPort                uint8   `json:"f_port"`
+	Payload              string  `json:"payload"`
+	PayloadScript        string  `json:"payload_script"`
+	PacketLoss           float64 `json:"packet_loss"`
+	SimulatePacketLoss   bool    `json:"simulate_packet_loss"`
+	LatencyMs            int     `json:"latency_ms"`
+	Frequency            int     `json:"frequency"`
+	Bandwidth            int     `json:"bandwidth"`
+	SpreadingFactor      int     `json:"spreading_factor"`
+	EventTopicTemplate   string  `json:"event_topic_template"`
+	CommandTopicTemplate string  `json:"command_topic_template"`
+	AnomalyProbability   float64 `json:"anomaly_probability"`
+	AnomalyTypes         string  `json:"anomaly_types"`
+	AnomalyDuration      int     `json:"anomaly_duration"`
+	PassiveMode          bool    `json:"passive_mode"`
+	SyncIntervalMinutes  int     `json:"sync_interval_minutes"`
 }
 
 // SimState holds the singleton simulation state.

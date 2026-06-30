@@ -6,6 +6,8 @@ import { fetchOrganizations, saveOrgConfig } from "./orgs.js";
 import { fetchDeviceProfiles } from "./devices.js";
 import { fetchApplications } from "./networks.js";
 import { fetchDevices } from "./device-list.js";
+import { triggerManualSync, loadPassiveModeConfig, connectTopologyEvents, disconnectTopologyEvents } from "../passive-sync.js";
+import { applyPassiveModeUI } from "../passive-mode-ui.js";
 
 export async function fetchSystemConfig() {
     const r = await api("GET", "/api/config");
@@ -221,6 +223,61 @@ export function initSettingsTab() {
                 testStatus.textContent = (isTr ? "Hata: " : "Error: ") + errMsg;
                 logEntry("SMTP test email failed: " + errMsg, "error");
             }
+        });
+    }
+
+    // 7. Passive Mode Toggle
+    const passiveModeToggle = $("#passive-mode-toggle");
+    const syncIntervalInput = $("#sync-interval");
+
+    if (passiveModeToggle) {
+        passiveModeToggle.addEventListener("change", async function () {
+            const enabled = this.checked;
+            const interval = syncIntervalInput ? parseInt(syncIntervalInput.value) || 5 : 5;
+
+            const r = await api("POST", "/api/passive-mode", {
+                enabled: enabled,
+                sync_interval_minutes: interval,
+            });
+
+            if (r.ok) {
+                applyPassiveModeUI(enabled);
+                if (enabled) {
+                    connectTopologyEvents();
+                    showToast(t("passive_mode_enabled") || "Pasif mod etkinleştirildi.", "success");
+                    logEntry("Passive mode enabled.", "success");
+                } else {
+                    disconnectTopologyEvents();
+                    showToast(t("passive_mode_disabled") || "Pasif mod devre dışı bırakıldı.", "info");
+                    logEntry("Passive mode disabled.", "info");
+                }
+            } else {
+                const err = (r.data && r.data.error) || "Bilinmeyen hata";
+                showToast("Hata: " + err, "error");
+                this.checked = !enabled;
+            }
+        });
+    }
+
+    // 8. Sync Interval change (saves immediately when passive mode is on)
+    if (syncIntervalInput) {
+        syncIntervalInput.addEventListener("change", async function () {
+            if (!state.passiveMode) return;
+            const interval = parseInt(this.value) || 5;
+            await api("POST", "/api/passive-mode", {
+                enabled: true,
+                sync_interval_minutes: interval,
+            });
+            showToast(t("sync_interval_saved") || "Senkronizasyon aralığı güncellendi.", "success");
+        });
+    }
+
+    // 9. Manual Sync button
+    const btnManualSync = $("#btn-manual-sync");
+    if (btnManualSync) {
+        btnManualSync.addEventListener("click", (e) => {
+            e.preventDefault();
+            triggerManualSync();
         });
     }
 }

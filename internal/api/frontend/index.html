@@ -71,6 +71,10 @@
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_networks">Ağlar</span>
                         </div>
+                        <div class="secondary-nav-link" data-tab="gateways">
+                            <span class="nav-icon">•</span>
+                            <span data-i18n="nav_gateways">Geçitler</span>
+                        </div>
                         <div class="secondary-nav-link" data-tab="devices">
                             <span class="nav-icon">•</span>
                             <span data-i18n="nav_device_profiles">Device Profilleri</span>
@@ -125,6 +129,9 @@
                         <button class="btn btn-success btn-xs" id="btn-top-start" data-i18n-title="top_start_title" data-i18n="top_start" title="Simülasyonu Başlat">▶ Başlat</button>
                         <button class="btn btn-danger btn-xs" id="btn-top-stop" data-i18n-title="top_stop_title" data-i18n="top_stop" title="Simülasyonu Durdur" disabled>■ Durdur</button>
                     </div>
+                    <span id="passive-mode-badge" class="badge" style="display:none; background-color: #f59e0b; color: white; align-items: center; gap: 4px;">
+                        <i class="fas fa-eye"></i> <span data-i18n="passive_mode_badge">Pasif Mod</span>
+                    </span>
                     <span id="connection-badge" class="badge badge-offline" data-i18n="badge_no_conn">Bağlantı Yok</span>
                     <span id="status-badge" class="badge badge-idle" data-i18n="badge_idle">IDLE</span>
                     <span id="uptime-badge" class="badge badge-uptime" style="display:none;"></span>
@@ -443,6 +450,78 @@
                             </span>
                         </div>
                         <div class="pagination" id="net-pagination"></div>
+                    </div>
+                </div>
+
+
+                 <div class="tab-content" id="content-gateways">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1 class="page-title" data-i18n="title_gateways">Geçitler</h1>
+                            <p class="page-subtitle" data-i18n="subtitle_gateways">ChirpStack tenant'larına ait LoRaWAN geçitlerini (gateways) yönetin.</p>
+                        </div>
+                        <div class="page-header-right">
+                            <select class="page-size-select" id="gw-tenant-select" style="max-width: 240px;">
+                                <option value="" data-i18n="select_all_tenants">Tüm Tenant'lar</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="btn-add-gw" style="display:inline-flex;" data-i18n="btn_add_gw">
+                                <span class="btn-icon">+</span> Yeni Geçit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="gw-search-input" data-i18n-placeholder="placeholder_search_gw" placeholder="Geçit ara...">
+                        </div>
+                        <button class="btn-refresh" id="btn-gw-refresh" title="Yenile">🔄</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="gw-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">
+                                        <span data-i18n="table_gw_name">Geçit Adı</span> <span class="sort-icon" id="gw-sort-icon-name">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="id">
+                                        <span data-i18n="table_gw_id">Gateway ID (EUI)</span> <span class="sort-icon" id="gw-sort-icon-id">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="tenant_id">
+                                        <span data-i18n="table_gw_org">Organizasyon</span> <span class="sort-icon" id="gw-sort-icon-tenant_id">▲</span>
+                                    </th>
+                                    <th class="sortable" data-sort="created_at">
+                                        <span data-i18n="table_gw_created_at">Oluşturma Tarihi</span> <span class="sort-icon" id="gw-sort-icon-created_at">▲</span>
+                                    </th>
+                                    <th style="text-align:right;" data-i18n="table_actions">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gw-table-body"></tbody>
+                        </table>
+
+                        <div class="empty-state" id="gw-empty-state" style="display:none;">
+                            <div class="empty-state-icon">📡</div>
+                            <div class="empty-state-title" data-i18n="empty_state_gw_title">Henüz geçit yok</div>
+                            <div class="empty-state-text" data-i18n="empty_state_gw_text">Geçitler simülasyon başladığında otomatik oluşturulur veya 'Yeni Geçit' butonuyla manuel ekleyebilirsiniz.</div>
+                        </div>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-footer-left">
+                            <div class="page-size-group">
+                                <span class="page-size-label" data-i18n="footer_page_size">Sayfa Başına:</span>
+                                <select class="page-size-select" id="gw-page-size-select">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                </select>
+                            </div>
+                            <span class="total-count" id="gw-total-count">
+                                Toplam: <strong>0</strong> Geçit
+                            </span>
+                        </div>
+                        <div class="pagination" id="gw-pagination"></div>
                     </div>
                 </div>
 
@@ -1080,6 +1159,41 @@
                                                         <option value="tr">Türkçe (TR)</option>
                                                         <option value="en">English (EN)</option>
                                                     </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pasif Mod / Passive Mode -->
+                                        <div>
+                                            <h3 style="font-size:0.8rem; font-weight:600; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em; border-left: 3px solid #f59e0b; padding-left: 8px;" data-i18n="settings_sec_passive">Simülasyon Modu</h3>
+                                            <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03)); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius); padding: 16px; display:flex; flex-direction:column; gap:14px;">
+                                                <!-- Toggle Row -->
+                                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                                                    <div>
+                                                        <label style="font-weight:600; font-size:0.9rem; margin:0;" data-i18n="passive_mode_label">Pasif Mod</label>
+                                                        <p style="font-size:0.78rem; color:var(--text-dim); margin:4px 0 0 0;" data-i18n="passive_mode_desc">Aktif olduğunda simülatör ChirpStack'e hiçbir şey yazmaz; tüm topoloji mevcut kayıtlardan okunur.</p>
+                                                    </div>
+                                                    <label style="position:relative; display:inline-block; width:46px; height:24px; flex-shrink:0; margin:0;">
+                                                        <input type="checkbox" id="passive-mode-toggle" style="opacity:0; width:0; height:0; position:absolute;">
+                                                        <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--border); border-radius:12px; transition:0.3s; display:block;" onclick="this.previousElementSibling.click()"></span>
+                                                        <style>#passive-mode-toggle:checked + span { background: #f59e0b; } #passive-mode-toggle:checked + span::after { transform: translateX(22px); } #passive-mode-toggle + span::after { content:''; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }</style>
+                                                    </label>
+                                                </div>
+                                                <!-- Passive Options (shown when enabled) -->
+                                                <div id="passive-mode-options" style="display:none; flex-direction:column; gap:12px; border-top:1px solid rgba(245,158,11,0.2); padding-top:12px;">
+                                                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                                        <div class="form-group" style="margin-bottom:0; flex:1; min-width:160px;">
+                                                            <label for="sync-interval" data-i18n="sync_interval_label">Otomatik Senkronizasyon Aralığı (dakika)</label>
+                                                            <input type="number" id="sync-interval" name="sync_interval" min="1" max="60" value="5" style="width:100%;">
+                                                        </div>
+                                                        <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:200px;">
+                                                            <span id="last-sync-label" style="font-size:0.78rem; color:var(--text-dim);" data-i18n="sync_never">Son Senkronizasyon: —</span>
+                                                            <button type="button" id="btn-manual-sync" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; width:fit-content;">
+                                                                <i class="fas fa-sync"></i>
+                                                                <span data-i18n="btn_manual_sync">Şimdi Senkronize Et</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -2088,6 +2202,63 @@ return payloadHex;</code></pre>
                 <div style="flex-grow: 1;"></div>
                 <button class="btn btn-secondary btn-sm" id="wiz-btn-cancel" style="margin-right: 8px;" data-i18n="btn_cancel">İptal</button>
                 <button class="btn btn-primary btn-sm" id="wiz-btn-next" data-i18n="btn_next">İleri</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ YENİ GEÇİT (Gateway) EKLEME MODALİ ══════════════════════════ -->
+    <div class="modal-overlay" id="gw-modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="modal_title_add_gw">Yeni Geçit (Gateway) Ekle</h3>
+                <button class="modal-close" id="gw-modal-close">✕</button>
+            </div>
+            <form id="gw-modal-form" autocomplete="off">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="gw-name" data-i18n="modal_lbl_gw_name">Geçit Adı *</label>
+                        <input type="text" id="gw-name" name="gw_name" placeholder="Örn: Batman-Raman-Gateway" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gw-id" data-i18n="modal_lbl_gw_id">Gateway ID (16 Karakter Hex EUI64) *</label>
+                        <input type="text" id="gw-id" name="gw_id" placeholder="Örn: 0018b27f298c4710" required maxlength="16" minlength="16" pattern="^[0-9a-fA-F]{16}$">
+                        <span class="form-hint" data-i18n="modal_hint_gw_id">16 karakterlik hex formatında benzersiz cihaz EUI64 değeri girilmelidir.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="gw-tenant-id" data-i18n="modal_lbl_gw_tenant">Organizasyon *</label>
+                        <select id="gw-tenant-id" name="tenant_id" required>
+                            <!-- Dinamik olarak doldurulacak -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="gw-description" data-i18n="modal_lbl_gw_description">Açıklama</label>
+                        <input type="text" id="gw-description" name="gw_description" placeholder="Açıklama yazın...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" id="gw-modal-cancel" data-i18n="btn_cancel">İptal</button>
+                    <button type="submit" class="btn btn-primary btn-sm" data-i18n="btn_save">Geçit Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ TOPOLOJİ DEĞİŞİKLİĞİ MODALİ ══════════════════════════ -->
+    <div class="modal-overlay" id="modal-topology-change" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: #f59e0b;" data-i18n="topology_change_title">⚠️ Topoloji Değişikliği Tespit Edildi</h3>
+            </div>
+            <div class="modal-body">
+                <p data-i18n="topology_change_body">ChirpStack sunucusundaki varlıklar ile simülatör topolojisi arasında farklılık tespit edildi:</p>
+                <div id="topology-change-summary" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 12px; font-size: 13px; max-height: 200px; overflow-y: auto;">
+                    <!-- Değişiklikler buraya listelenecek -->
+                </div>
+                <p style="margin-top: 14px; font-weight: 500;" data-i18n="topology_change_prompt">Simülasyonu güncel topoloji ile yeniden başlatmak istiyor musunuz?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-topology-change" data-i18n="btn_dismiss">Yoksay</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-restart-after-sync" style="background-color: #f59e0b; border-color: #f59e0b;" data-i18n="btn_restart_sim">Simülasyonu Yeniden Başlat</button>
             </div>
         </div>
     </div>

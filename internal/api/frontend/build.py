@@ -13,6 +13,7 @@ def build():
         '{{TAB_LIVE_MAP}}': os.path.join(src_dir, 'tabs', 'live-map.html'),
         '{{TAB_DEVICES}}': os.path.join(src_dir, 'tabs', 'devices.html'),
         '{{TAB_NETWORKS}}': os.path.join(src_dir, 'tabs', 'networks.html'),
+        '{{TAB_GATEWAYS}}': os.path.join(src_dir, 'tabs', 'gateways.html'),
         '{{TAB_DEVICE_LIST}}': os.path.join(src_dir, 'tabs', 'device-list.html'),
         '{{TAB_DEVICE_STATUS}}': os.path.join(src_dir, 'tabs', 'device-status.html'),
         '{{TAB_DYNAMIC_TELEMETRY}}': os.path.join(src_dir, 'tabs', 'dynamic-telemetry.html'),

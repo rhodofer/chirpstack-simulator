@@ -6,6 +6,7 @@ import { t, translateDOM } from "./translate.js";
 // Tab initializers
 import { initOrgsTab, fetchOrganizations } from "./tabs/orgs.js";
 import { initNetworksTab, fetchApplications, populateNetFilterTenantSelect } from "./tabs/networks.js";
+import { initGatewaysTab, fetchGateways, populateGwFilterTenantSelect } from "./tabs/gateways.js";
 import { initDevicesTab, fetchDeviceProfiles, populateDpFilterTenantSelect } from "./tabs/devices.js";
 import { initDeviceListTab, fetchDevices, populateDevFilterTenantSelect } from "./tabs/device-list.js";
 import { initDeviceStatusTab, fetchSimulationDevices } from "./tabs/device-status.js";
@@ -14,6 +15,8 @@ import { initConsoleTab, initConsoleTheme, toggleTheme, activeTheme, currentPres
 import { initSystemLogsTab, renderSystemLogs, purgeOldIndexedDBLogs } from "./tabs/system-logs.js";
 import { initDashboard, initMap, initChart, checkHealth, stopPolling } from "./tabs/dashboard.js";
 import { initDynamicTelemetryTab, populateTelemetryOrgsSelect } from "./tabs/dynamic-telemetry.js";
+import { loadPassiveModeConfig } from "./passive-sync.js";
+import { applyPassiveModeUI } from "./passive-mode-ui.js";
 
 // Wizard initializers
 import { initDpWizard } from "./wizards/dp-wizard.js";
@@ -28,6 +31,7 @@ export function updatePageTitle() {
         "live-map": t("nav_live_map"),
         devices: t("nav_device_profiles"),
         networks: t("nav_networks"),
+        gateways: t("nav_gateways"),
         "device-list": t("nav_devices"),
         "device-status": t("nav_device_status"),
         "log-center": t("nav_log_center"),
@@ -85,6 +89,8 @@ export function switchTab(name) {
         fetchDeviceProfiles(state.dpTenantFilter);
     } else if (name === "networks") {
         fetchApplications(state.netTenantFilter);
+    } else if (name === "gateways") {
+        fetchGateways(state.gwTenantFilter);
     } else if (name === "device-list") {
         fetchDevices(state.devTenantFilter);
     } else if (name === "device-status") {
@@ -129,12 +135,17 @@ async function loadDashboardData() {
     populateNetFilterTenantSelect();
     populateDevFilterTenantSelect();
     populateTelemetryOrgsSelect();
+    populateGwFilterTenantSelect();
     await fetchApplications(state.netTenantFilter);
+    await fetchGateways(state.gwTenantFilter);
 
     await fetchDevices("");
     
     // Load system settings
     await fetchSystemConfig();
+
+    // Load passive mode state and apply UI
+    await loadPassiveModeConfig();
 }
 
 // Global Event Listeners Registration
@@ -303,6 +314,7 @@ async function init() {
     // Initialize tab and wizard UI components
     initOrgsTab();
     initNetworksTab();
+    initGatewaysTab();
     initDevicesTab();
     initDeviceListTab();
     initDeviceStatusTab();
@@ -334,6 +346,7 @@ async function init() {
             import("./tabs/orgs.js").then(m => m.applyFiltersAndRender());
             import("./tabs/devices.js").then(m => m.applyDpFiltersAndRender());
             import("./tabs/networks.js").then(m => m.applyAppFiltersAndRender());
+            import("./tabs/gateways.js").then(m => m.applyGwFiltersAndRender());
             import("./tabs/device-list.js").then(m => m.applyDevFiltersAndRender());
             import("./tabs/device-status.js").then(m => m.applyDevStatusFiltersAndRender());
         });

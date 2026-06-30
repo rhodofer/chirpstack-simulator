@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { $, $$, escapeHtml, showToast, logEntry, openDetailsDrawer, closeDetailsDrawer } from "../utils.js";
 import { api } from "../api.js";
 import { t } from "../translate.js";
+import { applyRowLocks } from "../passive-mode-ui.js";
 import { getOrgName, applyFiltersAndRender as applyOrgFiltersAndRender } from "./orgs.js";
 import { findDp } from "./devices.js";
 import { findNet } from "./networks.js";
@@ -315,6 +316,7 @@ export function renderDevTable() {
 
         devTableBody.appendChild(tr);
     }
+    applyRowLocks(state.passiveMode);
 }
 
 export function renderDevPagination() {
@@ -496,6 +498,7 @@ export function renderDevIntTable() {
 
         devIntTableBody.appendChild(tr);
     }
+    applyRowLocks(state.passiveMode);
 }
 
 export function renderDevIntPagination() {

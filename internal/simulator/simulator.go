@@ -76,6 +76,7 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			anomalyProbability:   c.AnomalyProbability,
 			anomalyTypes:         c.AnomalyTypes,
 			anomalyDuration:      c.AnomalyDuration,
+			passiveMode:          c.PassiveMode,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
@@ -97,6 +98,7 @@ type simulation struct {
 	gatewayMinCount int
 	gatewayMaxCount int
 	duration        time.Duration
+	passiveMode     bool
 
 	fPort            uint8
 	payload          []byte
@@ -330,8 +332,31 @@ func (s *simulation) setupTenant() error {
 }
 
 func (s *simulation) setupGateways() error {
-	log.Info(fmt.Sprintf("[%s] simulator: creating gateways", s.appName))
+	if s.passiveMode {
+		log.Info(fmt.Sprintf("[%s] simulator: passive mode — reading existing gateways from ChirpStack", s.appName))
+		resp, err := as.Gateway().List(context.Background(), &api.ListGatewaysRequest{
+			TenantId: s.tenant.GetId(),
+			Limit:    1000,
+		})
+		if err != nil {
+			return errors.Wrap(err, "passive: list gateways error")
+		}
+		for _, g := range resp.GetResult() {
+			var eui lorawan.EUI64
+			if err := eui.UnmarshalText([]byte(g.GetGatewayId())); err != nil {
+				log.WithError(err).Warnf("[%s] passive: parse gateway EUI %s", s.appName, g.GetGatewayId())
+				continue
+			}
+			s.gatewayIDs = append(s.gatewayIDs, eui)
+		}
+		if len(s.gatewayIDs) == 0 {
+			return errors.New("passive mode: no gateways found in ChirpStack for this tenant")
+		}
+		log.Infof("[%s] simulator: passive mode — %d gateways loaded", s.appName, len(s.gatewayIDs))
+		return nil
+	}
 
+	log.Info(fmt.Sprintf("[%s] simulator: creating gateways", s.appName))
 	for i := 0; i < s.gatewayMaxCount; i++ {
 		var gatewayID lorawan.EUI64
 		if _, err := rand.Read(gatewayID[:]); err != nil {
@@ -353,13 +378,16 @@ func (s *simulation) setupGateways() error {
 
 		s.gatewayIDs = append(s.gatewayIDs, gatewayID)
 	}
-
 	return nil
 }
 
 func (s *simulation) tearDownGateways() error {
-	log.Info(fmt.Sprintf("[%s] simulator: tear-down gateways", s.appName))
+	if s.passiveMode {
+		log.Info(fmt.Sprintf("[%s] simulator: passive mode — skipping gateway teardown", s.appName))
+		return nil
+	}
 
+	log.Info(fmt.Sprintf("[%s] simulator: tear-down gateways", s.appName))
 	for _, gatewayID := range s.gatewayIDs {
 		_, err := as.Gateway().Delete(context.Background(), &api.DeleteGatewayRequest{
 			GatewayId: gatewayID.String(),
@@ -368,7 +396,6 @@ func (s *simulation) tearDownGateways() error {
 			return errors.Wrap(err, "delete gateway error")
 		}
 	}
-
 	return nil
 }
 
@@ -384,6 +411,34 @@ func (s *simulation) setupDeviceProfile() error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "list device-profiles error")
+	}
+
+	// In passive mode: use first matching profile (by name), else any profile
+	if s.passiveMode {
+		profiles := listResp.GetResult()
+		if len(profiles) == 0 {
+			return errors.New("passive mode: no device profiles found in ChirpStack for this tenant")
+		}
+		// Prefer a profile whose name matches our convention, fall back to first
+		for _, item := range profiles {
+			if item.GetName() == dpName {
+				dpID, err := uuid.FromString(item.GetId())
+				if err != nil {
+					return err
+				}
+				s.deviceProfileID = dpID
+				log.Infof("[%s] passive: matched device-profile '%s'", s.appName, dpName)
+				return nil
+			}
+		}
+		// Fall back to first available
+		dpID, err := uuid.FromString(profiles[0].GetId())
+		if err != nil {
+			return err
+		}
+		s.deviceProfileID = dpID
+		log.Infof("[%s] passive: using first available device-profile '%s'", s.appName, profiles[0].GetName())
+		return nil
 	}
 
 	for _, item := range listResp.GetResult() {
@@ -449,6 +504,32 @@ func (s *simulation) setupApplication() error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "list applications error")
+	}
+
+	// Passive mode: use first available application in the tenant
+	if s.passiveMode {
+		for _, item := range listResp.GetResult() {
+			if item.GetName() == s.appName {
+				s.applicationID = item.GetId()
+				log.Infof("[%s] passive: matched application '%s'", s.appName, s.appName)
+				return nil
+			}
+		}
+		// Fall back: list all apps without search filter
+		allApps, err := as.Application().List(context.Background(), &api.ListApplicationsRequest{
+			TenantId: s.tenant.GetId(),
+			Limit:    100,
+		})
+		if err != nil {
+			return errors.Wrap(err, "passive: list all applications error")
+		}
+		results := allApps.GetResult()
+		if len(results) == 0 {
+			return errors.New("passive mode: no applications found in ChirpStack for this tenant")
+		}
+		s.applicationID = results[0].GetId()
+		log.Infof("[%s] passive: using first available application '%s'", s.appName, results[0].GetName())
+		return nil
 	}
 
 	for _, item := range listResp.GetResult() {

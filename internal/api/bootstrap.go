@@ -126,6 +126,8 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		SpreadingFactor:      7,
 		EventTopicTemplate:   "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}",
 		CommandTopicTemplate: "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}",
+		PassiveMode:          false,
+		SyncIntervalMinutes:  5,
 	}
 
 	if req.Scenario == "batman_oil" {

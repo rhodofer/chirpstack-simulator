@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { $, $$, escapeHtml, showToast, logEntry, openDetailsDrawer, closeDetailsDrawer } from "../utils.js";
 import { api } from "../api.js";
 import { t } from "../translate.js";
+import { applyRowLocks } from "../passive-mode-ui.js";
 import { findOrg, getOrgName } from "./orgs.js";
 
 export function findNet(id) {
@@ -307,6 +308,7 @@ export function renderAppTable() {
         });
         netTableBody.appendChild(tr);
     }
+    applyRowLocks(state.passiveMode);
 }
 
 export function renderAppPagination() {

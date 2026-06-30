@@ -16,6 +16,20 @@ type Server struct {
 	httpServer *http.Server
 }
 
+// requireWriteMode blocks write operations when passive mode is active.
+func requireWriteMode(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && IsPassiveModeEnabled() {
+			writeJSON(w, http.StatusLocked, map[string]string{
+				"error":   "passive_mode_active",
+				"message": "Pasif modda değişiklik yapılamaz.",
+			})
+			return
+		}
+		next(w, r)
+	}
+}
+
 // New creates a new HTTP API server instance.
 func New(bind string) *Server {
 	InitLogHook()
@@ -23,6 +37,11 @@ func New(bind string) *Server {
 		log.WithError(err).Fatal("api: failed to initialize sqlite database")
 	}
 	StartReportScheduler()
+
+	// Resume passive sync if it was enabled before restart
+	if IsPassiveModeEnabled() {
+		StartPassiveSync(GetSyncInterval())
+	}
 	
 	mux := http.NewServeMux()
 	state := GetState()
@@ -58,7 +77,7 @@ func New(bind string) *Server {
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/system/smtp-config", requireAuth(handleSMTPConfig))
 	mux.HandleFunc("/api/system/test-email", requireAuth(handleTestEmail))
-	mux.HandleFunc("/api/organizations", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListOrganizations(w, r)
 		} else if r.Method == http.MethodPost {
@@ -66,10 +85,10 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
 	// DELETE/PUT /api/organizations/{id}
-	mux.HandleFunc("/api/organizations/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/organizations/", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/organizations/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization id is required"})
@@ -82,7 +101,7 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
 	// GET/POST /api/org-configs/{orgID}
 	mux.HandleFunc("/api/org-configs/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +119,7 @@ func New(bind string) *Server {
 		}
 	}))
 
-	mux.HandleFunc("/api/device-profiles", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/device-profiles", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDeviceProfiles(w, r)
 		} else if r.Method == http.MethodPost {
@@ -108,9 +127,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
-	mux.HandleFunc("/api/device-profiles/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/device-profiles/", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/device-profiles/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "device profile id is required"})
@@ -125,9 +144,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
-	mux.HandleFunc("/api/applications", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListApplications(w, r)
 		} else if r.Method == http.MethodPost {
@@ -135,9 +154,9 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
-	mux.HandleFunc("/api/applications/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/applications/", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Path[len("/api/applications/"):]
 		if id == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "application id is required"})
@@ -150,9 +169,32 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
-	mux.HandleFunc("/api/devices", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/gateways", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleListGateways(w, r)
+		} else if r.Method == http.MethodPost {
+			handleCreateGateway(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	})))
+
+	mux.HandleFunc("/api/gateways/", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Path[len("/api/gateways/"):]
+		if id == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "gateway id is required"})
+			return
+		}
+		if r.Method == http.MethodDelete {
+			handleDeleteGateway(w, r, id)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	})))
+
+	mux.HandleFunc("/api/devices", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListDevices(w, r)
 		} else if r.Method == http.MethodPost {
@@ -160,23 +202,23 @@ func New(bind string) *Server {
 		} else {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	}))
+	})))
 
-	mux.HandleFunc("/api/devices/", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/devices/", requireAuth(requireWriteMode(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[len("/api/devices/"):]
 		if path == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "dev_eui is required"})
 			return
 		}
-		
+
 		if strings.HasSuffix(path, "/anomaly") {
 			devEUI := path[:len(path)-len("/anomaly")]
 			handleDeviceAnomaly(w, r, devEUI)
 			return
 		}
-		
+
 		handleDeviceByID(w, r, path)
-	}))
+	})))
 
 	mux.HandleFunc("/api/device-intervals", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -208,6 +250,21 @@ func New(bind string) *Server {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
 	}))
+
+	// Passive mode management
+	mux.HandleFunc("/api/passive-mode", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleGetPassiveMode(w, r)
+		} else if r.Method == http.MethodPost {
+			handleSavePassiveMode(w, r)
+		} else {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
+	}))
+	mux.HandleFunc("/api/passive-sync/trigger", requireAuth(handleTriggerSync))
+	mux.HandleFunc("/api/passive-sync/status", requireAuth(handleGetSyncStatus))
+	mux.HandleFunc("/api/passive-sync/events", requireAuth(handleTopologyEvents))
+	mux.HandleFunc("/api/passive-sync/dismiss", requireAuth(handleDismissChanges))
 
 	// UI — serves embedded frontend files at root path
 	mux.Handle("/", uiHandler())

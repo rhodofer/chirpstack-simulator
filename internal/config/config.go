@@ -57,21 +57,23 @@ type SimulatorGatewayConfig struct {
 }
 
 type SimulatorConfig struct {
-	TenantID         string                 `mapstructure:"tenant_id" toml:"tenant_id"`
-	Duration         time.Duration          `mapstructure:"duration" toml:"duration"`
-	ActivationTime   time.Duration          `mapstructure:"activation_time" toml:"activation_time"`
-	AppName          string                 `mapstructure:"app_name" toml:"app_name"`
-	DeviceNamePrefix string                 `mapstructure:"device_name_prefix" toml:"device_name_prefix"`
-	PayloadScript    string                 `mapstructure:"payload_script" toml:"payload_script"`
-	PacketLoss       float64                `mapstructure:"packet_loss" toml:"packet_loss"`
-	SimulatePacketLoss bool                 `mapstructure:"simulate_packet_loss" toml:"simulate_packet_loss"`
-	LatencyMs        int                    `mapstructure:"latency_ms" toml:"latency_ms"`
-	AnomalyProbability float64              `mapstructure:"anomaly_probability" toml:"anomaly_probability"`
-	AnomalyTypes       string                 `mapstructure:"anomaly_types" toml:"anomaly_types"`
-	AnomalyDuration    int                    `mapstructure:"anomaly_duration" toml:"anomaly_duration"`
-	Device           SimulatorDeviceConfig  `mapstructure:"device" toml:"device"`
-	Gateway          SimulatorGatewayConfig `mapstructure:"gateway" toml:"gateway"`
-	DeviceIntervals  map[string]time.Duration `mapstructure:"device_intervals" toml:"device_intervals"`
+	TenantID            string                   `mapstructure:"tenant_id" toml:"tenant_id"`
+	Duration            time.Duration            `mapstructure:"duration" toml:"duration"`
+	ActivationTime      time.Duration            `mapstructure:"activation_time" toml:"activation_time"`
+	AppName             string                   `mapstructure:"app_name" toml:"app_name"`
+	DeviceNamePrefix    string                   `mapstructure:"device_name_prefix" toml:"device_name_prefix"`
+	PayloadScript       string                   `mapstructure:"payload_script" toml:"payload_script"`
+	PacketLoss          float64                  `mapstructure:"packet_loss" toml:"packet_loss"`
+	SimulatePacketLoss  bool                     `mapstructure:"simulate_packet_loss" toml:"simulate_packet_loss"`
+	LatencyMs           int                      `mapstructure:"latency_ms" toml:"latency_ms"`
+	AnomalyProbability  float64                  `mapstructure:"anomaly_probability" toml:"anomaly_probability"`
+	AnomalyTypes        string                   `mapstructure:"anomaly_types" toml:"anomaly_types"`
+	AnomalyDuration     int                      `mapstructure:"anomaly_duration" toml:"anomaly_duration"`
+	PassiveMode         bool                     `mapstructure:"passive_mode" toml:"passive_mode"`
+	SyncIntervalMinutes int                      `mapstructure:"sync_interval_minutes" toml:"sync_interval_minutes"`
+	Device              SimulatorDeviceConfig    `mapstructure:"device" toml:"device"`
+	Gateway             SimulatorGatewayConfig   `mapstructure:"gateway" toml:"gateway"`
+	DeviceIntervals     map[string]time.Duration `mapstructure:"device_intervals" toml:"device_intervals"`
 }
 
 type PrometheusConfig struct {

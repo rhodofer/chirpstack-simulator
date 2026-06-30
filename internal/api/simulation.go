@@ -460,18 +460,20 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 
 		for _, appName := range appNames {
 			simCfg := config.SimulatorConfig{
-				TenantID:           req.TenantID,
-				Duration:           duration,
-				ActivationTime:     activationTime,
-				AppName:            appName,
-				DeviceNamePrefix:   req.DevicePrefix,
-				PayloadScript:      req.PayloadScript,
-				PacketLoss:         packetLossRate,
-				SimulatePacketLoss: req.SimulatePacketLoss,
-				LatencyMs:          req.LatencyMs,
-				AnomalyProbability: req.AnomalyProbability,
-				AnomalyTypes:       req.AnomalyTypes,
-				AnomalyDuration:    req.AnomalyDuration,
+				TenantID:            req.TenantID,
+				Duration:            duration,
+				ActivationTime:      activationTime,
+				AppName:             appName,
+				DeviceNamePrefix:    req.DevicePrefix,
+				PayloadScript:       req.PayloadScript,
+				PacketLoss:          packetLossRate,
+				SimulatePacketLoss:  req.SimulatePacketLoss,
+				LatencyMs:           req.LatencyMs,
+				AnomalyProbability:  req.AnomalyProbability,
+				AnomalyTypes:        req.AnomalyTypes,
+				AnomalyDuration:     req.AnomalyDuration,
+				PassiveMode:         req.PassiveMode,
+				SyncIntervalMinutes: req.SyncIntervalMinutes,
 			}
 
 			simCfg.Device.Count = req.DeviceCount

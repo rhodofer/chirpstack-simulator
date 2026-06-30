@@ -67,5 +67,12 @@ export const state = {
         joinAccepts: []
     },
     maxHistoryPoints: 20,
-    prevMetrics: null
+    prevMetrics: null,
+
+    // Passive mode state
+    passiveMode: false,
+    syncIntervalMinutes: 5,
+    lastSyncAt: null,
+    pendingTopologyChange: false,
+    changesSummary: [],
 };
