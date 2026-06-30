@@ -19,6 +19,8 @@ func SetupDB() error {
 		return fmt.Errorf("sqlite open error: %w", err)
 	}
 
+	db.SetMaxOpenConns(1)
+
 	// Enable WAL mode and other optimizations
 	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
 		return fmt.Errorf("failed to set WAL mode: %w", err)
