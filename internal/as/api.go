@@ -39,6 +39,18 @@ func (j *jwtCredentials) RequireTransportSecurity() bool {
 func Setup(c config.Config) error {
 	conf := c.ChirpStack
 
+	// Disconnect existing client if connected
+	if mqttClient != nil && mqttClient.IsConnected() {
+		log.Info("as: disconnecting existing MQTT client")
+		mqttClient.Disconnect(250)
+	}
+
+	if clientConn != nil {
+		log.Info("as: closing existing gRPC connection")
+		_ = clientConn.Close()
+		clientConn = nil
+	}
+
 	// connect gRPC
 	log.WithFields(log.Fields{
 		"server":   conf.API.Server,
