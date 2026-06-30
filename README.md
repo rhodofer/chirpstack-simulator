@@ -37,6 +37,12 @@ Unsuccessful API calls are logged with complete Request/Response JSON payloads. 
 ### 7. Interactive UI Protections & Input Lock
 While a simulation is running or starting, all inputs and settings drawers are locked to prevent configuration changes that could corrupt the simulation state.
 
+### 8. Gateway Management
+A dedicated **Gateways** tab lists all gateways registered under ChirpStack tenants, allowing users to register new LoRaWAN gateways with EUI64 and delete them directly from the dashboard.
+
+### 9. Passive Mode & Topology Synchronization
+Supports a non-intrusive **Passive Mode** where the simulator does not create or modify resources on ChirpStack. Instead, it reads the existing topology (tenants, applications, devices, and gateways) and simulates them, with an optional automatic or manual background synchronization worker keeping the database updated.
+
 ---
 
 ## Getting Started
@@ -101,6 +107,8 @@ log_level=4
 tenant_id="PUT_YOUR_TENANT_ID_HERE"
 duration="5m"
 activation_time="1m"
+passive_mode=false
+sync_interval_minutes=30
 
   [simulator.device]
   count=1000
