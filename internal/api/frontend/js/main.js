@@ -13,7 +13,7 @@ import { initDeviceStatusTab, fetchSimulationDevices } from "./tabs/device-statu
 import { initSettingsTab, fetchSystemConfig } from "./tabs/settings.js";
 import { initConsoleTab, initConsoleTheme, toggleTheme, activeTheme, currentPreset } from "./tabs/console.js";
 import { initSystemLogsTab, renderSystemLogs, purgeOldIndexedDBLogs } from "./tabs/system-logs.js";
-import { initDashboard, initMap, initChart, checkHealth, stopPolling } from "./tabs/dashboard.js";
+import { initDashboard, initMap, initChart, checkHealth, stopPolling, startPolling } from "./tabs/dashboard.js";
 import { initDynamicTelemetryTab, populateTelemetryOrgsSelect } from "./tabs/dynamic-telemetry.js";
 import { loadPassiveModeConfig } from "./passive-sync.js";
 import { applyPassiveModeUI } from "./passive-mode-ui.js";
@@ -146,6 +146,9 @@ async function loadDashboardData() {
 
     // Load passive mode state and apply UI
     await loadPassiveModeConfig();
+
+    // Start polling simulation status immediately
+    startPolling();
 }
 
 // Global Event Listeners Registration

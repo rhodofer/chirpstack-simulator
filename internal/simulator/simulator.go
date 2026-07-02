@@ -499,8 +499,7 @@ func (s *simulation) setupApplication() error {
 	// Mevcut uygulamayı isimle ara.
 	listResp, err := as.Application().List(context.Background(), &api.ListApplicationsRequest{
 		TenantId: s.tenant.GetId(),
-		Limit:    100,
-		Search:   s.appName,
+		Limit:    1000,
 	})
 	if err != nil {
 		return errors.Wrap(err, "list applications error")

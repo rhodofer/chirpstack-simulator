@@ -56,6 +56,12 @@ export function applyPassiveModeUI(isPassive) {
     if (optionsSection) {
         optionsSection.style.display = isPassive ? "block" : "none";
     }
+
+    // Disable/enable manual sync button
+    const btnManualSync = document.getElementById("btn-manual-sync");
+    if (btnManualSync) {
+        btnManualSync.disabled = !isPassive;
+    }
 }
 
 /**
