@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "9002:9002"
-      - "9001:9001"
+      - "9003:9001"
     volumes:
       - ./simulator.toml:/app/simulator.toml
       - ./simulator.db:/app/simulator.db
