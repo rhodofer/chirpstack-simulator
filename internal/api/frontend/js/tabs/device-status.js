@@ -4,11 +4,23 @@ import { api } from "../api.js";
 import { t } from "../translate.js";
 
 export async function fetchSimulationDevices() {
+    if (state.devStatusSubTab === "gateways") {
+        return fetchSimulationGateways();
+    }
     const r = await api("GET", "/api/simulation/devices");
     if (r.ok && r.data && r.data.devices) {
         state.devStatusList = r.data.devices;
         populateStatusFilters();
         applyDevStatusFiltersAndRender();
+    }
+}
+
+export async function fetchSimulationGateways() {
+    const r = await api("GET", "/api/simulation/gateways");
+    if (r.ok && r.data && r.data.gateways) {
+        state.gwStatusList = r.data.gateways;
+        populateStatusFilters();
+        applyGwStatusFiltersAndRender();
     }
 }
 
@@ -68,6 +80,50 @@ export function applyDevStatusFiltersAndRender() {
     updateDevStatusSortIcons();
 }
 
+export function applyGwStatusFiltersAndRender() {
+    const q = (state.devStatusSearchQuery || "").toLowerCase();
+    const orgSelect = document.getElementById("dev-status-org-select");
+    const orgFilter = orgSelect ? orgSelect.value : "";
+
+    state.gwStatusFiltered = state.gwStatusList.filter((g) => {
+        // 1. Search Query Filter
+        const matchesSearch = !q ||
+            (g.gateway_id && g.gateway_id.toLowerCase().indexOf(q) !== -1) ||
+            (g.tenant_id && g.tenant_id.toLowerCase().indexOf(q) !== -1);
+        if (!matchesSearch) return false;
+
+        // 2. Org Filter
+        if (orgFilter) {
+            if (g.tenant_id !== orgFilter) return false;
+        }
+
+        return true;
+    });
+
+    const sk = state.gwStatusSort.key;
+    const sd = state.gwStatusSort.dir === "asc" ? 1 : -1;
+    state.gwStatusFiltered.sort((a, b) => {
+        const va = a[sk];
+        const vb = b[sk];
+        if (typeof va === "number" && typeof vb === "number") {
+            return (va - vb) * sd;
+        }
+        const vaStr = (va || "").toString().toLowerCase();
+        const vbStr = (vb || "").toString().toLowerCase();
+        if (vaStr < vbStr) return -1 * sd;
+        if (vaStr > vbStr) return 1 * sd;
+        return 0;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(state.gwStatusFiltered.length / state.gwStatusPageSize));
+    if (state.gwStatusPage > totalPages) state.gwStatusPage = totalPages;
+
+    renderGwStatusTable();
+    renderGwStatusPagination();
+    renderGwStatusTotalCount();
+    updateGwStatusSortIcons();
+}
+
 export function renderDevStatusTable() {
     const tbody = document.getElementById("dev-status-table-body");
     const empty = document.getElementById("dev-status-empty-state");
@@ -107,6 +163,37 @@ export function renderDevStatusTable() {
         tr.addEventListener("click", () => {
             openDeviceStatusDrawer(d);
         });
+        tbody.appendChild(tr);
+    }
+}
+
+export function renderGwStatusTable() {
+    const tbody = document.getElementById("gw-status-table-body");
+    const empty = document.getElementById("gw-status-empty-state");
+    if (!tbody || !empty) return;
+
+    tbody.innerHTML = "";
+    if (state.gwStatusFiltered.length === 0) {
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+
+    const start = (state.gwStatusPage - 1) * state.gwStatusPageSize;
+    const end = Math.min(start + state.gwStatusPageSize, state.gwStatusFiltered.length);
+    const pageItems = state.gwStatusFiltered.slice(start, end);
+
+    for (let i = 0; i < pageItems.length; i++) {
+        const g = pageItems[i];
+        const tr = document.createElement("tr");
+        
+        tr.innerHTML =
+            `<td><span class="id-cell">${escapeHtml(g.gateway_id)}</span></td>` +
+            `<td><span class="id-cell">${escapeHtml(g.tenant_id)}</span></td>` +
+            `<td><span class="org-name-primary">${g.uplink_count}</span></td>` +
+            `<td><span class="org-name-primary">${g.downlink_count}</span></td>` +
+            `<td><span class="status-pill activated">ONLINE</span></td>`;
+            
         tbody.appendChild(tr);
     }
 }
@@ -233,10 +320,52 @@ export function renderDevStatusPagination() {
     el.appendChild(nextBtn);
 }
 
+export function renderGwStatusPagination() {
+    const el = document.getElementById("gw-status-pagination");
+    if (!el) return;
+    el.innerHTML = "";
+    const total = state.gwStatusFiltered.length;
+    const totalPages = Math.max(1, Math.ceil(total / state.gwStatusPageSize));
+    const current = state.gwStatusPage;
+
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "pagination-btn";
+    prevBtn.innerHTML = t("prev_page") || "Geri";
+    prevBtn.disabled = (current <= 1);
+    prevBtn.addEventListener("click", () => { goToGwStatusPage(current - 1); });
+    el.appendChild(prevBtn);
+
+    let startPage = Math.max(1, current - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+    for (let p = startPage; p <= endPage; p++) {
+        const pageBtn = document.createElement("button");
+        pageBtn.className = "pagination-btn" + (p === current ? " active" : "");
+        pageBtn.textContent = p;
+        pageBtn.addEventListener("click", ((pageNum) => {
+            return () => { goToGwStatusPage(pageNum); };
+        })(p));
+        el.appendChild(pageBtn);
+    }
+
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "pagination-btn";
+    nextBtn.innerHTML = t("next_page") || "İleri";
+    nextBtn.disabled = (current >= totalPages);
+    nextBtn.addEventListener("click", () => { goToGwStatusPage(current + 1); });
+    el.appendChild(nextBtn);
+}
+
 export function renderDevStatusTotalCount() {
     const el = document.getElementById("dev-status-total-count");
     if (!el) return;
     el.innerHTML = t("footer_total_dev").replace("{count}", state.devStatusFiltered.length);
+}
+
+export function renderGwStatusTotalCount() {
+    const el = document.getElementById("gw-status-total-count");
+    if (!el) return;
+    el.innerHTML = `Toplam: <strong>${state.gwStatusFiltered.length}</strong> Gateway`;
 }
 
 export function updateDevStatusSortIcons() {
@@ -252,11 +381,31 @@ export function updateDevStatusSortIcons() {
     }
 }
 
+export function updateGwStatusSortIcons() {
+    const allIcons = document.querySelectorAll("[id^='gw-status-sort-icon-']");
+    for (let i = 0; i < allIcons.length; i++) {
+        allIcons[i].classList.remove("active");
+        allIcons[i].textContent = "▲";
+    }
+    const icon = document.getElementById("gw-status-sort-icon-" + state.gwStatusSort.key);
+    if (icon) {
+        icon.classList.add("active");
+        icon.textContent = state.gwStatusSort.dir === "asc" ? "▲" : "▼";
+    }
+}
+
 export function goToDevStatusPage(n) {
     const totalPages = Math.max(1, Math.ceil(state.devStatusFiltered.length / state.devStatusPageSize));
     if (n < 1 || n > totalPages) return;
     state.devStatusPage = n;
     applyDevStatusFiltersAndRender();
+}
+
+export function goToGwStatusPage(n) {
+    const totalPages = Math.max(1, Math.ceil(state.gwStatusFiltered.length / state.gwStatusPageSize));
+    if (n < 1 || n > totalPages) return;
+    state.gwStatusPage = n;
+    applyGwStatusFiltersAndRender();
 }
 
 export function populateStatusFilters() {
@@ -299,14 +448,55 @@ export function initDeviceStatusTab() {
     const devStatusSearchInput = $("#dev-status-search-input");
     const btnDevStatusRefresh = $("#btn-dev-status-refresh");
     const devStatusPageSizeSelect = $("#dev-status-page-size-select");
+    const gwStatusPageSizeSelect = $("#gw-status-page-size-select");
     const orgSelect = document.getElementById("dev-status-org-select");
     const appSelect = document.getElementById("dev-status-app-select");
+
+    // Sub tabs switching logic
+    const subTabButtons = $$(".sub-tab-btn");
+    subTabButtons.forEach((btn) => {
+        btn.addEventListener("click", function() {
+            const target = this.getAttribute("data-sub-tab");
+            state.devStatusSubTab = target;
+
+            subTabButtons.forEach(b => {
+                b.classList.remove("active");
+                b.style.borderBottom = "2px solid transparent";
+                b.style.color = "var(--text-dim)";
+            });
+
+            this.classList.add("active");
+            this.style.borderBottom = "2px solid var(--accent)";
+            this.style.color = "var(--accent)";
+
+            const devView = $("#dev-status-devices-view");
+            const gwView = $("#dev-status-gateways-view");
+            const appSel = $("#dev-status-app-select");
+
+            if (target === "devices") {
+                if (devView) devView.style.display = "block";
+                if (gwView) gwView.style.display = "none";
+                if (appSel) appSel.style.display = "block"; // Show app filter
+                fetchSimulationDevices();
+            } else {
+                if (devView) devView.style.display = "none";
+                if (gwView) gwView.style.display = "block";
+                if (appSel) appSel.style.display = "none"; // Hide app filter
+                fetchSimulationGateways();
+            }
+        });
+    });
 
     if (devStatusSearchInput) {
         devStatusSearchInput.addEventListener("input", (e) => {
             state.devStatusSearchQuery = e.target.value;
             state.devStatusPage = 1;
-            applyDevStatusFiltersAndRender();
+            state.gwStatusPage = 1;
+            if (state.devStatusSubTab === "gateways") {
+                applyGwStatusFiltersAndRender();
+            } else {
+                applyDevStatusFiltersAndRender();
+            }
         });
     }
     if (btnDevStatusRefresh) {
@@ -321,6 +511,13 @@ export function initDeviceStatusTab() {
             applyDevStatusFiltersAndRender();
         });
     }
+    if (gwStatusPageSizeSelect) {
+        gwStatusPageSizeSelect.addEventListener("change", (e) => {
+            state.gwStatusPageSize = parseInt(e.target.value, 10) || 5;
+            state.gwStatusPage = 1;
+            applyGwStatusFiltersAndRender();
+        });
+    }
 
     if (orgSelect) {
         orgSelect.addEventListener("change", (e) => {
@@ -328,8 +525,13 @@ export function initDeviceStatusTab() {
             state.devStatusOrgFilter = e.target.value;
             state.devStatusAppFilter = ""; // Reset app filter when org changes
             state.devStatusPage = 1;
+            state.gwStatusPage = 1;
             populateStatusFilters(); // update app options
-            applyDevStatusFiltersAndRender();
+            if (state.devStatusSubTab === "gateways") {
+                applyGwStatusFiltersAndRender();
+            } else {
+                applyDevStatusFiltersAndRender();
+            }
         });
     }
 
@@ -353,6 +555,21 @@ export function initDeviceStatusTab() {
             }
             state.devStatusPage = 1;
             applyDevStatusFiltersAndRender();
+        });
+    });
+
+    const gwHeaders = document.querySelectorAll("#gw-status-table thead th.sortable");
+    gwHeaders.forEach((th) => {
+        th.addEventListener("click", () => {
+            const key = th.getAttribute("data-sort");
+            if (state.gwStatusSort.key === key) {
+                state.gwStatusSort.dir = state.gwStatusSort.dir === "asc" ? "desc" : "asc";
+            } else {
+                state.gwStatusSort.key = key;
+                state.gwStatusSort.dir = "asc";
+            }
+            state.gwStatusPage = 1;
+            applyGwStatusFiltersAndRender();
         });
     });
 

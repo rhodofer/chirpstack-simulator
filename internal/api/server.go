@@ -74,6 +74,7 @@ func New(bind string) *Server {
 	}))
 	mux.HandleFunc("/api/simulation/metrics", requireAuth(handleSimulationMetrics))
 	mux.HandleFunc("/api/simulation/devices", requireAuth(handleSimulationDevices))
+	mux.HandleFunc("/api/simulation/gateways", requireAuth(handleSimulationGateways))
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/system/smtp-config", requireAuth(handleSMTPConfig))
 	mux.HandleFunc("/api/system/test-email", requireAuth(handleTestEmail))

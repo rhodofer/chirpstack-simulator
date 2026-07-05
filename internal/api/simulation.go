@@ -273,26 +273,12 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	// Sync all missing organization configs from ChirpStack first.
 	syncMissingOrgConfigs()
 
-	// Load all saved configurations from SQLite.
-	reqs, err := GetActiveOrgConfigs()
+	cfg, err := discoverAndBuildConfig()
 	if err != nil {
-		log.WithError(err).Error("HTTP API: failed to get active org configs, using request config only")
+		log.WithError(err).Error("HTTP API: failed to discover and build simulator configuration")
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Simülasyon topolojisi keşfedilemedi: " + err.Error()})
+		return
 	}
-
-	// Merge active request config (potentially unsaved changes from drawer)
-	found := false
-	for i, r := range reqs {
-		if r.TenantID == req.TenantID {
-			reqs[i] = req
-			found = true
-			break
-		}
-	}
-	if !found {
-		reqs = append(reqs, req)
-	}
-
-	cfg := buildConfigFromList(reqs)
 
 	state.mu.Lock()
 	if state.Status != StatusIdle && state.Status != StatusError {
@@ -308,6 +294,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, state *SimState) {
 	state.Status = StatusStarting
 	state.StartedAt = time.Now().UnixMilli()
 	sim_pkg.ActiveDevices.Clear()
+	sim_pkg.ActiveGateways.Clear()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := &sync.WaitGroup{}
@@ -375,122 +362,161 @@ func handleStop(w http.ResponseWriter, r *http.Request, state *SimState) {
 	})
 }
 
-// buildConfigFromList converts a slice of StartRequests into a simulator config.Config.
-func buildConfigFromList(reqs []StartRequest) config.Config {
-	// Start from the global config (preserves ChirpStack, Prometheus settings).
+// discoverAndBuildConfig automatically discovers all tenants, gateways, applications, and devices, building a config.Config.
+func discoverAndBuildConfig() (config.Config, error) {
 	cfg := config.C
 	cfg.Simulator = nil
 
-	for _, req := range reqs {
-		// Apply defaults.
-		if req.DeviceCount == 0 {
-			req.DeviceCount = 10
-		}
-		if req.GatewayCount == 0 {
-			req.GatewayCount = 3
-		}
-		if req.Duration == "" {
-			req.Duration = "0s"
-		}
-		if req.ActivationTime == "" {
-			req.ActivationTime = "1m"
-		}
-		if req.UplinkInterval == "" {
-			req.UplinkInterval = "2m"
-		}
-		if req.AppName == "" {
-			req.AppName = "simulasyon"
-		}
-		if req.DevicePrefix == "" {
-			req.DevicePrefix = "sim-dev"
-		}
-		if req.FPort == 0 {
-			req.FPort = 10
-		}
-		if req.Payload == "" {
-			req.Payload = "0102030405"
-		}
-		if req.Frequency == 0 {
-			req.Frequency = 868100000
-		}
-		if req.Bandwidth == 0 {
-			req.Bandwidth = 125000
-		}
-		if req.SpreadingFactor == 0 {
-			req.SpreadingFactor = 7
-		}
-		if req.EventTopicTemplate == "" {
-			req.EventTopicTemplate = "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}"
-		}
-		if req.CommandTopicTemplate == "" {
-			req.CommandTopicTemplate = "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
+	if !as.IsConnected() {
+		return cfg, fmt.Errorf("ChirpStack API bağlantısı kurulmadı")
+	}
+
+	ctx := context.Background()
+
+	// Load custom intervals for this simulation once outside the loops
+	devIntervals, _ := GetDeviceIntervals()
+
+	// 1. List all tenants
+	tenantsResp, err := as.Tenant().List(ctx, &api.ListTenantsRequest{Limit: 100})
+	if err != nil {
+		return cfg, fmt.Errorf("failed to list tenants: %w", err)
+	}
+
+	for _, tenantItem := range tenantsResp.GetResult() {
+		tenantID := tenantItem.GetId()
+
+		// Get org config from SQLite if it exists
+		orgCfg, err := GetOrgConfig(tenantID)
+		if err != nil {
+			log.WithError(err).Warnf("failed to get sqlite config for tenant %s", tenantID)
 		}
 
-		duration, _ := time.ParseDuration(req.Duration)
-		activationTime, _ := time.ParseDuration(req.ActivationTime)
-		uplinkInterval, _ := time.ParseDuration(req.UplinkInterval)
-
-		var packetLossRate float64
-		if req.SimulatePacketLoss {
-			packetLossRate = req.PacketLoss
+		// 2. Fetch gateways for this tenant
+		gwsResp, err := as.Gateway().List(ctx, &api.ListGatewaysRequest{
+			TenantId: tenantID,
+			Limit:    1000,
+		})
+		if err != nil {
+			log.WithError(err).Warnf("failed to list gateways for tenant %s, skipping", tenantID)
+			continue
+		}
+		if len(gwsResp.GetResult()) == 0 {
+			log.Infof("tenant %s has no gateways, skipping", tenantItem.GetName())
+			continue
 		}
 
-		// Query all applications (networks) under this tenant from ChirpStack.
-		var appNames []string
-		if as.IsConnected() {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			respApps, err := as.Application().List(ctx, &api.ListApplicationsRequest{
-				Limit:    100,
-				TenantId: req.TenantID,
+		// 3. Fetch applications for this tenant
+		appsResp, err := as.Application().List(ctx, &api.ListApplicationsRequest{
+			TenantId: tenantID,
+			Limit:    1000,
+		})
+		if err != nil {
+			log.WithError(err).Warnf("failed to list applications for tenant %s, skipping", tenantID)
+			continue
+		}
+
+		for _, appItem := range appsResp.GetResult() {
+			appID := appItem.GetId()
+			appName := appItem.GetName()
+
+			// 4. Fetch devices for this application
+			devsResp, err := as.Device().List(ctx, &api.ListDevicesRequest{
+				ApplicationId: appID,
+				Limit:         1000,
 			})
-			cancel()
-			if err == nil {
-				for _, app := range respApps.GetResult() {
-					appNames = append(appNames, app.GetName())
-				}
-			} else {
-				log.WithError(err).Warnf("buildConfigFromList: failed to list applications for tenant %s, falling back to default", req.TenantID)
+			if err != nil {
+				log.WithError(err).Warnf("failed to list devices for app %s, skipping", appName)
+				continue
 			}
-		}
 
-		// Fall back to the configured/default AppName if ChirpStack is not connected or returns empty
-		if len(appNames) == 0 {
-			appNames = []string{req.AppName}
-		}
+			activeDevsCount := 0
+			for range devsResp.GetResult() {
+				activeDevsCount++
+			}
 
-		for _, appName := range appNames {
+			if activeDevsCount == 0 {
+				log.Infof("application %s has no devices, skipping", appName)
+				continue
+			}
+
+			// Apply defaults or loaded sqlite config values
+			uplinkInterval := 2 * time.Minute
+			fPort := uint8(10)
+			payload := "001903F521"
+			payloadScript := ""
+			frequency := 868100000
+			bandwidth := 125000
+			spreadingFactor := 7
+			packetLoss := 0.0
+			simulatePacketLoss := false
+			latencyMs := 0
+			anomalyProbability := 0.0
+			anomalyTypes := ""
+			anomalyDuration := 5
+
+			if orgCfg != nil {
+				if orgCfg.UplinkInterval != "" {
+					if dur, err := time.ParseDuration(orgCfg.UplinkInterval); err == nil {
+						uplinkInterval = dur
+					}
+				}
+				if orgCfg.FPort != 0 {
+					fPort = uint8(orgCfg.FPort)
+				}
+				if orgCfg.Payload != "" {
+					payload = orgCfg.Payload
+				}
+				payloadScript = orgCfg.PayloadScript
+				if orgCfg.Frequency != 0 {
+					frequency = orgCfg.Frequency
+				}
+				if orgCfg.Bandwidth != 0 {
+					bandwidth = orgCfg.Bandwidth
+				}
+				if orgCfg.SpreadingFactor != 0 {
+					spreadingFactor = orgCfg.SpreadingFactor
+				}
+				packetLoss = orgCfg.PacketLoss
+				simulatePacketLoss = orgCfg.SimulatePacketLoss
+				latencyMs = orgCfg.LatencyMs
+				anomalyProbability = orgCfg.AnomalyProbability
+				anomalyTypes = orgCfg.AnomalyTypes
+				anomalyDuration = orgCfg.AnomalyDuration
+			}
+
+			duration := time.Duration(0)
+			activationTime := 30 * time.Second
+
 			simCfg := config.SimulatorConfig{
-				TenantID:            req.TenantID,
+				TenantID:            tenantID,
 				Duration:            duration,
 				ActivationTime:      activationTime,
 				AppName:             appName,
-				DeviceNamePrefix:    req.DevicePrefix,
-				PayloadScript:       req.PayloadScript,
-				PacketLoss:          packetLossRate,
-				SimulatePacketLoss:  req.SimulatePacketLoss,
-				LatencyMs:           req.LatencyMs,
-				AnomalyProbability:  req.AnomalyProbability,
-				AnomalyTypes:        req.AnomalyTypes,
-				AnomalyDuration:     req.AnomalyDuration,
-				PassiveMode:         req.PassiveMode,
-				SyncIntervalMinutes: req.SyncIntervalMinutes,
+				DeviceNamePrefix:    "",
+				PayloadScript:       payloadScript,
+				PacketLoss:          packetLoss,
+				SimulatePacketLoss:  simulatePacketLoss,
+				LatencyMs:           latencyMs,
+				AnomalyProbability:  anomalyProbability,
+				AnomalyTypes:        anomalyTypes,
+				AnomalyDuration:     anomalyDuration,
+				PassiveMode:         true, // IMPORTANT: force passive mode to use existing gateways/devices
 			}
 
-			simCfg.Device.Count = req.DeviceCount
+			simCfg.Device.Count = activeDevsCount
 			simCfg.Device.UplinkInterval = uplinkInterval
-			simCfg.Device.FPort = req.FPort
-			simCfg.Device.Payload = req.Payload
-			simCfg.Device.Frequency = req.Frequency
-			simCfg.Device.Bandwidth = req.Bandwidth
-			simCfg.Device.SpreadingFactor = req.SpreadingFactor
-			simCfg.Gateway.MinCount = req.GatewayCount
-			simCfg.Gateway.MaxCount = req.GatewayCount
-			simCfg.Gateway.EventTopicTemplate = req.EventTopicTemplate
-			simCfg.Gateway.CommandTopicTemplate = req.CommandTopicTemplate
+			simCfg.Device.FPort = fPort
+			simCfg.Device.Payload = payload
+			simCfg.Device.Frequency = frequency
+			simCfg.Device.Bandwidth = bandwidth
+			simCfg.Device.SpreadingFactor = spreadingFactor
+			simCfg.Gateway.MinCount = len(gwsResp.GetResult())
+			simCfg.Gateway.MaxCount = len(gwsResp.GetResult())
+			simCfg.Gateway.EventTopicTemplate = "eu868/gateway/{{ .GatewayID }}/event/{{ .Event }}"
+			simCfg.Gateway.CommandTopicTemplate = "eu868/gateway/{{ .GatewayID }}/command/{{ .Command }}"
 
-			// Load custom intervals for this simulation
-			devIntervals, err := GetDeviceIntervals()
-			if err == nil {
+			// Apply custom intervals if loaded
+			if len(devIntervals) > 0 {
 				simCfg.DeviceIntervals = make(map[string]time.Duration)
 				for devEUI, intStr := range devIntervals {
 					dur, err := time.ParseDuration(intStr)
@@ -504,7 +530,7 @@ func buildConfigFromList(reqs []StartRequest) config.Config {
 		}
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func validateStartRequest(req *StartRequest) error {
@@ -540,6 +566,11 @@ func handleSimulationMetrics(w http.ResponseWriter, r *http.Request) {
 func handleSimulationDevices(w http.ResponseWriter, r *http.Request) {
 	devices := sim_pkg.ActiveDevices.GetStatuses()
 	writeJSON(w, http.StatusOK, map[string]interface{}{"devices": devices})
+}
+
+func handleSimulationGateways(w http.ResponseWriter, r *http.Request) {
+	gateways := sim_pkg.ActiveGateways.GetStatuses()
+	writeJSON(w, http.StatusOK, map[string]interface{}{"gateways": gateways})
 }
 
 func handleDeviceAnomaly(w http.ResponseWriter, r *http.Request, devEUIStr string) {

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -40,6 +41,25 @@ type Gateway struct {
 
 	// Tenant ID.
 	tenantID string
+
+	uplinkCount   uint32
+	downlinkCount uint32
+}
+
+func (g *Gateway) GetUplinkCount() uint32 {
+	return atomic.LoadUint32(&g.uplinkCount)
+}
+
+func (g *Gateway) GetDownlinkCount() uint32 {
+	return atomic.LoadUint32(&g.downlinkCount)
+}
+
+func (g *Gateway) GetGatewayID() lorawan.EUI64 {
+	return g.gatewayID
+}
+
+func (g *Gateway) GetTenantID() string {
+	return g.tenantID
 }
 
 // WithMQTTClient sets the MQTT client for the gateway.
@@ -253,11 +273,13 @@ func NewGateway(opts ...GatewayOption) (*Gateway, error) {
 		}
 	}
 
+	ActiveGateways.Register(gw)
 	return gw, nil
 }
 
 // SendUplinkFrame sends the given uplink frame.
 func (g *Gateway) SendUplinkFrame(pl gw.UplinkFrame) error {
+	atomic.AddUint32(&g.uplinkCount, 1)
 	pl.RxInfo = &gw.UplinkRxInfo{
 		GatewayId: g.gatewayID.String(),
 		Rssi:      50,
@@ -357,6 +379,7 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 	g.deviceMux.RLock()
 	defer g.deviceMux.RUnlock()
 
+	atomic.AddUint32(&g.downlinkCount, 1)
 	log.WithFields(log.Fields{
 		"gateway_id": g.gatewayID,
 		"topic":      msg.Topic(),

@@ -91,3 +91,60 @@ func (r *DeviceRegistry) GetStatuses() []DeviceStatus {
 	}
 	return statuses
 }
+
+// GatewayStatus defines the current state of a simulated gateway.
+type GatewayStatus struct {
+	GatewayID     string `json:"gateway_id"`
+	TenantID      string `json:"tenant_id"`
+	UplinkCount   uint32 `json:"uplink_count"`
+	DownlinkCount uint32 `json:"downlink_count"`
+}
+
+// GatewayRegistry tracks all actively simulated gateways.
+type GatewayRegistry struct {
+	mu       sync.RWMutex
+	gateways map[lorawan.EUI64]*Gateway
+}
+
+// ActiveGateways is the global registry of running gateway simulations.
+var ActiveGateways = &GatewayRegistry{
+	gateways: make(map[lorawan.EUI64]*Gateway),
+}
+
+// Register adds a gateway to the registry.
+func (r *GatewayRegistry) Register(g *Gateway) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.gateways[g.gatewayID] = g
+}
+
+// Unregister removes a gateway from the registry.
+func (r *GatewayRegistry) Unregister(gatewayID lorawan.EUI64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.gateways, gatewayID)
+}
+
+// Clear clears all gateways from the registry.
+func (r *GatewayRegistry) Clear() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.gateways = make(map[lorawan.EUI64]*Gateway)
+}
+
+// GetStatuses returns a list of all active gateway statuses.
+func (r *GatewayRegistry) GetStatuses() []GatewayStatus {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	statuses := make([]GatewayStatus, 0, len(r.gateways))
+	for _, g := range r.gateways {
+		statuses = append(statuses, GatewayStatus{
+			GatewayID:     g.GetGatewayID().String(),
+			TenantID:      g.GetTenantID(),
+			UplinkCount:   g.GetUplinkCount(),
+			DownlinkCount: g.GetDownlinkCount(),
+		})
+	}
+	return statuses
+}
