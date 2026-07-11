@@ -26,6 +26,8 @@ import (
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
 	"github.com/chirpstack/chirpstack/api/go/v4/common"
 	"github.com/chirpstack/chirpstack/api/go/v4/gw"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Start starts the simulator.
@@ -627,17 +629,44 @@ func (s *simulation) setupDevices() error {
 		}
 
 		// Cihazın anahtarlarını çekelim.
+		var appKey lorawan.AES128Key
 		keysResp, err := as.Device().GetKeys(context.Background(), &api.GetDeviceKeysRequest{
 			DevEui: devItem.GetDevEui(),
 		})
 		if err != nil {
-			log.WithError(err).Warnf("[%s] get device keys for %s error, skipping", s.appName, devItem.GetName())
-			continue
-		}
-		var appKey lorawan.AES128Key
-		if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
-			log.WithError(err).Warnf("[%s] parse app key for %s error, skipping", s.appName, devItem.GetName())
-			continue
+			st, ok := status.FromError(err)
+			if ok && st.Code() == codes.NotFound {
+				log.Infof("[%s] device %s has no keys in ChirpStack, generating and registering random AppKey", s.appName, devItem.GetName())
+				var appKeyBytes [16]byte
+				if _, randErr := rand.Read(appKeyBytes[:]); randErr != nil {
+					log.WithError(randErr).Warnf("[%s] failed to generate random AppKey for %s, skipping", s.appName, devItem.GetName())
+					continue
+				}
+				appKeyStr := hex.EncodeToString(appKeyBytes[:])
+
+				_, createKeysErr := as.Device().CreateKeys(context.Background(), &api.CreateDeviceKeysRequest{
+					DeviceKeys: &api.DeviceKeys{
+						DevEui: devItem.GetDevEui(),
+						NwkKey: appKeyStr,
+					},
+				})
+				if createKeysErr != nil {
+					log.WithError(createKeysErr).Warnf("[%s] failed to create missing keys for %s in ChirpStack, skipping", s.appName, devItem.GetName())
+					continue
+				}
+				if err := appKey.UnmarshalText([]byte(appKeyStr)); err != nil {
+					log.WithError(err).Warnf("[%s] parse newly created app key for %s error, skipping", s.appName, devItem.GetName())
+					continue
+				}
+			} else {
+				log.WithError(err).Warnf("[%s] get device keys for %s error, skipping", s.appName, devItem.GetName())
+				continue
+			}
+		} else {
+			if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
+				log.WithError(err).Warnf("[%s] parse app key for %s error, skipping", s.appName, devItem.GetName())
+				continue
+			}
 		}
 
 		s.deviceAppKeys[devEUI] = appKey
