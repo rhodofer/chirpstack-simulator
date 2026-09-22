@@ -278,6 +278,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithAnomalyProbability(s.anomalyProbability),
 			simulator.WithAnomalyTypes(anomalyTypes),
 			simulator.WithAnomalyDuration(s.anomalyDuration),
+			simulator.WithRandomDevNonce(),
 			simulator.WithGateways(gws),
 			simulator.WithDeviceTenantID(s.tenantID),
 			simulator.WithDeviceApplicationID(s.applicationID),
@@ -648,6 +649,7 @@ func (s *simulation) setupDevices() error {
 					DeviceKeys: &api.DeviceKeys{
 						DevEui: devItem.GetDevEui(),
 						NwkKey: appKeyStr,
+						AppKey: appKeyStr,
 					},
 				})
 				if createKeysErr != nil {
@@ -663,7 +665,20 @@ func (s *simulation) setupDevices() error {
 				continue
 			}
 		} else {
-			if err := appKey.UnmarshalText([]byte(keysResp.GetDeviceKeys().GetNwkKey())); err != nil {
+			keyStr := keysResp.GetDeviceKeys().GetNwkKey()
+			if keyStr == "" || keyStr == "00000000000000000000000000000000" {
+				keyStr = keysResp.GetDeviceKeys().GetAppKey()
+			}
+			if keysResp.GetDeviceKeys().GetAppKey() == "" || keysResp.GetDeviceKeys().GetAppKey() == "00000000000000000000000000000000" {
+				_, _ = as.Device().UpdateKeys(context.Background(), &api.UpdateDeviceKeysRequest{
+					DeviceKeys: &api.DeviceKeys{
+						DevEui: devItem.GetDevEui(),
+						NwkKey: keyStr,
+						AppKey: keyStr,
+					},
+				})
+			}
+			if err := appKey.UnmarshalText([]byte(keyStr)); err != nil {
 				log.WithError(err).Warnf("[%s] parse app key for %s error, skipping", s.appName, devItem.GetName())
 				continue
 			}

@@ -295,10 +295,10 @@ func (g *Gateway) SendUplinkFrame(pl gw.UplinkFrame) error {
 
 	uplinkTopic := g.getEventTopic("up")
 
-	log.WithFields(log.Fields{
-		"gateway_id": g.gatewayID,
-		"topic":      uplinkTopic,
-	}).Debug("simulator: publish uplink frame")
+	// log.WithFields(log.Fields{
+	// 	"gateway_id": g.gatewayID,
+	// 	"topic":      uplinkTopic,
+	// }).Debug("simulator: publish uplink frame")
 
 	if token := g.mqtt.Publish(uplinkTopic, 0, false, b); token.Wait() && token.Error() != nil {
 		return errors.Wrap(err, "simulator: publish uplink frame error")
@@ -318,10 +318,10 @@ func (g *Gateway) sendDownlinkTxAck(pl gw.DownlinkTxAck) error {
 
 	ackTopic := g.getEventTopic("ack")
 
-	log.WithFields(log.Fields{
-		"gateway_id": g.gatewayID,
-		"topic":      ackTopic,
-	}).Debug("simulator: publish downlink tx ack")
+	// log.WithFields(log.Fields{
+	// 	"gateway_id": g.gatewayID,
+	// 	"topic":      ackTopic,
+	// }).Debug("simulator: publish downlink tx ack")
 
 	if token := g.mqtt.Publish(ackTopic, 0, false, b); token.Wait() && token.Error() != nil {
 		return errors.Wrap(err, "simulator: publish downlink tx ack error")
@@ -337,12 +337,12 @@ func (g *Gateway) addDevice(devEUI lorawan.EUI64, appName, deviceName string, c 
 	g.deviceMux.Lock()
 	defer g.deviceMux.Unlock()
 
-	log.WithFields(log.Fields{
-		"dev_eui":     devEUI,
-		"app_name":    appName,
-		"device_name": deviceName,
-		"gateway_id":  g.gatewayID,
-	}).Info("simulator: add device to gateway")
+	// log.WithFields(log.Fields{
+	// 	"dev_eui":     devEUI,
+	// 	"app_name":    appName,
+	// 	"device_name": deviceName,
+	// 	"gateway_id":  g.gatewayID,
+	// }).Info("simulator: add device to gateway")
 
 	g.devices[devEUI] = c
 }
@@ -380,10 +380,10 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 	defer g.deviceMux.RUnlock()
 
 	atomic.AddUint32(&g.downlinkCount, 1)
-	log.WithFields(log.Fields{
-		"gateway_id": g.gatewayID,
-		"topic":      msg.Topic(),
-	}).Debug("simulator: downlink command received")
+	// log.WithFields(log.Fields{
+	// 	"gateway_id": g.gatewayID,
+	// 	"topic":      msg.Topic(),
+	// }).Debug("simulator: downlink command received")
 
 	GatewayDownlinkCounter(g.tenantID).Inc()
 
@@ -393,10 +393,10 @@ func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
 	}
 
 	for devEUI, downChan := range g.devices {
-		log.WithFields(log.Fields{
-			"dev_eui":    devEUI,
-			"gateway_id": g.gatewayID,
-		}).Debug("simulator: forwarding downlink to device")
+		// log.WithFields(log.Fields{
+		// 	"dev_eui":    devEUI,
+		// 	"gateway_id": g.gatewayID,
+		// }).Debug("simulator: forwarding downlink to device")
 		select {
 		case downChan <- pl:
 		default:

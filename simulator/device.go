@@ -344,11 +344,11 @@ func NewDevice(ctx context.Context, wg *sync.WaitGroup, opts ...DeviceOption) (*
 		}
 	}
 
-	log.WithFields(log.Fields{
-		"dev_eui":     d.devEUI,
-		"app_name":    d.appName,
-		"device_name": d.deviceName,
-	}).Info(fmt.Sprintf("[%s] simulator: new otaa device", d.appName))
+	// log.WithFields(log.Fields{
+	// 	"dev_eui":     d.devEUI,
+	// 	"app_name":    d.appName,
+	// 	"device_name": d.deviceName,
+	// }).Info(fmt.Sprintf("[%s] simulator: new otaa device", d.appName))
 
 	ActiveDevices.Register(d)
 
@@ -460,11 +460,11 @@ func (d *Device) downlinkLoop() {
 
 // joinRequest sends the join-request.
 func (d *Device) joinRequest() {
-	log.WithFields(log.Fields{
-		"dev_eui":     d.devEUI,
-		"app_name":    d.appName,
-		"device_name": d.deviceName,
-	}).Debug(fmt.Sprintf("[%s] simulator: send OTAA request", d.appName))
+	// log.WithFields(log.Fields{
+	// 	"dev_eui":     d.devEUI,
+	// 	"app_name":    d.appName,
+	// 	"device_name": d.deviceName,
+	// }).Debug(fmt.Sprintf("[%s] simulator: send OTAA request", d.appName))
 
 	phy := lorawan.PHYPayload{
 		MHDR: lorawan.MHDR{
@@ -517,12 +517,12 @@ func (d *Device) dataUp() {
 	d.Unlock()
 
 	if currentAnomalyType != "" {
-		log.WithFields(log.Fields{
-			"dev_eui":      d.devEUI,
-			"device_name":  d.deviceName,
-			"anomaly_type": currentAnomalyType,
-			"is_manual":    isManual,
-		}).Warn(fmt.Sprintf("[%s] simulator: injecting anomaly", d.appName))
+		// log.WithFields(log.Fields{
+		// 	"dev_eui":      d.devEUI,
+		// 	"device_name":  d.deviceName,
+		// 	"anomaly_type": currentAnomalyType,
+		// 	"is_manual":    isManual,
+		// }).Warn(fmt.Sprintf("[%s] simulator: injecting anomaly", d.appName))
 
 		if currentAnomalyType == "dropout" {
 			// Veri Kaybı: Skip uplink transmission completely, increment fCnt
@@ -557,12 +557,12 @@ func (d *Device) dataUp() {
 	d.Unlock()
 
 	if isFlatlineApplied {
-		log.WithFields(log.Fields{
-			"dev_eui":     d.devEUI,
-			"app_name":    d.appName,
-			"device_name": d.deviceName,
-			"payload":     hex.EncodeToString(d.payload),
-		}).Info(fmt.Sprintf("[%s] simulator: flatline anomaly applied, repeated last payload", d.appName))
+		// log.WithFields(log.Fields{
+		// 	"dev_eui":     d.devEUI,
+		// 	"app_name":    d.appName,
+		// 	"device_name": d.deviceName,
+		// 	"payload":     hex.EncodeToString(d.payload),
+		// }).Info(fmt.Sprintf("[%s] simulator: flatline anomaly applied, repeated last payload", d.appName))
 	} else if d.payloadScript != "" {
 		err := func() error {
 			vm := goja.New()
@@ -775,15 +775,15 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 
 	ok, err := phy.ValidateDownlinkJoinMIC(lorawan.JoinRequestType, d.joinEUI, d.devNonce, d.appKey)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"dev_eui": d.devEUI,
-		}).Debug("simulator: invalid join-accept MIC")
+		// log.WithFields(log.Fields{
+		// 	"dev_eui": d.devEUI,
+		// }).Debug("simulator: invalid join-accept MIC")
 		return nil
 	}
 	if !ok {
-		log.WithFields(log.Fields{
-			"dev_eui": d.devEUI,
-		}).Debug("simulator: invalid join-accept MIC")
+		// log.WithFields(log.Fields{
+		// 	"dev_eui": d.devEUI,
+		// }).Debug("simulator: invalid join-accept MIC")
 		return nil
 	}
 
@@ -804,12 +804,12 @@ func (d *Device) joinAccept(phy lorawan.PHYPayload) error {
 
 	d.devAddr = jaPL.DevAddr
 
-	log.WithFields(log.Fields{
-		"dev_eui":     d.devEUI,
-		"dev_addr":    d.devAddr,
-		"app_name":    d.appName,
-		"device_name": d.deviceName,
-	}).Info(fmt.Sprintf("[%s] simulator: device OTAA activated", d.appName))
+	// log.WithFields(log.Fields{
+	// 	"dev_eui":     d.devEUI,
+	// 	"dev_addr":    d.devAddr,
+	// 	"app_name":    d.appName,
+	// 	"device_name": d.deviceName,
+	// }).Info(fmt.Sprintf("[%s] simulator: device OTAA activated", d.appName))
 
 	d.setState(deviceStateActivated)
 	DeviceJoinAcceptCounter(d.tenantID).Inc()
@@ -864,16 +864,16 @@ func (d *Device) downlinkData(phy lorawan.PHYPayload) error {
 		}
 	}
 
-	log.WithFields(log.Fields{
-		"confirmed":   phy.MHDR.MType == lorawan.ConfirmedDataDown,
-		"ack":         macPL.FHDR.FCtrl.ACK,
-		"f_cnt":       d.fCntDown,
-		"dev_eui":     d.devEUI,
-		"app_name":    d.appName,
-		"device_name": d.deviceName,
-		"f_port":      fPort,
-		"data":        hex.EncodeToString(data),
-	}).Info(fmt.Sprintf("[%s] simulator: device received downlink data", d.appName))
+	// log.WithFields(log.Fields{
+	// 	"confirmed":   phy.MHDR.MType == lorawan.ConfirmedDataDown,
+	// 	"ack":         macPL.FHDR.FCtrl.ACK,
+	// 	"f_cnt":       d.fCntDown,
+	// 	"dev_eui":     d.devEUI,
+	// 	"app_name":    d.appName,
+	// 	"device_name": d.deviceName,
+	// 	"f_port":      fPort,
+	// 	"data":        hex.EncodeToString(data),
+	// }).Info(fmt.Sprintf("[%s] simulator: device received downlink data", d.appName))
 
 	if d.downlinkHandlerFunc == nil {
 		return nil

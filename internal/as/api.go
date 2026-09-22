@@ -123,12 +123,11 @@ func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
 	topic := msg.Topic()
 	payload := msg.Payload()
 
-	log.Infof("as/debug: RECEIVED MQTT message on topic: %s", topic)
+	// log.Infof("as/debug: RECEIVED MQTT message on topic: %s", topic)
 
 	// Parse topic structure: application/{{application_id}}/device/{{dev_eui}}/event/{{event}}
 	parts := strings.Split(topic, "/")
 	if len(parts) < 6 || parts[0] != "application" || parts[2] != "device" || parts[4] != "event" {
-		// Ignore topics that are not integration events
 		return
 	}
 
@@ -156,20 +155,32 @@ func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
 
 	if eventType == "up" {
 		type UplinkFields struct {
-			FPort int    `json:"fPort"`
-			FCnt  int    `json:"fCnt"`
-			Data  string `json:"data"`
+			FPort  int                    `json:"fPort"`
+			FCnt   int                    `json:"fCnt"`
+			Data   string                 `json:"data"`
+			Object map[string]interface{} `json:"object"`
 		}
 		var up UplinkFields
 		_ = json.Unmarshal(payload, &up)
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a veri gönderdi. FPort: %d, FCnt: %d, Base64 Data: %s",
-			devName, devEUI, up.FPort, up.FCnt, up.Data)
+
+		objStr := "{}"
+		if len(up.Object) > 0 {
+			if b, err := json.Marshal(up.Object); err == nil {
+				objStr = string(b)
+			}
+		}
+
+		log.Infof("as/integration: [ChirpStack Integration] Uplink received from '%s' (%s) → payload=%s",
+			devName, devEUI, objStr)
+
+		// log.Infof("as/integration: [HTTP Webhook] Cihaz: %s (%s) → Status: 202 OK (Target: http://100.64.0.3:8000/api/v1/webhook/chirpstack/uplink)",
+		// 	devName, devEUI)
 	} else if eventType == "join" {
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a başarıyla katıldı (OTAA Join Accept)",
-			devName, devEUI)
+		// log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a başarıyla katıldı (OTAA Join Accept)",
+		// 	devName, devEUI)
 	} else {
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) olay bildirdi: %s",
-			devName, devEUI, eventType)
+		// log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) olay bildirdi: %s",
+		// 	devName, devEUI, eventType)
 	}
 }
 
