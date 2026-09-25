@@ -1,0 +1,277 @@
+{
+  "report": {
+    "duration_sec": 181,
+    "total_messages": 12,
+    "errors": 0,
+    "per_device": {
+      "Raman2-Raman2ag-1-Raman2device-5": 1,
+      "Raman2device-2": 2,
+      "Raman2-Raman2ag-1-Raman2device-2": 2,
+      "Raman2device-1": 2,
+      "Raman2device-4": 1,
+      "Raman2-Raman2ag-1-Raman2device-3": 2,
+      "Raman2-Raman2ag-1-Raman2device-4": 1,
+      "Raman2device-3": 1
+    },
+    "last_payloads": {
+      "Raman2-Raman2ag-1-Raman2device-5": {
+        "temperature": 15,
+        "pressure": 1000,
+        "battery": 3.6
+      },
+      "Raman2device-2": {
+        "raw": [
+          0.0,
+          29.0,
+          3.0,
+          234.0,
+          30.0
+        ],
+        "humidity": 3.0,
+        "temperature": 2.9
+      },
+      "Raman2-Raman2ag-1-Raman2device-2": {
+        "temperature": 26,
+        "pressure": 996,
+        "battery": 3.2
+      },
+      "Raman2device-1": {
+        "raw": [
+          0.0,
+          19.0,
+          3.0,
+          226.0,
+          33.0
+        ],
+        "temperature": 1.9,
+        "humidity": 3.0
+      },
+      "Raman2device-4": {
+        "humidity": 3.0,
+        "raw": [
+          0.0,
+          32.0,
+          3.0,
+          250.0,
+          32.0
+        ],
+        "temperature": 3.2
+      },
+      "Raman2-Raman2ag-1-Raman2device-3": {
+        "temperature": 15,
+        "pressure": 1012,
+        "battery": 3.1
+      },
+      "Raman2-Raman2ag-1-Raman2device-4": {
+        "temperature": 18,
+        "pressure": 985,
+        "battery": 2.8
+      },
+      "Raman2device-3": {
+        "raw": [
+          0.0,
+          25.0,
+          3.0,
+          250.0,
+          34.0
+        ],
+        "temperature": 2.5,
+        "humidity": 3.0
+      }
+    }
+  },
+  "logs": [
+    {
+      "elapsed_sec": 36,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-5",
+      "device_id": "bda5e8f0-412c-4405-b8dc-15df6f8a3a35",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 15,
+        "pressure": 1000,
+        "battery": 3.6
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 36,
+      "device_name": "Raman2device-2",
+      "device_id": "be871b1f-3fea-42c8-8e94-da618ba93a4b",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "humidity": 3.0,
+        "temperature": 1.9,
+        "raw": [
+          0.0,
+          19.0,
+          3.0,
+          222.0,
+          32.0
+        ]
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 37,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-2",
+      "device_id": "4914c884-911b-44e3-9d48-fd76a14b6be7",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 34,
+        "pressure": 1005,
+        "battery": 2.8
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 43,
+      "device_name": "Raman2device-1",
+      "device_id": "993a6709-6b3b-49e8-b20e-87ea6b784750",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 3.4,
+        "humidity": 4.0,
+        "raw": [
+          0.0,
+          34.0,
+          4.0,
+          1.0,
+          36.0
+        ]
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 46,
+      "device_name": "Raman2device-4",
+      "device_id": "5f66e860-6e8c-4ae1-94fd-a3fc7a35007f",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "humidity": 3.0,
+        "raw": [
+          0.0,
+          32.0,
+          3.0,
+          250.0,
+          32.0
+        ],
+        "temperature": 3.2
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 49,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-3",
+      "device_id": "34957b6b-009d-44bb-a4ba-b826bb843e98",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 29,
+        "pressure": 1009,
+        "battery": 2.9
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 53,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-4",
+      "device_id": "b8fdfe72-ace6-4e4b-b490-16ef9cf8e242",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 18,
+        "pressure": 985,
+        "battery": 2.8
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 156,
+      "device_name": "Raman2device-2",
+      "device_id": "be871b1f-3fea-42c8-8e94-da618ba93a4b",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "raw": [
+          0.0,
+          29.0,
+          3.0,
+          234.0,
+          30.0
+        ],
+        "humidity": 3.0,
+        "temperature": 2.9
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 157,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-2",
+      "device_id": "4914c884-911b-44e3-9d48-fd76a14b6be7",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 26,
+        "pressure": 996,
+        "battery": 3.2
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 162,
+      "device_name": "Raman2device-3",
+      "device_id": "ea9ec17d-3661-4ec3-b74f-80e1581ee768",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "raw": [
+          0.0,
+          25.0,
+          3.0,
+          250.0,
+          34.0
+        ],
+        "temperature": 2.5,
+        "humidity": 3.0
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 163,
+      "device_name": "Raman2device-1",
+      "device_id": "993a6709-6b3b-49e8-b20e-87ea6b784750",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "raw": [
+          0.0,
+          19.0,
+          3.0,
+          226.0,
+          33.0
+        ],
+        "temperature": 1.9,
+        "humidity": 3.0
+      },
+      "rssi": 50,
+      "snr": 5.5
+    },
+    {
+      "elapsed_sec": 169,
+      "device_name": "Raman2-Raman2ag-1-Raman2device-3",
+      "device_id": "34957b6b-009d-44bb-a4ba-b826bb843e98",
+      "application_name": "Raman2-Raman2ag-1",
+      "data": {
+        "temperature": 15,
+        "pressure": 1012,
+        "battery": 3.1
+      },
+      "rssi": 50,
+      "snr": 5.5
+    }
+  ]
+}

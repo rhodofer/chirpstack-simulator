@@ -232,6 +232,8 @@ func (s *simulation) runSimulation() error {
 	}
 	defer cancel()
 
+	deviceIdx := 0
+	numDevices := len(s.deviceAppKeys)
 	for devEUI, appKey := range s.deviceAppKeys {
 		devGateways := make(map[int]*simulator.Gateway)
 		devNumGateways := s.gatewayMinCount + mrand.Intn(s.gatewayMaxCount-s.gatewayMinCount+1)
@@ -264,13 +266,20 @@ func (s *simulation) runSimulation() error {
 			}
 		}
 
+		// Calculate even staggering delay across the uplink interval
+		staggerDelay := time.Duration(0)
+		if numDevices > 1 {
+			staggerDelay = time.Duration(int64(devInterval) * int64(deviceIdx) / int64(numDevices))
+		}
+		deviceIdx++
+
 		d, err := simulator.NewDevice(ctx, &wg,
 			simulator.WithDevEUI(devEUI),
 			simulator.WithAppName(s.appName),
 			simulator.WithDeviceName(s.deviceNames[devEUI]),
 			simulator.WithAppKey(appKey),
 			simulator.WithUplinkInterval(devInterval),
-			simulator.WithOTAADelay(time.Duration(mrand.Int63n(int64(s.activationTime)))),
+			simulator.WithOTAADelay(staggerDelay),
 			simulator.WithUplinkPayload(false, s.fPort, s.payload),
 			simulator.WithPayloadScript(s.payloadScript),
 			simulator.WithPacketLoss(s.packetLoss),
