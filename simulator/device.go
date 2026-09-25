@@ -408,10 +408,14 @@ func (d *Device) uplinkLoop() {
 				}
 			}
 
+			// Add random jitter (0 to 30 seconds) to prevent concurrent uplinks across devices
+			jitter := time.Duration(mrand.Int63n(30 * int64(time.Second)))
+			nextInterval := d.uplinkInterval + jitter
+
 			select {
 			case <-d.ctx.Done():
 				return
-			case <-time.After(d.uplinkInterval):
+			case <-time.After(nextInterval):
 			}
 		}
 	}
