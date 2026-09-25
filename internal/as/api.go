@@ -1,10 +1,14 @@
 package as
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +21,55 @@ import (
 	"github.com/brocaar/chirpstack-simulator/internal/config"
 	"github.com/chirpstack/chirpstack/api/go/v4/api"
 )
+
+// backendWebhookURL: Backend webhook URL (env: FALT_BACKEND_URL veya sabit fallback)
+var backendWebhookURL = func() string {
+	if u := os.Getenv("FALT_BACKEND_URL"); u != "" {
+		return strings.TrimRight(u, "/") + "/api/v1/webhook/chirpstack/uplink"
+	}
+	return "http://100.64.0.3:8000/api/v1/webhook/chirpstack/uplink"
+}()
+
+// backendWebhookSecret: Bearer token for backend auth (env: CHIRPSTACK_WEBHOOK_SECRET)
+var backendWebhookSecret = func() string {
+	if s := os.Getenv("CHIRPSTACK_WEBHOOK_SECRET"); s != "" {
+		return s
+	}
+	return "falt_secure_webhook_2026_x86"
+}()
+
+// forwardToBackend sends the raw ChirpStack MQTT payload to the backend webhook asynchronously.
+func forwardToBackend(rawPayload []byte, devName, devEUI string) {
+	go func() {
+		client := &http.Client{Timeout: 10 * time.Second}
+		req, err := http.NewRequest(http.MethodPost, backendWebhookURL, bytes.NewReader(rawPayload))
+		if err != nil {
+			log.WithError(err).Warnf("as/integration: forward HTTP request build error (%s)", devEUI)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+backendWebhookSecret)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"dev_eui":     devEUI,
+				"device_name": devName,
+				"target":      backendWebhookURL,
+			}).Warnf("as/integration: [HTTP Webhook] Backend'e iletim hatasi: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+
+		log.WithFields(log.Fields{
+			"dev_eui":     devEUI,
+			"device_name": devName,
+			"status":      resp.StatusCode,
+		}).Infof("as/integration: [HTTP Webhook] Cihaz: %s (%s) → Status: %d (Target: %s)",
+			devName, devEUI, resp.StatusCode, backendWebhookURL)
+	}()
+}
 
 var clientConn *grpc.ClientConn
 var mqttClient mqtt.Client
@@ -123,12 +176,11 @@ func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
 	topic := msg.Topic()
 	payload := msg.Payload()
 
-	log.Infof("as/debug: RECEIVED MQTT message on topic: %s", topic)
+	// log.Infof("as/debug: RECEIVED MQTT message on topic: %s", topic)
 
 	// Parse topic structure: application/{{application_id}}/device/{{dev_eui}}/event/{{event}}
 	parts := strings.Split(topic, "/")
 	if len(parts) < 6 || parts[0] != "application" || parts[2] != "device" || parts[4] != "event" {
-		// Ignore topics that are not integration events
 		return
 	}
 
@@ -153,22 +205,28 @@ func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
 
 	devName := common.DeviceInfo.DeviceName
 	devEUI := common.DeviceInfo.DevEUI
-
 	if eventType == "up" {
-		type UplinkFields struct {
-			FPort int    `json:"fPort"`
-			FCnt  int    `json:"fCnt"`
-			Data  string `json:"data"`
-		}
-		var up UplinkFields
-		_ = json.Unmarshal(payload, &up)
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a veri gönderdi. FPort: %d, FCnt: %d, Base64 Data: %s",
-			devName, devEUI, up.FPort, up.FCnt, up.Data)
+		log.WithFields(log.Fields{
+			"app_name":    "",
+			"dev_eui":     devEUI,
+			"device_name": devName,
+		}).Infof("as/integration: [ChirpStack Integration] Uplink received from '%s' (%s) → ChirpStack",
+			devName, devEUI)
+
+		// MQTT'den gelen ham payload'ı backend webhook'a ilet (güvenlik ağı)
+		forwardToBackend(payload, devName, devEUI)
+
 	} else if eventType == "join" {
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a başarıyla katıldı (OTAA Join Accept)",
+		log.WithFields(log.Fields{
+			"dev_eui":     devEUI,
+			"device_name": devName,
+		}).Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) ChirpStack'a katildi (OTAA Join)",
 			devName, devEUI)
 	} else {
-		log.Infof("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) olay bildirdi: %s",
+		log.WithFields(log.Fields{
+			"dev_eui":     devEUI,
+			"device_name": devName,
+		}).Debugf("as/integration: [ChirpStack Integration] Cihaz '%s' (%s) olay: %s",
 			devName, devEUI, eventType)
 	}
 }

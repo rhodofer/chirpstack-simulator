@@ -49,14 +49,11 @@ func StopPoller() {
 
 // runPoller polls ChirpStack every 15 seconds for uplink events across all tenants.
 func runPoller(ctx context.Context) {
-	// Track last seen uplink count per device to emit only new events.
 	lastUplinkCount := make(map[string]float64)
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
-	// First poll: silently establish baseline (no logging).
-	// This prevents flooding the console with historical hourly uplink counts.
 	select {
 	case <-ctx.Done():
 		return
@@ -77,7 +74,6 @@ func runPoller(ctx context.Context) {
 }
 
 // pollAllDevices iterates all tenants → applications → devices and fetches link metrics.
-// baselineOnly = true: silently record counts without logging (startup pass).
 func pollAllDevices(ctx context.Context, lastUplinkCount map[string]float64, baselineOnly bool) {
 	if clientConn == nil {
 		return
@@ -123,8 +119,6 @@ func pollAllDevices(ctx context.Context, lastUplinkCount map[string]float64, bas
 	}
 }
 
-// pollDeviceLinkMetrics fetches uplink stats for one device and logs new uplinks.
-// When baselineOnly is true, the count is recorded silently (no log output).
 func pollDeviceLinkMetrics(
 	ctx context.Context,
 	devSvc api.DeviceServiceClient,
@@ -133,7 +127,7 @@ func pollDeviceLinkMetrics(
 	baselineOnly bool,
 ) {
 	now := time.Now().UTC()
-	start := now.Truncate(24 * time.Hour) // start of today UTC
+	start := now.Truncate(24 * time.Hour)
 
 	resp, err := devSvc.GetLinkMetrics(ctx, &api.GetDeviceLinkMetricsRequest{
 		DevEui:      devEUI,
@@ -149,7 +143,6 @@ func pollDeviceLinkMetrics(
 		return
 	}
 
-	// Sum rx_packets (received uplinks) across returned buckets.
 	var rxTotal float32
 	if m := resp.GetRxPackets(); m != nil {
 		for _, ds := range m.GetDatasets() {
@@ -163,7 +156,6 @@ func pollDeviceLinkMetrics(
 	prev := float32(lastUplinkCount[key])
 
 	if baselineOnly {
-		// Silently record current count as baseline — no logging.
 		lastUplinkCount[key] = float64(rxTotal)
 		return
 	}
@@ -180,6 +172,15 @@ func pollDeviceLinkMetrics(
 				"as/integration: [ChirpStack Integration] Uplink received from '%s' (%s) → ChirpStack [%s / %s]",
 				devName, devEUI, appName, tenantName,
 			)
+
+			// log.WithFields(log.Fields{
+			// 	"dev_eui":     devEUI,
+			// 	"device_name": devName,
+			// 	"status":      "202 OK",
+			// }).Infof(
+			// 	"as/integration: [HTTP Webhook] Cihaz: %s (%s) → Status: 202 OK (Target: http://100.64.0.3:8000/api/v1/webhook/chirpstack/uplink)",
+			// 	devName, devEUI,
+			// )
 		}
 	}
 }
