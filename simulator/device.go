@@ -50,6 +50,9 @@ type Device struct {
 	// DeviceName.
 	deviceName string
 
+	// DeviceProfileName.
+	deviceProfileName string
+
 	// JoinEUI.
 	joinEUI lorawan.EUI64
 
@@ -159,6 +162,14 @@ func WithAppName(appName string) DeviceOption {
 func WithDeviceName(deviceName string) DeviceOption {
 	return func(d *Device) error {
 		d.deviceName = deviceName
+		return nil
+	}
+}
+
+// WithDeviceProfileName sets the DeviceProfileName.
+func WithDeviceProfileName(name string) DeviceOption {
+	return func(d *Device) error {
+		d.deviceProfileName = name
 		return nil
 	}
 }
@@ -578,6 +589,7 @@ func (d *Device) dataUp() {
 			vm.Set("fCnt", d.fCntUp)
 			vm.Set("devEUI", d.devEUI.String())
 			vm.Set("deviceName", d.deviceName)
+			vm.Set("deviceProfileName", d.deviceProfileName)
 
 			// Inject anomaly state into the script
 			anomalyMap := map[string]interface{}{

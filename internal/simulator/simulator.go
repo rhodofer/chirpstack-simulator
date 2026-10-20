@@ -81,6 +81,7 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			passiveMode:          c.PassiveMode,
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
+			deviceProfileNames:   make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
 			eventTopicTemplate:   c.Gateway.EventTopicTemplate,
 			commandTopicTemplate: c.Gateway.CommandTopicTemplate,
@@ -127,6 +128,7 @@ type simulation struct {
 	deviceAppKeysMutex   sync.Mutex
 	deviceAppKeys        map[lorawan.EUI64]lorawan.AES128Key
 	deviceNames          map[lorawan.EUI64]string
+	deviceProfileNames   map[lorawan.EUI64]string
 	eventTopicTemplate   string
 	commandTopicTemplate string
 }
@@ -277,6 +279,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithDevEUI(devEUI),
 			simulator.WithAppName(s.appName),
 			simulator.WithDeviceName(s.deviceNames[devEUI]),
+			simulator.WithDeviceProfileName(s.deviceProfileNames[devEUI]),
 			simulator.WithAppKey(appKey),
 			simulator.WithUplinkInterval(devInterval),
 			simulator.WithOTAADelay(staggerDelay),
@@ -616,7 +619,10 @@ func (s *simulation) setupDevices() error {
 
 	s.deviceAppKeys = make(map[lorawan.EUI64]lorawan.AES128Key)
 	s.deviceNames = make(map[lorawan.EUI64]string)
+	s.deviceProfileNames = make(map[lorawan.EUI64]string)
 	s.deviceEUIs = []lorawan.EUI64{}
+
+	dpNameCache := make(map[string]string)
 
 	for _, devItem := range allDevices {
 		devEUIStr := strings.ToLower(strings.TrimSpace(devItem.GetDevEui()))
@@ -702,8 +708,23 @@ func (s *simulation) setupDevices() error {
 			}
 		}
 
+		dpID := devResp.GetDevice().GetDeviceProfileId()
+		dpName := ""
+		if dpID != "" {
+			if cached, ok := dpNameCache[dpID]; ok {
+				dpName = cached
+			} else {
+				dpResp, err := as.DeviceProfile().Get(context.Background(), &api.GetDeviceProfileRequest{Id: dpID})
+				if err == nil && dpResp.GetDeviceProfile() != nil {
+				dpName = dpResp.GetDeviceProfile().GetName()
+				dpNameCache[dpID] = dpName
+			}
+			}
+		}
+
 		s.deviceAppKeys[devEUI] = appKey
 		s.deviceNames[devEUI] = devItem.GetName()
+		s.deviceProfileNames[devEUI] = dpName
 		s.deviceEUIs = append(s.deviceEUIs, devEUI)
 	}
 
