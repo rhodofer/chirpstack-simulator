@@ -619,6 +619,15 @@ func (s *simulation) setupDevices() error {
 	s.deviceEUIs = []lorawan.EUI64{}
 
 	for _, devItem := range allDevices {
+		devEUIStr := strings.ToLower(strings.TrimSpace(devItem.GetDevEui()))
+		devNameStr := strings.TrimSpace(devItem.GetName())
+
+		// Gerçek fiziksel donanım düğümlerini (Elecrow1, Elecrow2 vb.) simülasyondan koru
+		if devEUIStr == "0000000000000055" || devEUIStr == "70b3d57ed0065635" || strings.HasPrefix(strings.ToLower(devNameStr), "elecrow") {
+			log.Infof("[%s] device %s (%s) is a protected physical hardware node, skipping from simulation", s.appName, devNameStr, devEUIStr)
+			continue
+		}
+
 		var devEUI lorawan.EUI64
 		if err := devEUI.UnmarshalText([]byte(devItem.GetDevEui())); err != nil {
 			return errors.Wrapf(err, "parse dev EUI for %s", devItem.GetName())

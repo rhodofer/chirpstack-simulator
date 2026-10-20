@@ -27,3 +27,6 @@ chirpstack-simulator
 # generated report directory
 /report/
 /files-main
+chirpstack-simulator-linux
+archive_*/
+scratch/

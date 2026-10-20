@@ -213,8 +213,11 @@ func handleIntegrationMessage(c mqtt.Client, msg mqtt.Message) {
 		}).Infof("as/integration: [ChirpStack Integration] Uplink received from '%s' (%s) → ChirpStack",
 			devName, devEUI)
 
-		// MQTT'den gelen ham payload'ı backend webhook'a ilet (güvenlik ağı)
-		forwardToBackend(payload, devName, devEUI)
+		// ChirpStack v4 resmi HTTP Integration kullandığı için mükerrer (çift) webhook gönderimini
+		// önlemek adına yalnızca SIM_FORWARD_WEBHOOK=true ise MQTT üzerinden ikinci kez iletilir.
+		if os.Getenv("SIM_FORWARD_WEBHOOK") == "true" {
+			forwardToBackend(payload, devName, devEUI)
+		}
 
 	} else if eventType == "join" {
 		log.WithFields(log.Fields{

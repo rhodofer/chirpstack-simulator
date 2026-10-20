@@ -408,8 +408,12 @@ func (d *Device) uplinkLoop() {
 				}
 			}
 
-			// Add small random jitter (0 to 5 seconds) to prevent rigid micro-collisions while maintaining even spacing
-			jitter := time.Duration(mrand.Int63n(5 * int64(time.Second)))
+			// If uplinkInterval >= 3m (180s), use 0..60s random jitter so intervals vary randomly between 3 and 4 minutes (180s-240s)
+			jitterMax := int64(5 * time.Second)
+			if d.uplinkInterval >= 3*time.Minute {
+				jitterMax = int64(60 * time.Second)
+			}
+			jitter := time.Duration(mrand.Int63n(jitterMax + 1))
 			nextInterval := d.uplinkInterval + jitter
 
 			select {

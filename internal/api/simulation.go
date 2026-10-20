@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -430,17 +431,22 @@ func discoverAndBuildConfig() (config.Config, error) {
 			}
 
 			activeDevsCount := 0
-			for range devsResp.GetResult() {
+			for _, devItem := range devsResp.GetResult() {
+				euiLower := strings.ToLower(strings.TrimSpace(devItem.GetDevEui()))
+				nameLower := strings.ToLower(strings.TrimSpace(devItem.GetName()))
+				if euiLower == "0000000000000055" || euiLower == "70b3d57ed0065635" || strings.HasPrefix(nameLower, "elecrow") {
+					continue
+				}
 				activeDevsCount++
 			}
 
 			if activeDevsCount == 0 {
-				log.Infof("application %s has no devices, skipping", appName)
+				log.Infof("application %s has no simulated devices (only physical or empty), skipping", appName)
 				continue
 			}
 
 			// Apply defaults or loaded sqlite config values
-			uplinkInterval := 2 * time.Minute
+			uplinkInterval := 3 * time.Minute
 			fPort := uint8(10)
 			payload := "001903F521"
 			payloadScript := ""
