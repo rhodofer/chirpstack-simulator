@@ -82,6 +82,7 @@ func Start(ctx context.Context, wg *sync.WaitGroup, c config.Config) error {
 			deviceAppKeys:        make(map[lorawan.EUI64]lorawan.AES128Key),
 			deviceNames:          make(map[lorawan.EUI64]string),
 			deviceProfileNames:   make(map[lorawan.EUI64]string),
+			deviceProfileScripts: make(map[lorawan.EUI64]string),
 			deviceEUIs:           []lorawan.EUI64{},
 			eventTopicTemplate:   c.Gateway.EventTopicTemplate,
 			commandTopicTemplate: c.Gateway.CommandTopicTemplate,
@@ -129,6 +130,7 @@ type simulation struct {
 	deviceAppKeys        map[lorawan.EUI64]lorawan.AES128Key
 	deviceNames          map[lorawan.EUI64]string
 	deviceProfileNames   map[lorawan.EUI64]string
+	deviceProfileScripts map[lorawan.EUI64]string
 	eventTopicTemplate   string
 	commandTopicTemplate string
 }
@@ -275,6 +277,11 @@ func (s *simulation) runSimulation() error {
 		}
 		deviceIdx++
 
+		devScript := s.payloadScript
+		if s.deviceProfileScripts != nil && s.deviceProfileScripts[devEUI] != "" {
+			devScript = s.deviceProfileScripts[devEUI]
+		}
+
 		d, err := simulator.NewDevice(ctx, &wg,
 			simulator.WithDevEUI(devEUI),
 			simulator.WithAppName(s.appName),
@@ -284,7 +291,7 @@ func (s *simulation) runSimulation() error {
 			simulator.WithUplinkInterval(devInterval),
 			simulator.WithOTAADelay(staggerDelay),
 			simulator.WithUplinkPayload(false, s.fPort, s.payload),
-			simulator.WithPayloadScript(s.payloadScript),
+			simulator.WithPayloadScript(devScript),
 			simulator.WithPacketLoss(s.packetLoss),
 			simulator.WithLatencyMs(s.latencyMs),
 			simulator.WithAnomalyProbability(s.anomalyProbability),
@@ -623,6 +630,7 @@ func (s *simulation) setupDevices() error {
 	s.deviceEUIs = []lorawan.EUI64{}
 
 	dpNameCache := make(map[string]string)
+	dpScriptCache := make(map[string]string)
 
 	for _, devItem := range allDevices {
 		devEUIStr := strings.ToLower(strings.TrimSpace(devItem.GetDevEui()))
@@ -650,6 +658,20 @@ func (s *simulation) setupDevices() error {
 
 		if devResp.GetDevice().GetIsDisabled() {
 			log.Infof("[%s] device %s is disabled in ChirpStack, skipping from simulation", s.appName, devItem.GetName())
+			continue
+		}
+
+		// Simülasyon bayrağı kontrolü (tags["is_simulated"] == "true")
+		tags := devResp.GetDevice().GetTags()
+		isSimulated := false
+		if tags != nil && (tags["is_simulated"] == "true" || tags["simulated"] == "true") {
+			isSimulated = true
+		} else if strings.HasPrefix(strings.ToLower(devNameStr), "sim-") || strings.Contains(strings.ToLower(s.appName), "sim") {
+			isSimulated = true
+		}
+
+		if !isSimulated {
+			log.Infof("[%s] device %s (%s) is a physical hardware node (is_simulated=false), skipping from simulation", s.appName, devNameStr, devEUIStr)
 			continue
 		}
 
@@ -716,15 +738,17 @@ func (s *simulation) setupDevices() error {
 			} else {
 				dpResp, err := as.DeviceProfile().Get(context.Background(), &api.GetDeviceProfileRequest{Id: dpID})
 				if err == nil && dpResp.GetDeviceProfile() != nil {
-				dpName = dpResp.GetDeviceProfile().GetName()
-				dpNameCache[dpID] = dpName
-			}
+					dpName = dpResp.GetDeviceProfile().GetName()
+					dpNameCache[dpID] = dpName
+					dpScriptCache[dpID] = dpResp.GetDeviceProfile().GetPayloadCodecScript()
+				}
 			}
 		}
 
 		s.deviceAppKeys[devEUI] = appKey
 		s.deviceNames[devEUI] = devItem.GetName()
 		s.deviceProfileNames[devEUI] = dpName
+		s.deviceProfileScripts[devEUI] = dpScriptCache[dpID]
 		s.deviceEUIs = append(s.deviceEUIs, devEUI)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	mrand "math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -140,6 +141,10 @@ type Device struct {
 	lastPayload            []byte
 	manualAnomalyType      string
 	manualAnomalyActive    bool
+
+	// Codec Auto-Probe & Generator state
+	matchedCodecFamily string
+	probedOnce         bool
 }
 
 // WithAppKey sets the AppKey.
@@ -582,122 +587,134 @@ func (d *Device) dataUp() {
 		// 	"device_name": d.deviceName,
 		// 	"payload":     hex.EncodeToString(d.payload),
 		// }).Info(fmt.Sprintf("[%s] simulator: flatline anomaly applied, repeated last payload", d.appName))
-	} else if d.payloadScript != "" {
-		err := func() error {
-			vm := goja.New()
-			vm.Set("fPort", d.fPort)
-			vm.Set("fCnt", d.fCntUp)
-			vm.Set("devEUI", d.devEUI.String())
-			vm.Set("deviceName", d.deviceName)
-			vm.Set("deviceProfileName", d.deviceProfileName)
+	} else {
+		var genPayload []byte
 
-			// Inject anomaly state into the script
-			anomalyMap := map[string]interface{}{
-				"active":     false,
-				"type":       "",
-				"driftValue": 0.0,
-			}
-			if currentAnomalyType == "spike" || currentAnomalyType == "drift" {
-				d.RLock()
-				anomalyMap["active"] = true
-				anomalyMap["type"] = currentAnomalyType
-				anomalyMap["driftValue"] = d.driftAccumulated
-				d.RUnlock()
-			}
-			vm.Set("anomaly", anomalyMap)
+		if d.payloadScript != "" {
+			_ = func() error {
+				vm := goja.New()
 
-			// Set up execution timeout interrupt (2s limit)
-			timeLimit := 2 * time.Second
-			timer := time.AfterFunc(timeLimit, func() {
-				vm.Interrupt("timeout")
-			})
-			defer timer.Stop()
+				anomalyMap := map[string]interface{}{
+					"active":     false,
+					"type":       "",
+					"driftValue": 0.0,
+				}
+				if currentAnomalyType == "spike" || currentAnomalyType == "drift" {
+					d.RLock()
+					anomalyMap["active"] = true
+					anomalyMap["type"] = currentAnomalyType
+					anomalyMap["driftValue"] = d.driftAccumulated
+					d.RUnlock()
+				}
 
-			wrappedScript := fmt.Sprintf("(function(){\n%s\n})()", d.payloadScript)
-			res, err := vm.RunString(wrappedScript)
-			if err != nil {
-				return err
-			}
+				_ = vm.Set("fPort", d.fPort)
+				_ = vm.Set("fCnt", d.fCntUp)
+				_ = vm.Set("devEUI", d.devEUI.String())
+				_ = vm.Set("deviceName", d.deviceName)
+				_ = vm.Set("deviceProfileName", d.deviceProfileName)
+				_ = vm.Set("anomaly", anomalyMap)
 
-			if res != nil {
-				val := res.Export()
-				switch v := val.(type) {
-				case []interface{}:
-					pl := make([]byte, len(v))
-					for i, x := range v {
-						if n, ok := x.(int64); ok {
-							pl[i] = byte(n)
-						} else if f, ok := x.(float64); ok {
-							pl[i] = byte(f)
-						} else if in, ok := x.(int); ok {
-							pl[i] = byte(in)
-						} else {
-							return fmt.Errorf("invalid byte type at index %d: %T", i, x)
+				timeLimit := 2 * time.Second
+				timer := time.AfterFunc(timeLimit, func() {
+					vm.Interrupt("timeout")
+				})
+				defer timer.Stop()
+
+				// Execute script
+				_, runErr := vm.RunString(d.payloadScript)
+				if runErr != nil {
+					return runErr
+				}
+
+				// 1. If simulateUplink(ctx) function exists, call it directly!
+				simVal := vm.Get("simulateUplink")
+				if simVal != nil && !goja.IsUndefined(simVal) && !goja.IsNull(simVal) {
+					if simFn, ok := goja.AssertFunction(simVal); ok {
+						ctxObj := vm.NewObject()
+						_ = ctxObj.Set("fPort", d.fPort)
+						_ = ctxObj.Set("fCnt", d.fCntUp)
+						_ = ctxObj.Set("devEUI", d.devEUI.String())
+						_ = ctxObj.Set("anomaly", anomalyMap)
+						res, err := simFn(goja.Undefined(), ctxObj)
+						if err == nil && res != nil && !goja.IsUndefined(res) && !goja.IsNull(res) {
+							switch v := res.Export().(type) {
+							case []interface{}:
+								pl := make([]byte, len(v))
+								for i, x := range v {
+									if n, ok := x.(int64); ok {
+										pl[i] = byte(n)
+									} else if f, ok := x.(float64); ok {
+										pl[i] = byte(f)
+									} else if in, ok := x.(int); ok {
+										pl[i] = byte(in)
+									}
+								}
+								genPayload = pl
+								return nil
+							case string:
+								b, hexErr := hex.DecodeString(v)
+								if hexErr == nil {
+									genPayload = b
+									return nil
+								}
+							}
 						}
 					}
-					d.Lock()
-					d.payload = pl
-					d.Unlock()
-					log.WithFields(log.Fields{
-						"dev_eui":     d.devEUI,
-						"app_name":    d.appName,
-						"device_name": d.deviceName,
-						"payload":     hex.EncodeToString(d.payload),
-					}).Info(fmt.Sprintf("[%s] simulator: evaluated JS dynamic payload", d.appName))
-				case string:
-					b, err := hex.DecodeString(v)
-					if err != nil {
-						return err
-					}
-					d.Lock()
-					d.payload = b
-					d.Unlock()
-					log.WithFields(log.Fields{
-						"dev_eui":     d.devEUI,
-						"app_name":    d.appName,
-						"device_name": d.deviceName,
-						"payload":     hex.EncodeToString(d.payload),
-					}).Info(fmt.Sprintf("[%s] simulator: evaluated JS hex payload", d.appName))
-				default:
-					return fmt.Errorf("unexpected script return type: %T", val)
 				}
-			}
-			return nil
-		}()
-		if err != nil {
-			log.WithError(err).Error(fmt.Sprintf("[%s] simulator: dynamic payload script error, using default", d.appName))
-		}
-	} else if len(d.payload) == 5 {
-		nowNs := time.Now().UnixNano()
-		tempVal := int16(15 + (nowNs % 21)) // 15 to 35
-		pressVal := uint16(980 + ((nowNs >> 4) % 46)) // 980 to 1025
-		voltVal := uint8(28 + ((nowNs >> 8) % 9)) // 28 to 36
 
-		// Apply anomalies to default 5-byte payload values
-		if currentAnomalyType == "spike" {
-			tempVal += 15
-		} else if currentAnomalyType == "drift" {
-			d.RLock()
-			tempVal += int16(d.driftAccumulated)
-			d.RUnlock()
+				// 2. Auto-Probe against decodeUplink()
+				if !d.probedOnce {
+					d.matchedCodecFamily = d.probeCodecFamily(vm)
+					d.probedOnce = true
+					log.WithFields(log.Fields{
+						"dev_eui": d.devEUI,
+						"device":  d.deviceName,
+						"family":  d.matchedCodecFamily,
+					}).Info(fmt.Sprintf("[%s] simulator: auto-probed codec family", d.appName))
+				}
+
+				if d.matchedCodecFamily != "" {
+					genPayload = d.generateFamilyPayload(d.matchedCodecFamily, currentAnomalyType)
+				}
+				return nil
+			}()
+		}
+
+		if len(genPayload) == 0 {
+			if !d.probedOnce || d.matchedCodecFamily == "" {
+				profKey := strings.ToUpper(d.deviceProfileName + " " + d.deviceName)
+				switch {
+				case strings.Contains(profKey, "LHT65") || strings.Contains(profKey, "DRAGINO"):
+					d.matchedCodecFamily = "DRAGINO"
+				case strings.Contains(profKey, "EM300") || strings.Contains(profKey, "MILESIGHT"):
+					d.matchedCodecFamily = "MILESIGHT"
+				case strings.Contains(profKey, "AGRO"):
+					d.matchedCodecFamily = "AGROSENSE"
+				case strings.Contains(profKey, "SMC30") || strings.Contains(profKey, "SENZEMO"):
+					d.matchedCodecFamily = "SENZEMO"
+				case strings.Contains(profKey, "BROWAN") || strings.Contains(profKey, "TBHV"):
+					d.matchedCodecFamily = "CAYENNE"
+				case strings.Contains(profKey, "ENGINKO") || strings.Contains(profKey, "MCF"):
+					d.matchedCodecFamily = "ENGINKO"
+				default:
+					d.matchedCodecFamily = "FALLBACK_4B"
+				}
+				d.probedOnce = true
+			}
+			genPayload = d.generateFamilyPayload(d.matchedCodecFamily, currentAnomalyType)
 		}
 
 		d.Lock()
-		d.payload[0] = byte(tempVal >> 8)
-		d.payload[1] = byte(tempVal)
-		d.payload[2] = byte(pressVal >> 8)
-		d.payload[3] = byte(pressVal)
-		d.payload[4] = voltVal
+		d.payload = genPayload
 		d.Unlock()
 
 		log.WithFields(log.Fields{
 			"dev_eui":     d.devEUI,
 			"app_name":    d.appName,
 			"device_name": d.deviceName,
-			"temperature": tempVal,
-			"pressure":    pressVal,
-			"voltage":     float64(voltVal) / 10.0,
-		}).Info(fmt.Sprintf("[%s] simulator: generated dynamic telemetry payload", d.appName))
+			"family":      d.matchedCodecFamily,
+			"payload_hex": hex.EncodeToString(genPayload),
+		}).Info(fmt.Sprintf("[%s] simulator: generated codec-aware telemetry payload", d.appName))
 	}
 
 	log.WithFields(log.Fields{
@@ -973,4 +990,246 @@ func (d *Device) setState(s deviceState) {
 	defer d.Unlock()
 
 	d.state = s
+}
+
+type probeCandidate struct {
+	family string
+	fPort  uint8
+	bytes  []byte
+}
+
+var probeCandidates = []probeCandidate{
+	{
+		family: "DRAGINO",
+		fPort:  2,
+		bytes:  []byte{0x0B, 0xB6, 0x09, 0x92, 0x02, 0x35, 0x01, 0x0A, 0x78, 0x7F, 0xFF},
+	},
+	{
+		family: "MILESIGHT",
+		fPort:  85,
+		bytes:  []byte{0x01, 0x75, 0x5A, 0x03, 0x67, 0xF5, 0x00, 0x04, 0x68, 0x64, 0x05, 0x00, 0x00},
+	},
+	{
+		family: "AGROSENSE",
+		fPort:  8,
+		bytes:  []byte{0x01, 0x75, 0x5A, 0x02, 0x67, 0xF5, 0x00, 0x03, 0x68, 0x64, 0x04, 0x6E, 0x50, 0x05, 0x66, 0xDC, 0x00, 0x06, 0x7D, 0x50, 0x02},
+	},
+	{
+		family: "SENZEMO",
+		fPort:  1,
+		bytes:  []byte{0x0F, 0xF5, 0x00, 0x35, 0x02, 0xE4, 0x07, 0x5A},
+	},
+	{
+		family: "CAYENNE",
+		fPort:  1,
+		bytes:  []byte{0x01, 0x67, 0xF5, 0x00, 0x02, 0x68, 0x64, 0x03, 0x73, 0xE4, 0x27, 0x04, 0x74, 0x5A, 0x01, 0x05, 0x7D, 0x50, 0x02},
+	},
+	{
+		family: "ENGINKO",
+		fPort:  1,
+		bytes:  []byte{0x01, 0x5A, 0xA0, 0x09, 0x00, 0x00, 0x50, 0xC3, 0x00, 0x00, 0x90, 0x13, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00},
+	},
+	{
+		family: "ELECROW_4B",
+		fPort:  1,
+		bytes:  []byte{0x1D, 0x0D, 0x0E, 0xF4},
+	},
+	{
+		family: "CUSTOM_2B",
+		fPort:  1,
+		bytes:  []byte{0x09, 0xC4, 0x13, 0x88},
+	},
+}
+
+func probeScriptWithCandidate(vm *goja.Runtime, fn goja.Callable, c probeCandidate) int {
+	inputObj := vm.NewObject()
+	byteArr := make([]interface{}, len(c.bytes))
+	for i, b := range c.bytes {
+		byteArr[i] = int(b)
+	}
+	_ = inputObj.Set("bytes", byteArr)
+	_ = inputObj.Set("fPort", c.fPort)
+
+	res, err := fn(goja.Undefined(), inputObj)
+	if err != nil || res == nil || goja.IsUndefined(res) || goja.IsNull(res) {
+		return 0
+	}
+
+	resObj := res.ToObject(vm)
+	if resObj == nil {
+		return 0
+	}
+
+	targetObj := resObj
+	dataVal := resObj.Get("data")
+	if dataVal != nil && !goja.IsUndefined(dataVal) && !goja.IsNull(dataVal) {
+		if dObj := dataVal.ToObject(vm); dObj != nil {
+			targetObj = dObj
+		}
+	}
+
+	score := 0
+	for _, k := range targetObj.Keys() {
+		v := targetObj.Get(k)
+		if v != nil && !goja.IsUndefined(v) && !goja.IsNull(v) {
+			score++
+		}
+	}
+	return score
+}
+
+func (d *Device) probeCodecFamily(vm *goja.Runtime) string {
+	decVal := vm.Get("decodeUplink")
+	if decVal == nil || goja.IsUndefined(decVal) || goja.IsNull(decVal) {
+		return ""
+	}
+
+	decFn, ok := goja.AssertFunction(decVal)
+	if !ok {
+		return ""
+	}
+
+	bestFamily := ""
+	bestScore := 0
+
+	for _, cand := range probeCandidates {
+		score := probeScriptWithCandidate(vm, decFn, cand)
+		if score > bestScore {
+			bestScore = score
+			bestFamily = cand.family
+		}
+	}
+
+	if bestScore > 0 {
+		return bestFamily
+	}
+
+	// Heuristic by profile or device name
+	profKey := strings.ToUpper(d.deviceProfileName + " " + d.deviceName)
+	switch {
+	case strings.Contains(profKey, "LHT65") || strings.Contains(profKey, "DRAGINO"):
+		return "DRAGINO"
+	case strings.Contains(profKey, "EM300") || strings.Contains(profKey, "MILESIGHT"):
+		return "MILESIGHT"
+	case strings.Contains(profKey, "AGRO"):
+		return "AGROSENSE"
+	case strings.Contains(profKey, "SMC30") || strings.Contains(profKey, "SENZEMO"):
+		return "SENZEMO"
+	case strings.Contains(profKey, "BROWAN") || strings.Contains(profKey, "TBHV"):
+		return "CAYENNE"
+	case strings.Contains(profKey, "ENGINKO") || strings.Contains(profKey, "MCF"):
+		return "ENGINKO"
+	default:
+		return "FALLBACK_4B"
+	}
+}
+
+func (d *Device) generateFamilyPayload(family string, anomaly string) []byte {
+	nowNs := time.Now().UnixNano()
+	tempC := 18.0 + float64(nowNs%140)/10.0
+	humPct := 42.0 + float64((nowNs>>4)%380)/10.0
+	pressHpa := 995.0 + float64((nowNs>>8)%300)/10.0
+	batPct := uint8(78 + ((nowNs >> 12) % 22))
+	batMv := uint16(3050 + ((nowNs >> 10) % 550))
+	counter := uint16((d.fCntUp*3 + uint32(nowNs>>16)) % 65535)
+
+	if anomaly == "spike" {
+		tempC += 15.0
+		humPct += 18.0
+	} else if anomaly == "drift" {
+		d.RLock()
+		tempC += d.driftAccumulated
+		d.RUnlock()
+	}
+
+	switch family {
+	case "DRAGINO":
+		batField := uint16(0x8000) | (batMv & 0x3FFF)
+		tSht := int16(tempC * 100)
+		hSht := uint16(humPct * 10)
+		tDs := int16((tempC + 1.8) * 100)
+		return []byte{
+			byte(batField >> 8), byte(batField),
+			byte(tSht >> 8), byte(tSht),
+			byte(hSht >> 8), byte(hSht),
+			0x01,
+			byte(tDs >> 8), byte(tDs),
+			0x7F, 0xFF,
+		}
+	case "MILESIGHT":
+		t10 := int16(tempC * 10)
+		h2 := byte(humPct * 2)
+		leak := byte(0x00)
+		if anomaly == "spike" {
+			leak = 0x01
+		}
+		return []byte{
+			0x01, 0x75, batPct,
+			0x03, 0x67, byte(t10), byte(t10 >> 8),
+			0x04, 0x68, h2,
+			0x05, 0x00, leak,
+		}
+	case "AGROSENSE":
+		t10 := int16(tempC * 10)
+		h2 := byte(humPct * 2)
+		soilMoist2 := byte((35.0 + float64((nowNs>>6)%300)/10.0) * 2)
+		soilTemp10 := int16((tempC - 2.4) * 10)
+		co2 := uint16(415 + ((nowNs >> 9) % 240))
+		return []byte{
+			0x01, 0x75, batPct,
+			0x02, 0x67, byte(t10), byte(t10 >> 8),
+			0x03, 0x68, h2,
+			0x04, 0x6E, soilMoist2,
+			0x05, 0x66, byte(soilTemp10), byte(soilTemp10 >> 8),
+			0x06, 0x7D, byte(co2), byte(co2 >> 8),
+		}
+	case "SENZEMO":
+		t10 := int16(tempC * 10)
+		h10 := uint16(humPct * 10)
+		pOffset10 := uint16((pressHpa - 800.0) * 10)
+		return []byte{
+			0x0F,
+			byte(t10), byte(t10 >> 8),
+			byte(h10), byte(h10 >> 8),
+			byte(pOffset10), byte(pOffset10 >> 8),
+			batPct,
+		}
+	case "CAYENNE":
+		t10 := int16(tempC * 10)
+		h2 := byte(humPct * 2)
+		p10 := uint16(pressHpa * 10)
+		v100 := batMv / 10
+		co2 := uint16(460 + ((nowNs >> 7) % 350))
+		return []byte{
+			0x01, 0x67, byte(t10), byte(t10 >> 8),
+			0x02, 0x68, h2,
+			0x03, 0x73, byte(p10), byte(p10 >> 8),
+			0x04, 0x74, byte(v100), byte(v100 >> 8),
+			0x05, 0x7D, byte(co2), byte(co2 >> 8),
+		}
+	case "ENGINKO":
+		pl := make([]byte, 18)
+		pl[0] = 0x01
+		pl[1] = batPct
+		binary.LittleEndian.PutUint32(pl[2:6], uint32(int32(tempC*100)))
+		binary.LittleEndian.PutUint32(pl[6:10], uint32(int32(pressHpa*100)))
+		binary.LittleEndian.PutUint32(pl[10:14], uint32(int32(humPct*100)))
+		binary.LittleEndian.PutUint32(pl[14:18], uint32(90+((nowNs>>11)%10)))
+		return pl
+	case "CUSTOM_2B":
+		t100 := int16(tempC * 100)
+		h10 := uint16(humPct * 10)
+		return []byte{
+			byte(t100 >> 8), byte(t100),
+			byte(h10 >> 8), byte(h10),
+		}
+	case "ELECROW_4B", "FALLBACK_4B":
+		fallthrough
+	default:
+		t100 := int16(tempC * 100)
+		return []byte{
+			byte(counter >> 8), byte(counter),
+			byte(t100 >> 8), byte(t100),
+		}
+	}
 }
