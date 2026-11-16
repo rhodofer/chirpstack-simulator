@@ -1,6 +1,7 @@
 version: "2"
 services:
   chirpstack-simulator:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile-devel
