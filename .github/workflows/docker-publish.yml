@@ -3,14 +3,20 @@ name: Build and Deploy Simulator
 on:
   push:
     branches: [ "main", "master" ]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Deneme çalıştırması: yalnızca kontrol et, dağıtma/yeniden başlatma"
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  COMPOSE_DIR: /home/rhod/chirpstack-simulator
 
 jobs:
   build-and-push:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,26 +53,20 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: self-hosted
-
+    if: ${{ always() && needs.build-and-push.result != 'failure' && needs.build-and-push.result != 'cancelled' }}
+    # ikincil-pc (WSL2) üzerindeki self-hosted runner
+    runs-on: [self-hosted, ikincil-pc]
+    concurrency:
+      group: deploy-ikincil-pc-simulator
+      cancel-in-progress: false
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          path: chirpstack-simulator
+          fetch-depth: 0
 
-      - name: Log in to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Pull latest image
-        run: docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
-
-      - name: Copy compose file
-        run: cp chirpstack-simulator/docker-compose.prod.yml ${{ env.COMPOSE_DIR }}/docker-compose.prod.yml
-
-      - name: Restart container
-        working-directory: ${{ env.COMPOSE_DIR }}
-        run: docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d
-
-      - name: Cleanup old images
-        run: docker image prune -f
+      - name: Deploy (ikincil-pc, systemd)
+        env:
+          APP: simulator
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: bash .github/deploy/ikincil-pc.sh
